@@ -9,6 +9,10 @@ import '../models/enums.dart';
 class ScanEngine {
   final EvaluatorRegistry registry;
 
+  // Bolt Optimization: Reusable instance maps to prevent allocations & GC pressure on high-frequency scan loops
+  final Map<String, bool> _nodeOutputPower = {};
+  final Map<String, List<String>> _incomingSources = {};
+
   ScanEngine(this.registry);
 
   Set<LadderNode> _getAllNodes(List<LadderNode> nodes) {
@@ -75,13 +79,13 @@ class ScanEngine {
   }
 
   void executeScan(LadderNetwork network, List<LadderNode> plan, Map<String, NodeRuntimeState> states, TagStateStore tagStore, int deltaTimeMs) {
-    final Map<String, bool> nodeOutputPower = {};
+    _nodeOutputPower.clear();
+    _incomingSources.clear();
 
     // Bolt Optimization: Pre-index incoming connection source node IDs per target node.
     // Eliminates O(E) linear search over network.connections on every node execution step in the scan loop.
-    final Map<String, List<String>> incomingSources = {};
     for (var conn in network.connections) {
-      incomingSources.putIfAbsent(conn.toNodeId, () => []).add(conn.fromNodeId);
+      _incomingSources.putIfAbsent(conn.toNodeId, () => []).add(conn.fromNodeId);
     }
 
     for (var node in plan) {
@@ -91,14 +95,14 @@ class ScanEngine {
 
       // Calcula entrada de energia. Se nao ha conexao de entrada, e true (ligado direto no barramento)
       bool inPower = false;
-      final sources = incomingSources[node.id];
+      final sources = _incomingSources[node.id];
       
       if (sources == null || sources.isEmpty) {
         inPower = true;
       } else {
         // OR logico das entradas em O(in-degree) em vez de O(all connections)
         for (var sourceId in sources) {
-          if (nodeOutputPower[sourceId] == true) {
+          if (_nodeOutputPower[sourceId] == true) {
             inPower = true;
             break;
           }
@@ -107,9 +111,9 @@ class ScanEngine {
 
       final evaluator = registry.getEvaluator(node.type);
       if (evaluator != null) {
-        nodeOutputPower[node.id] = evaluator.evaluate(node, state, inPower, tagStore, deltaTimeMs);
+        _nodeOutputPower[node.id] = evaluator.evaluate(node, state, inPower, tagStore, deltaTimeMs);
       } else {
-        nodeOutputPower[node.id] = false;
+        _nodeOutputPower[node.id] = false;
       }
     }
   }
