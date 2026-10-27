@@ -1,0 +1,77 @@
+#include "scheduler.h"
+#include "esp_attr.h"
+#include "esp_log.h"
+
+#include "io_driver.h"
+#include "io_image.h"
+#include "automation_engine.h"
+#include "fieldbus.h"
+#include "control_kernel.h"
+#include "event_bus.h"
+#include "io_command.h"
+#include "state.h"
+#include "ladder_engine.h"
+
+/* ============================================================
+   CONFIG (🔥 CONTROLE HARD REAL-TIME)
+============================================================ */
+
+#define IO_CMD_BUDGET      1
+#define EVENT_BUS_BUDGET   1
+
+/* ============================================================
+   IO PHASE (🔥 PROCESSAMENTO - LEVE)
+============================================================ */
+
+void IRAM_ATTR scheduler_run_io(void)
+{
+    io_driver_scan_inputs();
+    io_image_scan_inputs();
+
+    io_cmd_t cmd;
+    int budget = IO_CMD_BUDGET;
+
+    while (budget-- && io_command_pop(&cmd))
+    {
+        state_set_int(cmd.id, cmd.value);
+        /* ESP_LOGW removed from hot-path to preserve 1ms determinism */
+    }
+}
+
+/* ============================================================
+   IO APPLY PHASE (🔥 ATUAÇÃO - SEPARADA)
+============================================================ */
+
+void IRAM_ATTR scheduler_run_io_apply(void)
+{
+    io_driver_update();
+}
+
+/* ============================================================
+   FIELDBUS (🔥 DETERMINÍSTICO)
+============================================================ */
+
+void IRAM_ATTR scheduler_run_fieldbus(void)
+{
+    fieldbus_tick();
+}
+
+/* ============================================================
+   AUTOMATION
+============================================================ */
+
+void IRAM_ATTR scheduler_run_automation(void)
+{
+    automation_engine_tick_1ms();
+    ladder_engine_run();
+    control_kernel_task();
+}
+
+/* ============================================================
+   EVENTS (🔥 LEVE E LIMITADO)
+============================================================ */
+
+void IRAM_ATTR scheduler_run_events(void)
+{
+    event_bus_dispatch_budgeted(EVENT_BUS_BUDGET);
+}
