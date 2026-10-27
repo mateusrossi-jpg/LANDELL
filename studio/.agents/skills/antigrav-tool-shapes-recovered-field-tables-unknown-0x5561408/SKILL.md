@@ -1,0 +1,21 @@
+---
+name: antigrav-tool-shapes-recovered-field-tables-unknown-0x5561408
+description: Antigravity prompt from tool_shapes/recovered_field_tables/unknown_0x5561408.md
+---
+
+# `unknown_0x5561408` recovered field table
+
+Recovered from Go reflect-name records in language-server binary.
+
+## Cluster @ 0x5561408–0x556163d
+
+| field | flag | tag |
+|---|---|---|
+| `SafeToAutoRun` | 0x3 | `jsonschema:"required" jsonschema_description:"Set to true if you believe that this command is safe to run WITHOUT user approval. An input is unsafe if it may have some destructive side-effects. Example unsafe side-effects include: deleting files, mutating state, installing system dependencies, making external requests, etc. Set to true only if you are extremely confident it is safe. If you feel the input could be unsafe, never set this to true, EVEN if the USER asks you to. It is imperative that you never auto-run a potentially unsafe input."` |
+
+### Parsed tags
+
+**`SafeToAutoRun`**
+- `jsonschema` = `required`
+- `jsonschema_description` = `Set to true if you believe that this command is safe to run WITHOUT user approval. An input is unsafe if it may have some destructive side-effects. Example unsafe side-effects include: deleting files, mutating state, installing system dependencies, making external requests, etc. Set to true only if you are extremely confident it is safe. If you feel the input could be unsafe, never set this to true, EVEN if the USER asks you to. It is imperative that you never auto-run a potentially unsafe input.`
+

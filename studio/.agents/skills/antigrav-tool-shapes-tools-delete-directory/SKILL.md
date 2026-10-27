@@ -1,0 +1,24 @@
+---
+name: antigrav-tool-shapes-tools-delete-directory
+description: Antigravity prompt from tool_shapes/tools/delete_directory.md
+---
+
+# `delete_directory`
+
+**Cortex step type:** `CortexStepDeleteDirectory`
+
+**Source:** `third_party/jetski/cortex_pb/cortex.proto` (byte-exact, recovered from the embedded `FileDescriptorProto`)
+
+## Proto schema
+
+```proto
+message CortexStepDeleteDirectory {
+  string directory_path_uri = 1;
+  bool force = 2;
+}
+```
+
+## Field descriptions
+
+See [`../byte_exact_field_index.md`](../byte_exact_field_index.md) for byte-exact `(field_name, jsonschema tag)` records recovered from Go reflect-name tables in the binary. Cortex-step proto messages and JSON-schema tool-arg structs are different namespaces, so a clean static attribution from one to the other is not possible. Match by reading the description text against this tool's purpose.
+

@@ -1,0 +1,22 @@
+---
+name: antigrav-tool-shapes-recovered-field-tables-unknown-0x5239064
+description: Antigravity prompt from tool_shapes/recovered_field_tables/unknown_0x5239064.md
+---
+
+# `unknown_0x5239064` recovered field table
+
+Recovered from Go reflect-name records in language-server binary.
+
+## Cluster @ 0x5239064–0x5239106
+
+| field | flag | tag |
+|---|---|---|
+| `Description` | 0x3 | `json:"description" jsonschema:"required" jsonschema_description:"Human-readable description of what this subagent does and when it should be used."` |
+
+### Parsed tags
+
+**`Description`**
+- `json` = `description`
+- `jsonschema` = `required`
+- `jsonschema_description` = `Human-readable description of what this subagent does and when it should be used.`
+

@@ -1,0 +1,48 @@
+Widget _buildComponentToolbox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0F172A),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFF334155), width: 1.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _isDraggingNode 
+                ? 'Arraste aqui para Excluir o Elemento:' 
+                : 'Paleta de Componentes (Arraste para o Rung):',
+            style: TextStyle(
+              color: _isDraggingNode ? Colors.redAccent : Colors.grey, 
+              fontWeight: FontWeight.bold, 
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _isDraggingNode
+              ? _buildTrashDropZone()
+              : SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildDraggableToolboxItem('Contato NA', NodeType.contactNO, Icons.power_input),
+                      _buildDraggableToolboxItem('Contato NF', NodeType.contactNC, Icons.do_not_disturb_on),
+                      _buildDraggableToolboxItem('Bobina', NodeType.coil, Icons.radio_button_checked),
+                      _buildDraggableToolboxItem('Bobina SET', NodeType.coilSet, Icons.subdirectory_arrow_right),
+                      _buildDraggableToolboxItem('Bobina RST', NodeType.coilReset, Icons.settings_backup_restore),
+                      _buildDraggableToolboxItem('Timer TON', NodeType.timerTON, Icons.timer),
+                      _buildDraggableToolboxItem('Contador', NodeType.counterCTU, Icons.plus_one),
+                      _buildDraggableToolboxItem('Igual (EQU)', NodeType.compareEqual, Icons.compare_arrows),
+                      _buildDraggableToolboxItem('Maior (GRT)', NodeType.compareGreater, Icons.arrow_upward),
+                      _buildDraggableToolboxItem('Menor (LES)', NodeType.compareLess, Icons.arrow_downward),
+                    ],
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  

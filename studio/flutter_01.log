@@ -1,0 +1,69 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter run -d web-server --web-port 8080 --web-hostname 0.0.0.0
+
+## exception
+
+DartDevelopmentServiceException: DartDevelopmentServiceException: WebSocketChannelException: WebSocketException: Connection to 'http://127.0.0.1:38329/wfCQkSMiTSE=/ws#' was not upgraded to websocket
+
+```
+```
+
+## flutter doctor
+
+```
+[✓] Flutter (Channel stable, 3.44.2, on Ubuntu 26.04.1 LTS 7.0.0-31-generic,
+    locale en_US.UTF-8) [107ms]
+    • Flutter version 3.44.2 on channel stable at
+      /home/mateus/snap/flutter/common/flutter
+    • Upstream repository https://github.com/flutter/flutter.git
+    • Framework revision c9a6c48423 (3 months ago), 2026-06-10 15:52:41 -0700
+    • Engine revision 77e2e94772
+    • Dart version 3.12.2
+    • DevTools version 2.57.0
+    • Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop,
+      enable-windows-desktop, enable-android, enable-ios, cli-animations,
+      enable-native-assets, enable-swift-package-manager,
+      omit-legacy-version-file, enable-lldb-debugging, enable-uiscene-migration
+
+[✓] Android toolchain - develop for Android devices (Android SDK version 36.0.0)
+    [4.1s]
+    • Android SDK at /home/mateus/Android/Sdk
+    • Emulator version 36.6.11.0 (build_id 15507667) (CL:N/A)
+    • Platform android-36, build-tools 36.0.0
+    • ANDROID_HOME = /home/mateus/Android/Sdk
+    • ANDROID_SDK_ROOT = /home/mateus/Android/Sdk
+    • Java binary at: /usr/bin/java
+      This JDK was found in the system PATH.
+      To manually set the JDK path, use: `flutter config
+      --jdk-dir="path/to/jdk"`.
+    • Java version OpenJDK Runtime Environment (build 17.0.20+8-1-26.04-Ubuntu)
+    • All Android licenses accepted.
+
+[✓] Chrome - develop for the web [18ms]
+    • Chrome at google-chrome
+
+[✓] Linux toolchain - develop for Linux desktop [228ms]
+    • Ubuntu clang version 21.1.8 (6ubuntu1)
+    • cmake version 4.2.3
+    • ninja version 1.13.2
+    • pkg-config version 2.5.1
+    ! Unable to access driver information using 'eglinfo'.
+      It is likely available from your distribution (e.g.: apt install
+      mesa-utils)
+
+[✓] Connected device (3 available) [651ms]
+    • Linux (desktop)  • linux      • linux-x64      • Ubuntu 26.04.1 LTS
+      7.0.0-31-generic
+    • Web Server (web) • web-server • web-javascript • Flutter Tools
+    • Chrome (web)     • chrome     • web-javascript • Google Chrome
+      152.0.7977.64
+
+[✓] Network resources [718ms]
+    • All expected network resources are available.
+
+• No issues found!
+```

@@ -1,0 +1,26 @@
+# Flutter
+*.dart_tool/
+*.flutter-plugins
+*.flutter-plugins-dependencies
+.packages
+build/
+.metadata
+
+# IDE
+*.iml
+.idea/
+
+# Dart
+.dart_tool/
+.packages
+pubspec.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scratch and temp dumps
+*.bin
+scratch_*.png
+scratch/
+screenshots/

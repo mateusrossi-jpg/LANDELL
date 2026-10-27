@@ -1,0 +1,36 @@
+---
+name: antigrav-tool-shapes-tools-view-file
+description: Antigravity prompt from tool_shapes/tools/view_file.md
+---
+
+# `view_file`
+
+**Cortex step type:** `CortexStepViewFile`
+
+**Source:** `third_party/jetski/cortex_pb/cortex.proto` (byte-exact, recovered from the embedded `FileDescriptorProto`)
+
+## Proto schema
+
+```proto
+message CortexStepViewFile {
+  string absolute_path_uri = 1;
+  uint32 start_line = 2;
+  uint32 end_line = 3;
+  string content = 4;
+  bool is_skill_file = 17;
+  exa.cortex_pb.SkillMetadata skill_metadata = 18;
+  string raw_content = 9;
+  exa.codeium_common_pb.ImageData binary_data = 14;
+  exa.codeium_common_pb.Media media_data = 15;
+  string triggered_memories = 10;
+  uint32 num_lines = 11;
+  uint32 num_bytes = 12;
+  bool is_injected_reminder = 13;
+  exa.cortex_pb.FilePermissionInteractionSpec file_permission_request = 16;
+}
+```
+
+## Field descriptions
+
+See [`../byte_exact_field_index.md`](../byte_exact_field_index.md) for byte-exact `(field_name, jsonschema tag)` records recovered from Go reflect-name tables in the binary. Cortex-step proto messages and JSON-schema tool-arg structs are different namespaces, so a clean static attribution from one to the other is not possible. Match by reading the description text against this tool's purpose.
+

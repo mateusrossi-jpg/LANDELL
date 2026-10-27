@@ -1,0 +1,27 @@
+---
+name: antigrav-tool-shapes-tools-resolve-task
+description: Antigravity prompt from tool_shapes/tools/resolve_task.md
+---
+
+# `resolve_task`
+
+**Cortex step type:** `CortexStepResolveTask`
+
+**Source:** `third_party/jetski/cortex_pb/cortex.proto` (byte-exact, recovered from the embedded `FileDescriptorProto`)
+
+## Proto schema
+
+```proto
+message CortexStepResolveTask {
+  string absolute_uri = 1;
+  string title = 2;
+  string description = 3;
+  bool user_rejected = 4;
+  exa.cortex_pb.TaskResolution resolution = 5;
+}
+```
+
+## Field descriptions
+
+See [`../byte_exact_field_index.md`](../byte_exact_field_index.md) for byte-exact `(field_name, jsonschema tag)` records recovered from Go reflect-name tables in the binary. Cortex-step proto messages and JSON-schema tool-arg structs are different namespaces, so a clean static attribution from one to the other is not possible. Match by reading the description text against this tool's purpose.
+
