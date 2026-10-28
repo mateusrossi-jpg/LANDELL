@@ -9,6 +9,10 @@ import '../models/enums.dart';
 class ScanEngine {
   final EvaluatorRegistry registry;
 
+  // Bolt Optimization: Reusable instance maps to prevent allocations & GC pressure on high-frequency scan loops
+  final Map<String, bool> _nodeOutputPower = {};
+  final Map<String, List<String>> _incomingSources = {};
+
   ScanEngine(this.registry);
 
   Set<LadderNode> _getAllNodes(List<LadderNode> nodes) {
@@ -36,11 +40,13 @@ class ScanEngine {
       inDegree[node.id] = 0;
     }
 
-    // Calcula graus de entrada
+    // Pre-calcula mapa de conexoes sainte -> entrantes para ordenacao topologica eficiente
+    final Map<String, List<String>> outgoingConnections = {};
     for (var conn in network.connections) {
       if (inDegree.containsKey(conn.toNodeId)) {
         inDegree[conn.toNodeId] = inDegree[conn.toNodeId]! + 1;
       }
+      outgoingConnections.putIfAbsent(conn.fromNodeId, () => []).add(conn.toNodeId);
     }
 
     // Fila para nos sem entrada (conectados direto ao barramento)
@@ -51,15 +57,20 @@ class ScanEngine {
       }
     }
 
-    // Ordenacao topologica (Kahn)
+    // Ordenacao topologica (Kahn) em O(V + E)
     while (queue.isNotEmpty) {
       final currId = queue.removeAt(0);
       plan.add(nodeMap[currId]!);
       
-      for (var conn in network.connections.where((c) => c.fromNodeId == currId)) {
-        inDegree[conn.toNodeId] = inDegree[conn.toNodeId]! - 1;
-        if (inDegree[conn.toNodeId] == 0) {
-          queue.add(conn.toNodeId);
+      final outgoing = outgoingConnections[currId];
+      if (outgoing != null) {
+        for (var targetId in outgoing) {
+          if (inDegree.containsKey(targetId)) {
+            inDegree[targetId] = inDegree[targetId]! - 1;
+            if (inDegree[targetId] == 0) {
+              queue.add(targetId);
+            }
+          }
         }
       }
     }
@@ -68,7 +79,14 @@ class ScanEngine {
   }
 
   void executeScan(LadderNetwork network, List<LadderNode> plan, Map<String, NodeRuntimeState> states, TagStateStore tagStore, int deltaTimeMs) {
-    final Map<String, bool> nodeOutputPower = {};
+    _nodeOutputPower.clear();
+    _incomingSources.clear();
+
+    // Bolt Optimization: Pre-index incoming connection source node IDs per target node.
+    // Eliminates O(E) linear search over network.connections on every node execution step in the scan loop.
+    for (var conn in network.connections) {
+      _incomingSources.putIfAbsent(conn.toNodeId, () => []).add(conn.fromNodeId);
+    }
 
     for (var node in plan) {
       // Cria estado se nao existir
@@ -77,14 +95,14 @@ class ScanEngine {
 
       // Calcula entrada de energia. Se nao ha conexao de entrada, e true (ligado direto no barramento)
       bool inPower = false;
-      final incomingConns = network.connections.where((c) => c.toNodeId == node.id).toList();
+      final sources = _incomingSources[node.id];
       
-      if (incomingConns.isEmpty) {
+      if (sources == null || sources.isEmpty) {
         inPower = true;
       } else {
-        // OR logico das entradas
-        for (var conn in incomingConns) {
-          if (nodeOutputPower[conn.fromNodeId] == true) {
+        // OR logico das entradas em O(in-degree) em vez de O(all connections)
+        for (var sourceId in sources) {
+          if (_nodeOutputPower[sourceId] == true) {
             inPower = true;
             break;
           }
@@ -93,9 +111,9 @@ class ScanEngine {
 
       final evaluator = registry.getEvaluator(node.type);
       if (evaluator != null) {
-        nodeOutputPower[node.id] = evaluator.evaluate(node, state, inPower, tagStore, deltaTimeMs);
+        _nodeOutputPower[node.id] = evaluator.evaluate(node, state, inPower, tagStore, deltaTimeMs);
       } else {
-        nodeOutputPower[node.id] = false;
+        _nodeOutputPower[node.id] = false;
       }
     }
   }
