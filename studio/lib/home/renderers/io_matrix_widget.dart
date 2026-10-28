@@ -151,14 +151,18 @@ class IoMatrixWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceAround,
           children: row1,
         ),
         if (row2.isNotEmpty) ...[
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.spaceAround,
             children: row2,
           ),
         ],
@@ -259,17 +263,27 @@ class IoMatrixWidget extends StatelessWidget {
       ],
     );
 
+    final String statusInfo = '$label: $stateText${isForced ? " (FORÇADO)" : ""}';
+    final Widget wrappedContent = Tooltip(
+      message: '$statusInfo • Clique para forçar ponto de I/O',
+      child: Semantics(
+        label: statusInfo,
+        button: onTap != null,
+        child: content,
+      ),
+    );
+
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-          child: content,
+          child: wrappedContent,
         ),
       );
     }
 
-    return content;
+    return wrappedContent;
   }
 }
