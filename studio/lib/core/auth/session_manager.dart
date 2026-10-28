@@ -12,7 +12,7 @@ class SessionManager {
   bool _isLoggedIn = true;
   String? _currentUser = 'OPERADOR';
   String? _currentRole = 'OPERADOR INDUSTRIAL';
-  String? _sessionToken = 'master_admin_session_token';
+  String? _sessionToken;
 
   bool get isLoggedIn => _isLoggedIn;
   String? get currentUser => _currentUser;
