@@ -10,7 +10,7 @@ class ScanScheduler {
   bool _isRunning = false;
 
 // ignore: prefer_initializing_formals
-  ScanScheduler({this._intervalMs = 100});
+  ScanScheduler({int intervalMs = 100}) : _intervalMs = intervalMs;
 
   void setInterval(int intervalMs) {
     _intervalMs = intervalMs;

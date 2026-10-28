@@ -153,7 +153,7 @@ void main() {
     addTearDown(() => tester.view.resetPhysicalSize());
 
     final demoProject = DemoProject.createDemoProject();
-    final soilTag = demoProject.tags['UMID_SOLO']!;
+    final soilTag = demoProject.tags['AI0.0']!;
     final key = GlobalKey();
     await tester.pumpWidget(
       MaterialApp(
