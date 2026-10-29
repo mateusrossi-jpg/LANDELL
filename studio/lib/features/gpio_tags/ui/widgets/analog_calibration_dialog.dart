@@ -3,12 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:endap_studio/ladder/models/tag.dart';
 import 'dart:convert';
 import 'package:endap_studio/design_system/tokens.dart';
+import '../../../../core/network/authenticated_http_client.dart';
 
 class AnalogCalibrationDialog extends StatefulWidget {
   final Tag tag;
   final double? liveValue;
   final Function(double? offset, double? gain)? onSaveProject;
   final String gatewayUrl;
+  final http.Client? httpClient;
 
   const AnalogCalibrationDialog({
     super.key,
@@ -16,6 +18,7 @@ class AnalogCalibrationDialog extends StatefulWidget {
     this.liveValue,
     this.onSaveProject,
     this.gatewayUrl = 'http://192.168.4.1',
+    this.httpClient,
   });
 
   @override
@@ -26,6 +29,7 @@ class _AnalogCalibrationDialogState extends State<AnalogCalibrationDialog> {
   late TextEditingController _offsetController;
   late TextEditingController _gainController;
   final TextEditingController _realTempController = TextEditingController();
+  late final http.Client _client;
 
   bool _isSubmitting = false;
   String? _statusMessage;
@@ -35,6 +39,7 @@ class _AnalogCalibrationDialogState extends State<AnalogCalibrationDialog> {
   @override
   void initState() {
     super.initState();
+    _client = widget.httpClient ?? AuthenticatedHttpClient();
     _offsetController = TextEditingController(
       text: (widget.tag.calOffset ?? 0.0).toStringAsFixed(1),
     );
@@ -135,7 +140,7 @@ class _AnalogCalibrationDialogState extends State<AnalogCalibrationDialog> {
         'gain': (_currentGain * 1000).round(),
       };
 
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
