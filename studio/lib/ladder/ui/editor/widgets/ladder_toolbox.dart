@@ -14,22 +14,22 @@ class LadderToolbox extends StatelessWidget {
   });
 
   static const List<Map<String, dynamic>> _tools = [
-    {'label': 'NO', 'type': NodeType.contactNO},
-    {'label': 'NC', 'type': NodeType.contactNC},
-    {'label': 'COIL', 'type': NodeType.coil},
-    {'label': 'SET', 'type': NodeType.coilSet},
-    {'label': 'RST', 'type': NodeType.coilReset},
-    {'label': 'TON', 'type': NodeType.timerTON},
-    {'label': 'TOF', 'type': NodeType.timerTOF},
-    {'label': 'CTU', 'type': NodeType.counterCTU},
-    {'label': 'EQU', 'type': NodeType.compareEqual},
-    {'label': 'GRT', 'type': NodeType.compareGreater},
-    {'label': 'LES', 'type': NodeType.compareLess},
-    {'label': 'ADD', 'type': NodeType.mathADD},
-    {'label': 'SUB', 'type': NodeType.mathSUB},
-    {'label': 'MUL', 'type': NodeType.mathMUL},
-    {'label': 'DIV', 'type': NodeType.mathDIV},
-    {'label': 'PID', 'type': NodeType.pid},
+    {'label': 'NO', 'type': NodeType.contactNO, 'description': 'Contato Normal Aberto (NO)'},
+    {'label': 'NC', 'type': NodeType.contactNC, 'description': 'Contato Normal Fechado (NC)'},
+    {'label': 'COIL', 'type': NodeType.coil, 'description': 'Bobina de Saída (COIL)'},
+    {'label': 'SET', 'type': NodeType.coilSet, 'description': 'Bobina de Retenção Set (SET)'},
+    {'label': 'RST', 'type': NodeType.coilReset, 'description': 'Bobina de Reset (RST)'},
+    {'label': 'TON', 'type': NodeType.timerTON, 'description': 'Temporizador Atraso na Ligação (TON)'},
+    {'label': 'TOF', 'type': NodeType.timerTOF, 'description': 'Temporizador Atraso no Desligamento (TOF)'},
+    {'label': 'CTU', 'type': NodeType.counterCTU, 'description': 'Contador Crescente (CTU)'},
+    {'label': 'EQU', 'type': NodeType.compareEqual, 'description': 'Comparador Igual (EQU)'},
+    {'label': 'GRT', 'type': NodeType.compareGreater, 'description': 'Comparador Maior Que (GRT)'},
+    {'label': 'LES', 'type': NodeType.compareLess, 'description': 'Comparador Menor Que (LES)'},
+    {'label': 'ADD', 'type': NodeType.mathADD, 'description': 'Operação de Adição (ADD)'},
+    {'label': 'SUB', 'type': NodeType.mathSUB, 'description': 'Operação de Subtração (SUB)'},
+    {'label': 'MUL', 'type': NodeType.mathMUL, 'description': 'Operação de Multiplicação (MUL)'},
+    {'label': 'DIV', 'type': NodeType.mathDIV, 'description': 'Operação de Divisão (DIV)'},
+    {'label': 'PID', 'type': NodeType.pid, 'description': 'Controlador PID'},
   ];
 
   @override
@@ -65,6 +65,7 @@ class LadderToolbox extends StatelessWidget {
               return _buildToolItem(
                 label: item['label'] as String,
                 type: item['type'] as NodeType,
+                description: item['description'] as String,
               );
             }).toList(),
           ),
@@ -90,6 +91,7 @@ class LadderToolbox extends StatelessWidget {
           return _buildToolItem(
             label: item['label'] as String,
             type: item['type'] as NodeType,
+            description: item['description'] as String,
           );
         },
       ),
@@ -128,6 +130,7 @@ class LadderToolbox extends StatelessWidget {
   Widget _buildToolItem({
     required String label,
     required NodeType type,
+    required String description,
   }) {
     final buttonContent = Container(
       constraints: const BoxConstraints(minWidth: 44, minHeight: 38),
@@ -162,18 +165,25 @@ class LadderToolbox extends StatelessWidget {
       ),
     );
 
-    return LongPressDraggable<NodeType>(
-      data: type,
-      delay: const Duration(milliseconds: 200),
-      feedback: Material(
-        color: Colors.transparent,
-        child: Opacity(opacity: 0.9, child: buttonContent),
-      ),
-      childWhenDragging: Opacity(opacity: 0.3, child: buttonContent),
-      child: InkWell(
-        onTap: () => onNodeTapped(type),
-        borderRadius: BorderRadius.circular(6),
-        child: buttonContent,
+    return Tooltip(
+      message: description,
+      child: Semantics(
+        button: true,
+        label: description,
+        child: LongPressDraggable<NodeType>(
+          data: type,
+          delay: const Duration(milliseconds: 200),
+          feedback: Material(
+            color: Colors.transparent,
+            child: Opacity(opacity: 0.9, child: buttonContent),
+          ),
+          childWhenDragging: Opacity(opacity: 0.3, child: buttonContent),
+          child: InkWell(
+            onTap: () => onNodeTapped(type),
+            borderRadius: BorderRadius.circular(6),
+            child: buttonContent,
+          ),
+        ),
       ),
     );
   }
