@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Studio-Windows
-          path: studio/build/windows/x64/runner/Release/endap_studio.exe
+          path: studio/build/windows/x64/runner/Release/
