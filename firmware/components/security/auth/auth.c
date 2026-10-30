@@ -761,6 +761,26 @@ static void auth_seed_default_admin(void)
     }
 }
 
+static void auth_check_default_admin_bootstrap_flag(void)
+{
+    for (size_t i = 0; i < AUTH_MAX_ACCOUNTS; i++)
+    {
+        auth_account_record_t *acc = &auth_config.accounts[i];
+        if (!acc->in_use || strcmp(acc->username, "admin") != 0)
+        {
+            continue;
+        }
+
+        uint8_t default_hash[AUTH_HASH_LEN];
+        auth_hash_password("admin123", acc->salt, default_hash);
+        if (auth_constant_time_equals(default_hash, acc->hash, sizeof(default_hash)))
+        {
+            acc->flags |= (uint8_t)AUTH_ACCOUNT_FLAG_BOOTSTRAP;
+        }
+        break;
+    }
+}
+
 void auth_init(void)
 {
     if (auth_initialized)
@@ -776,19 +796,7 @@ void auth_init(void)
     }
     else
     {
-        for (size_t i = 0; i < AUTH_MAX_ACCOUNTS; i++)
-        {
-            if (auth_config.accounts[i].in_use && strcmp(auth_config.accounts[i].username, "admin") == 0)
-            {
-                uint8_t default_hash[AUTH_HASH_LEN];
-                auth_hash_password("admin123", auth_config.accounts[i].salt, default_hash);
-                if (auth_constant_time_equals(default_hash, auth_config.accounts[i].hash, sizeof(default_hash)))
-                {
-                    auth_config.accounts[i].flags |= (uint8_t)AUTH_ACCOUNT_FLAG_BOOTSTRAP;
-                }
-                break;
-            }
-        }
+        auth_check_default_admin_bootstrap_flag();
     }
 
     auth_initialized = true;
