@@ -374,36 +374,50 @@ class _VariablesPanelState extends State<VariablesPanel> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              SizedBox(
-                                height: 34,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF4FD1C5),
-                                    foregroundColor: AppTokens.bg,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                    elevation: 0,
+                              Tooltip(
+                                message: 'Adicionar tag rápida',
+                                child: Semantics(
+                                  button: true,
+                                  label: 'Adicionar tag rápida',
+                                  child: SizedBox(
+                                    height: 34,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF4FD1C5),
+                                        foregroundColor: AppTokens.bg,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                        elevation: 0,
+                                      ),
+                                      onPressed: () {
+                                        _addVariable(_textController.text);
+                                        _textController.clear();
+                                      },
+                                      child: const Text('Adicionar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ),
                                   ),
-                                  onPressed: () {
-                                    _addVariable(_textController.text);
-                                    _textController.clear();
-                                  },
-                                  child: const Text('Adicionar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              SizedBox(
-                                height: 34,
-                                child: OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF4FD1C5),
-                                    side: const BorderSide(color: Color(0xFF4FD1C5), width: 1),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              Tooltip(
+                                message: 'Criar nova tag configurada',
+                                child: Semantics(
+                                  button: true,
+                                  label: 'Criar nova tag configurada',
+                                  child: SizedBox(
+                                    height: 34,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF4FD1C5),
+                                        side: const BorderSide(color: Color(0xFF4FD1C5), width: 1),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                      ),
+                                      icon: const Icon(Icons.add, size: 16),
+                                      label: const Text('Nova', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      onPressed: () => _openTagDialog(),
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.add, size: 16),
-                                  label: const Text('Nova', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                  onPressed: () => _openTagDialog(),
                                 ),
                               ),
                             ],
@@ -580,55 +594,76 @@ class _VariablesPanelState extends State<VariablesPanel> {
                                     ),
                                     const SizedBox(width: 6),
                                     if (tag.type == TagType.real || (tag.address?.startsWith('%IW') ?? false) || (tag.address?.startsWith('AI') ?? false)) ...[
-                                      InkWell(
-                                        onTap: () {
-                                          final gatewayIp = widget.networkManager?.gatewayIp.trim().isNotEmpty == true
-                                              ? widget.networkManager!.gatewayIp.trim()
-                                              : '192.168.4.1';
-                                          showDialog(
-                                            context: context,
-                                            builder: (ctx) => AnalogCalibrationDialog(
-                                              tag: tag,
-                                              gatewayUrl: 'http://$gatewayIp',
-                                              onSaveProject: (newOffset, newGain) {
-                                                final updated = Tag(
-                                                  id: tag.id,
-                                                  name: tag.name,
-                                                  type: tag.type,
-                                                  address: tag.address,
-                                                  unit: tag.unit,
-                                                  description: tag.description,
-                                                  calOffset: newOffset,
-                                                  calGain: newGain,
-                                                );
-                                                widget.onTagUpdated?.call(updated);
-                                              },
+                                      Tooltip(
+                                        message: 'Calibrar tag ${tag.id}',
+                                        child: Semantics(
+                                          button: true,
+                                          label: 'Calibrar tag ${tag.id}',
+                                          child: InkWell(
+                                            onTap: () {
+                                              final gatewayIp = widget.networkManager?.gatewayIp.trim().isNotEmpty == true
+                                                  ? widget.networkManager!.gatewayIp.trim()
+                                                  : '192.168.4.1';
+                                              showDialog(
+                                                context: context,
+                                                builder: (ctx) => AnalogCalibrationDialog(
+                                                  tag: tag,
+                                                  gatewayUrl: 'http://$gatewayIp',
+                                                  onSaveProject: (newOffset, newGain) {
+                                                    final updated = Tag(
+                                                      id: tag.id,
+                                                      name: tag.name,
+                                                      type: tag.type,
+                                                      address: tag.address,
+                                                      unit: tag.unit,
+                                                      description: tag.description,
+                                                      calOffset: newOffset,
+                                                      calGain: newGain,
+                                                    );
+                                                    widget.onTagUpdated?.call(updated);
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(4.0),
+                                              child: Icon(Icons.tune, size: 15, color: Color(0xFFF59E0B)),
                                             ),
-                                          );
-                                        },
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(4.0),
-                                          child: Icon(Icons.tune, size: 15, color: Color(0xFFF59E0B)),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                     ],
-                                    InkWell(
-                                      onTap: () => _openTagDialog(tag),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(4.0),
-                                        child: Icon(Icons.edit_outlined, size: 15, color: Color(0xFF4FD1C5)),
+                                    Tooltip(
+                                      message: 'Editar tag ${tag.id}',
+                                      child: Semantics(
+                                        button: true,
+                                        label: 'Editar tag ${tag.id}',
+                                        child: InkWell(
+                                          onTap: () => _openTagDialog(tag),
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4.0),
+                                            child: Icon(Icons.edit_outlined, size: 15, color: Color(0xFF4FD1C5)),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    InkWell(
-                                      onTap: () => widget.onTagRemoved(tag.id),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(4.0),
-                                        child: Icon(Icons.close, size: 14, color: Color(0xFF8C98A8)),
+                                    Tooltip(
+                                      message: 'Remover tag ${tag.id}',
+                                      child: Semantics(
+                                        button: true,
+                                        label: 'Remover tag ${tag.id}',
+                                        child: InkWell(
+                                          onTap: () => widget.onTagRemoved(tag.id),
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4.0),
+                                            child: Icon(Icons.close, size: 14, color: Color(0xFF8C98A8)),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -745,29 +780,44 @@ class _VariablesPanelState extends State<VariablesPanel> {
                     ),
                   ),
                   const Spacer(),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: () {
-                      setState(() {
-                        if (_panelState == PanelState.collapsed) {
-                          _panelState = PanelState.semi;
-                        } else if (_panelState == PanelState.semi) {
-                          _panelState = PanelState.full;
-                        } else {
-                          _panelState = PanelState.collapsed;
-                        }
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: Icon(
-                        _panelState == PanelState.collapsed
-                            ? Icons.keyboard_arrow_up
-                            : _panelState == PanelState.semi
-                                ? Icons.open_in_full
-                                : Icons.keyboard_arrow_down,
-                        color: const Color(0xFF4FD1C5),
-                        size: 20,
+                  Tooltip(
+                    message: _panelState == PanelState.collapsed
+                        ? 'Expandir painel de variáveis'
+                        : _panelState == PanelState.semi
+                            ? 'Maximizar painel de variáveis'
+                            : 'Recolher painel de variáveis',
+                    child: Semantics(
+                      button: true,
+                      label: _panelState == PanelState.collapsed
+                          ? 'Expandir painel de variáveis'
+                          : _panelState == PanelState.semi
+                              ? 'Maximizar painel de variáveis'
+                              : 'Recolher painel de variáveis',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(4),
+                        onTap: () {
+                          setState(() {
+                            if (_panelState == PanelState.collapsed) {
+                              _panelState = PanelState.semi;
+                            } else if (_panelState == PanelState.semi) {
+                              _panelState = PanelState.full;
+                            } else {
+                              _panelState = PanelState.collapsed;
+                            }
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(
+                            _panelState == PanelState.collapsed
+                                ? Icons.keyboard_arrow_up
+                                : _panelState == PanelState.semi
+                                    ? Icons.open_in_full
+                                    : Icons.keyboard_arrow_down,
+                            color: const Color(0xFF4FD1C5),
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                   ),
