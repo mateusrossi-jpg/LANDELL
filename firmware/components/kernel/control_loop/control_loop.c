@@ -384,3 +384,56 @@ void control_loop_get_metrics(control_loop_metrics_t *m)
     m->deadline_miss = snapshot.deadline_miss;
     m->overrun_count = snapshot.overrun_count;
 }
+
+/* ============================================================
+   SELF TEST
+============================================================ */
+
+bool control_loop_run_self_test(void)
+{
+    ESP_LOGI(TAG, "Running Control Loop unit self-tests...");
+
+    /* 1. Test safe_time_diff math and rollover safety */
+    if (safe_time_diff(100, 250) != 150)
+    {
+        ESP_LOGE(TAG, "Self-test failed: safe_time_diff normal diff mismatch");
+        return false;
+    }
+    if (safe_time_diff(200, 200) != 0)
+    {
+        ESP_LOGE(TAG, "Self-test failed: safe_time_diff equal values mismatch");
+        return false;
+    }
+    if (safe_time_diff(500, 100) != 0)
+    {
+        ESP_LOGE(TAG, "Self-test failed: safe_time_diff underflow protection failed");
+        return false;
+    }
+
+    /* 2. Test initialization defaults and state invariants */
+    if (LOOP_PERIOD_US != 1000)
+    {
+        ESP_LOGE(TAG, "Self-test failed: LOOP_PERIOD_US expected 1000us");
+        return false;
+    }
+    if (BOOT_IGNORE_CYCLES != 2000)
+    {
+        ESP_LOGE(TAG, "Self-test failed: BOOT_IGNORE_CYCLES expected 2000");
+        return false;
+    }
+    if (DEADLINE_FAULT_THRESHOLD != 200)
+    {
+        ESP_LOGE(TAG, "Self-test failed: DEADLINE_FAULT_THRESHOLD expected 200");
+        return false;
+    }
+
+    /* 3. Test control_loop_get_metrics with NULL handle (must not crash) */
+    control_loop_get_metrics(NULL);
+
+    /* 4. Test control_loop_get_metrics with valid struct pointer */
+    control_loop_metrics_t metrics = { .max_jitter = 0xFFFFFFFF };
+    control_loop_get_metrics(&metrics);
+
+    ESP_LOGI(TAG, "Control Loop self-tests passed successfully");
+    return true;
+}

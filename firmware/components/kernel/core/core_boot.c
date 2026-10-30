@@ -627,6 +627,7 @@ static void core_init_services(void)
     io_driver_init();
     (void)pve_run_self_tests();
     (void)ladder_engine_run_self_test();
+    (void)control_loop_run_self_test();
     network_ready_init();
     network_ready_register_callback(on_network_ready, NULL);
     node_registry_init();
