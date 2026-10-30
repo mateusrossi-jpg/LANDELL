@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "scheduler.c"
+    SRCS "scheduler.c" "scheduler_self_test.c"
     INCLUDE_DIRS "include"
     WHOLE_ARCHIVE
     REQUIRES
