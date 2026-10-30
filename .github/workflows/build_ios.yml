@@ -6,6 +6,9 @@ on:
 jobs:
   build_ios:
     runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ./studio
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -31,4 +34,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Studio-IPA
-          path: Payload.ipa
+          path: studio/Payload.ipa
