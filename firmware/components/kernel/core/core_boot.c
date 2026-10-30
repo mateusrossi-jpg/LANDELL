@@ -62,6 +62,7 @@
 #include "failsafe.h"
 #include "phase_load_test.h"
 #include "pve_self_test.h"
+#include "scheduler_self_test.h"
 #include "pve.h"
 #include "telemetry.h"
 #include "system_diag.h"
@@ -626,6 +627,7 @@ static void core_init_services(void)
     telemetry_init();
     io_driver_init();
     (void)pve_run_self_tests();
+    (void)scheduler_run_self_tests();
     (void)ladder_engine_run_self_test();
     network_ready_init();
     network_ready_register_callback(on_network_ready, NULL);
