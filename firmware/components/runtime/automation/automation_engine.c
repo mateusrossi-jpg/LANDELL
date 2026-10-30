@@ -1012,6 +1012,60 @@ static void automation_load(void)
    EVENT HANDLER
 ============================================================ */
 
+static void automation_sync_field_node_input(const endap_event_t *ev, uint32_t self_node)
+{
+    // 2º Controlador ou superior (Field Node): Se for mudança em entrada local (IDs locais de 10 a 25)
+    if (ev->source < 10 || ev->source > 25)
+        return;
+
+    uint8_t my_ctrl_idx = node_registry_get_controller_index(self_node);
+    if (my_ctrl_idx == 0)
+    {
+        my_ctrl_idx = 1; // Default para primeiro nó remoto se não definido
+    }
+
+    uint16_t local_offset = (ev->source >= 22) ? (ev->source - 22) : (ev->source - 10);
+    uint16_t global_input_id = 10 + (my_ctrl_idx * 8) + (local_offset % 8);
+    uint32_t gw_node_id = node_registry_find_id_by_controller_index(0);
+
+    if (gw_node_id == self_node || !automation_remote_queue)
+        return;
+
+    automation_remote_cmd_t cmd = {
+        .target_node = gw_node_id,
+        .requester_node = self_node,
+        .output_id = global_input_id,
+        .value = ev->data,
+    };
+    xQueueSend(automation_remote_queue, &cmd, 0);
+}
+
+static void automation_sync_gateway_output(const endap_event_t *ev, uint32_t self_node)
+{
+    // Gateway: Se for mudança em saída global remota (ex: 108..115 para controlador 1)
+    if (ev->source < 108 || ev->source >= 200)
+        return;
+
+    uint8_t target_ctrl_idx = (ev->source - 100) / 8;
+    uint32_t target_node_id = node_registry_find_id_by_controller_index(target_ctrl_idx);
+
+    if (target_node_id == 0U)
+    {
+        target_node_id = node_registry_find_first_remote_node(self_node);
+    }
+
+    if (target_node_id == 0U || target_node_id == self_node || !automation_remote_queue)
+        return;
+
+    automation_remote_cmd_t cmd = {
+        .target_node = target_node_id,
+        .requester_node = self_node,
+        .output_id = ev->source,
+        .value = ev->data,
+    };
+    xQueueSend(automation_remote_queue, &cmd, 0);
+}
+
 static void automation_event_handler(const endap_event_t *ev)
 {
     uint32_t trigger_ms;
@@ -1025,61 +1079,11 @@ static void automation_event_handler(const endap_event_t *ev)
 
     if (!is_gateway)
     {
-        // 2º Controlador ou superior (Field Node): Se for mudança em entrada local (IDs locais de 10 a 25)
-        if (ev->source >= 10 && ev->source <= 25)
-        {
-            uint8_t my_ctrl_idx = node_registry_get_controller_index(metrics.self_node);
-            if (my_ctrl_idx == 0)
-            {
-                my_ctrl_idx = 1; // Default para primeiro nó remoto se não definido
-            }
-
-            uint16_t local_offset = (ev->source >= 22) ? (ev->source - 22) : (ev->source - 10);
-            uint16_t global_input_id = 10 + (my_ctrl_idx * 8) + (local_offset % 8);
-            uint32_t gw_node_id = node_registry_find_id_by_controller_index(0);
-
-            if (gw_node_id != metrics.self_node)
-            {
-                automation_remote_cmd_t cmd = {
-                    .target_node = gw_node_id,
-                    .requester_node = metrics.self_node,
-                    .output_id = global_input_id,
-                    .value = ev->data,
-                };
-                if (automation_remote_queue)
-                {
-                    xQueueSend(automation_remote_queue, &cmd, 0);
-                }
-            }
-        }
+        automation_sync_field_node_input(ev, metrics.self_node);
     }
     else
     {
-        // Gateway: Se for mudança em saída global remota (ex: 108..115 para controlador 1)
-        if (ev->source >= 108 && ev->source < 200)
-        {
-            uint8_t target_ctrl_idx = (ev->source - 100) / 8;
-            uint32_t target_node_id = node_registry_find_id_by_controller_index(target_ctrl_idx);
-
-            if (target_node_id == 0U)
-            {
-                target_node_id = node_registry_find_first_remote_node(metrics.self_node);
-            }
-
-            if (target_node_id != 0U && target_node_id != metrics.self_node)
-            {
-                automation_remote_cmd_t cmd = {
-                    .target_node = target_node_id,
-                    .requester_node = metrics.self_node,
-                    .output_id = ev->source,
-                    .value = ev->data,
-                };
-                if (automation_remote_queue)
-                {
-                    xQueueSend(automation_remote_queue, &cmd, 0);
-                }
-            }
-        }
+        automation_sync_gateway_output(ev, metrics.self_node);
     }
 
     trigger_ms = automation_now_ms();
