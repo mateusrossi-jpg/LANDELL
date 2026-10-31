@@ -146,15 +146,22 @@ class IndustrialRibbonBar extends StatelessWidget {
 
             if (onToggleTerminal != null && box.maxWidth > 390) ...[
               const SizedBox(width: 4),
-              InkWell(
-                borderRadius: BorderRadius.circular(4),
-                onTap: onToggleTerminal,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: Icon(
-                    Icons.terminal_rounded,
-                    size: 17,
-                    color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+              Tooltip(
+                message: 'Terminal de Diagnóstico',
+                child: Semantics(
+                  button: true,
+                  label: 'Terminal de Diagnóstico',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: onToggleTerminal,
+                    child: Padding(
+                      padding: const EdgeInsets.all(5),
+                      child: Icon(
+                        Icons.terminal_rounded,
+                        size: 17,
+                        color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -163,33 +170,40 @@ class IndustrialRibbonBar extends StatelessWidget {
             const SizedBox(width: 6),
 
             // Botão Failsafe / Parada Compacto e Elegante
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTriggerFailsafe,
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B181E),
+            Tooltip(
+              message: 'Parada de Emergência (Failsafe)',
+              child: Semantics(
+                button: true,
+                label: 'Parada de Emergência (Failsafe)',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onTriggerFailsafe,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: const Color(0xFF6B2129), width: 1),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.stop_circle_outlined, size: 12, color: Color(0xFFEF4444)),
-                      SizedBox(width: 3),
-                      Text(
-                        'STOP',
-                        style: TextStyle(
-                          color: Color(0xFFFCA5A5),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 9,
-                          letterSpacing: 0.5,
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B181E),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFF6B2129), width: 1),
                       ),
-                    ],
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.stop_circle_outlined, size: 12, color: Color(0xFFEF4444)),
+                          SizedBox(width: 3),
+                          Text(
+                            'STOP',
+                            style: TextStyle(
+                              color: Color(0xFFFCA5A5),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 9,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -351,33 +365,40 @@ class IndustrialRibbonBar extends StatelessWidget {
                   onPressed: onFetch,
                 ),
                 const SizedBox(width: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onTriggerFailsafe,
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3B181E),
+                Tooltip(
+                  message: 'Parada de Emergência (Failsafe)',
+                  child: Semantics(
+                    button: true,
+                    label: 'Parada de Emergência (Failsafe)',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onTriggerFailsafe,
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFF6B2129), width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.stop_circle_outlined, size: 13, color: Color(0xFFEF4444)),
-                          SizedBox(width: 4),
-                          Text(
-                            'FAILSAFE',
-                            style: TextStyle(
-                              color: Color(0xFFFCA5A5),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10,
-                              letterSpacing: 0.5,
-                            ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B181E),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFF6B2129), width: 1),
                           ),
-                        ],
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stop_circle_outlined, size: 13, color: Color(0xFFEF4444)),
+                              SizedBox(width: 4),
+                              Text(
+                                'FAILSAFE',
+                                style: TextStyle(
+                                  color: Color(0xFFFCA5A5),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
