@@ -5,6 +5,7 @@ import '../../../models/ladder_node.dart';
 import '../../../models/enums.dart';
 import '../../../runtime/ladder_runtime.dart';
 import '../../../runtime/node_runtime_state.dart';
+import '../../../runtime/evaluators/pid_evaluator.dart';
 import '../../../runtime/evaluators/timer_evaluator.dart';
 
 class LadderNodeVisual extends StatelessWidget {
@@ -668,8 +669,7 @@ class LadderNodeVisual extends StatelessWidget {
             pVal?.stringValue ??
             '';
         final upperTag = tagText.trim().toUpperCase();
-        final isPctTag = upperTag == 'UMID_SOLO' ||
-            upperTag == 'AI0.0' ||
+        final isPctTag = upperTag == 'AI0.0' ||
             upperTag == 'AI0.1' ||
             upperTag == '%IW0.0' ||
             upperTag == '%IW0.1' ||
@@ -806,9 +806,15 @@ class LadderNodeVisual extends StatelessWidget {
         final int pvLive = runtime.tagStore.getReal(pvStr) != 0.0
             ? runtime.tagStore.getReal(pvStr).round()
             : runtime.tagStore.getInt(pvStr);
-        final int mvLive = runtime.tagStore.getReal(mvStr) != 0.0
-            ? runtime.tagStore.getReal(mvStr).round()
-            : runtime.tagStore.getInt(mvStr);
+        final bool mvIsDigital = PidEvaluator.isDigitalOutputTag(mvStr);
+        final int mvLive = mvIsDigital
+            ? (runtime.tagStore.getBool(mvStr) ? 100 : 0)
+            : (runtime.tagStore.getReal(mvStr) != 0.0
+                ? runtime.tagStore.getReal(mvStr).round()
+                : runtime.tagStore.getInt(mvStr));
+        final String mvLiveText = mvIsDigital ? (mvLive > 0 ? 'ON' : 'OFF') : '$mvLive%';
+        final bool pidManual = runtime.nodeStates[node.id]?.runtimeFlags['MAN'] == true;
+        final String pidMode = '${(node.config.pidDirect ?? false) ? 'DIR' : 'REV'}${pidManual ? ' MAN' : ''}';
         final String spDisplay = double.tryParse(spRaw) != null
             ? '$spRaw%'
             : '$spRaw(${runtime.tagStore.getReal(spRaw) != 0.0 ? runtime.tagStore.getReal(spRaw).round() : runtime.tagStore.getInt(spRaw)}%)';
@@ -868,7 +874,7 @@ class LadderNodeVisual extends StatelessWidget {
                         color: const Color(0xFF1E293B),
                         alignment: Alignment.center,
                         child: Text(
-                          'PID • SAÍDA:$mvLive%',
+                          'PID $pidMode • MV:$mvLiveText',
                           style: const TextStyle(
                             fontSize: 9.0,
                             fontWeight: FontWeight.bold,
@@ -889,14 +895,15 @@ class LadderNodeVisual extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text('PV:$pvLive%', style: const TextStyle(fontSize: 8.0, fontWeight: FontWeight.bold, color: Color(0xFF1E293B), fontFamily: 'monospace')),
-                                  Text('META:$spDisplay', style: TextStyle(fontSize: 8.0, fontWeight: FontWeight.bold, color: node.isEnergized ? const Color(0xFF047857) : const Color(0xFF1E293B), fontFamily: 'monospace')),
+                                  const SizedBox(width: 4),
+                                  Flexible(child: Text('SP:$spDisplay', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: TextStyle(fontSize: 8.0, fontWeight: FontWeight.bold, color: node.isEnergized ? const Color(0xFF047857) : const Color(0xFF1E293B), fontFamily: 'monospace'))),
                                 ],
                               ),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('EN', style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: Color(0xFF334155), fontFamily: 'monospace')),
-                                  Flexible(child: Text('MV:$mvStr($mvLive%)', style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: node.isEnergized ? const Color(0xFF047857) : const Color(0xFF334155), fontFamily: 'monospace'), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
+                                  Flexible(child: Text('MV:$mvStr($mvLiveText)', style: TextStyle(fontSize: 7.5, fontWeight: FontWeight.bold, color: node.isEnergized ? const Color(0xFF047857) : const Color(0xFF334155), fontFamily: 'monospace'), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
                                 ],
                               ),
                             ],

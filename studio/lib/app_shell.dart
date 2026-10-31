@@ -34,7 +34,7 @@ class _AppShellState extends State<AppShell> {
           .then((loaded) {
         if (mounted && loaded != null) {
           // Se for versão anterior da bancada ou demo legado, carrega a lógica limpa com PID em AI0.0
-          final isCleanCurrent = loaded.id == 'proj_bancada_tcc_v4_pid_clean';
+          final isCleanCurrent = loaded.id == 'proj_bancada_tcc_v5_pid_industrial';
           final finalProj = isCleanCurrent ? loaded : DemoProject.createCleanTccProject();
           if (!isCleanCurrent) {
             saveCurrentLadder(finalProj);

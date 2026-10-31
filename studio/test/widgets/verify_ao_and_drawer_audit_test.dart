@@ -37,12 +37,12 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // 1. Scroll e verifica se a seção "SAÍDAS ANALÓGICAS" e os canais AO0.0 e AO0.1 aparecem
-    await tester.drag(find.byType(ListView).first, const Offset(0, -600));
+    // 1. Scroll e verifica se a seção de Saída Analógica e os canais AO0.0 e AO0.1 aparecem
+    await tester.drag(find.byType(ListView).first, const Offset(0, -1800));
     await tester.pumpAndSettle();
-    expect(find.textContaining('SAÍDAS ANALÓGICAS'), findsOneWidget);
-    expect(find.text('AO0.0'), findsWidgets);
-    expect(find.text('AO0.1'), findsWidgets);
+    expect(find.textContaining('Saída Analógica'), findsWidgets);
+    expect(find.textContaining('AO0.0'), findsWidgets);
+    expect(find.textContaining('AO0.1'), findsWidgets);
 
     // 2. Abre o menu Hamburguer (Drawer)
     final menuBtn = find.byTooltip('Menu');

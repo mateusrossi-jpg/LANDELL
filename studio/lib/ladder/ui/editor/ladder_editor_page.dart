@@ -22,6 +22,7 @@ import 'widgets/variables_panel.dart';
 import 'widgets/rung_list.dart';
 import 'widgets/ladder_toolbox.dart';
 import 'widgets/industrial_tag_browser_dialog.dart';
+import 'widgets/pid_config_dialog.dart';
 import '../../../design_system/tokens.dart';
 import '../../../../core/services/network_manager.dart';
 import '../../../core/services/hardware_force_bridge.dart';
@@ -145,7 +146,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     );
     TelemetrySyncService.instance.addListener(_onTelemetryUpdated);
     if (_mode == EditorMode.simulateHardware && !TelemetrySyncService.instance.isPolling) {
-      TelemetrySyncService.instance.start(interval: const Duration(milliseconds: 100));
+      TelemetrySyncService.instance.start();
     }
     if (widget.initialProject != null) {
       _project = widget.initialProject!;
@@ -189,11 +190,12 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
           _startTimedSimulation();
         }
         if (_mode == EditorMode.simulateHardware && !TelemetrySyncService.instance.isPolling) {
-          TelemetrySyncService.instance.start(interval: const Duration(milliseconds: 100));
+          TelemetrySyncService.instance.start();
         }
       } else if (!widget.isActive) {
         _simulationTimer?.cancel();
         _simulationTimer = null;
+        TelemetrySyncService.instance.stop();
       }
     }
   }
@@ -203,50 +205,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     _searchController.dispose();
     _simulationTimer?.cancel();
     TelemetrySyncService.instance.removeListener(_onTelemetryUpdated);
-    if (!widget.embedded) {
-      TelemetrySyncService.instance.stop();
-    }
+    TelemetrySyncService.instance.stop();
     super.dispose();
   }
 
   Future<void> _loadProject() async {
     final loaded = await loadCurrentLadder();
     final proj = loaded ?? LadderProject.blank();
-    // Garante que AI0.0 e AI0.1 operem diretamente em 0-100% e migra eventual UMID_SOLO legado para AI0.0
-    for (final aiKey in ['AI0.0', 'AI0.1']) {
-      final existingAi = proj.tags[aiKey];
-      if (existingAi != null && existingAi.unit == 'V') {
-        proj.tags[aiKey] = Tag(
-          id: aiKey,
-          name: aiKey,
-          type: TagType.real,
-          address: aiKey,
-          description: 'Entrada Analógica Direta $aiKey — Sensor Capacitivo 0-100%',
-          unit: '%',
-          rawMin: 1500,
-          rawMax: 3800,
-          scaledMin: 100,
-          scaledMax: 0,
-          initialValue: TagValue.real(0.0),
-        );
-      }
-    }
-    proj.tags.remove('UMID_SOLO');
-    for (final net in proj.networks) {
-      for (final n in net.nodes) {
-        if (n.config.tagId == 'UMID_SOLO') {
-          n.config = NodeConfig(
-            tagId: 'AI0.0',
-            presetValue: n.config.presetValue,
-            setpointTagId: n.config.setpointTagId,
-            outputTagId: n.config.outputTagId,
-            kp: n.config.kp,
-            ki: n.config.ki,
-            kd: n.config.kd,
-          );
-        }
-      }
-    }
     if (mounted) {
       setState(() {
         _project = proj;
@@ -841,6 +806,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       );
     }
 
+    if (type == NodeType.pid) {
+      return LadderNode(id: 'node_$ts', type: type, config: NodeConfig.pid());
+    }
+
     return LadderNode(
       id: 'node_$ts',
       type: type,
@@ -853,13 +822,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 : (isCompare
                     ? TagValue.integer(50)
                     : (isMath ? TagValue.integer(1) : null))),
-        setpointTagId: type == NodeType.pid ? '50' : null,
-        outputTagId: type == NodeType.pid
-            ? 'MV_PID'
-            : (isMath ? 'M0.6' : null),
-        kp: type == NodeType.pid ? 2.5 : null,
-        ki: type == NodeType.pid ? 0.5 : null,
-        kd: type == NodeType.pid ? 0.1 : null,
+        outputTagId: isMath ? 'M0.6' : null,
       ),
     );
   }
@@ -965,8 +928,29 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     );
   }
 
+  Future<void> _showPidDialog(int rungIndex, int nodeIndex) async {
+    final node = _project.networks[rungIndex].nodes[nodeIndex];
+    final updated = await PidConfigDialog.show(
+      context,
+      initial: node.config,
+      tags: _project.tags,
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      ensurePidTags(_project.tags, updated);
+      node.config = updated;
+      _selectedRungIndex = null;
+      _selectedNodeIndex = null;
+      _saveProject();
+    });
+  }
+
   void _showEditNodeBottomSheet(int rungIndex, int nodeIndex) {
     final node = _project.networks[rungIndex].nodes[nodeIndex];
+    if (node.type == NodeType.pid) {
+      _showPidDialog(rungIndex, nodeIndex);
+      return;
+    }
     final initialTag = (node.config.tagId != null && node.config.tagId!.trim().isNotEmpty)
         ? node.config.tagId!
         : (node.type == NodeType.pid ? 'AI0.0' : '');
@@ -989,13 +973,6 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     final presetController = TextEditingController(text: initialPresetText);
     final tagBController = TextEditingController();
     final mathDestController = TextEditingController(text: node.config.outputTagId ?? 'M0.6');
-
-    // Controllers PID
-    final spController = TextEditingController(text: node.config.setpointTagId ?? '50');
-    final mvController = TextEditingController(text: node.config.outputTagId ?? 'MV_PID');
-    final kpController = TextEditingController(text: (node.config.kp ?? 2.5).toString());
-    final kiController = TextEditingController(text: (node.config.ki ?? 0.5).toString());
-    final kdController = TextEditingController(text: (node.config.kd ?? 0.1).toString());
 
     if (node.type == NodeType.compareEqual ||
         node.type == NodeType.compareGreater ||
@@ -1193,313 +1170,6 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                           ),
                         ),
                       ],
-                      if (node.type == NodeType.pid) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F291E),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.45)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                '💡 Escolha o Modo de Atuação do PID (1 Clique):',
-                                style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  OutlinedButton.icon(
-                                    icon: const Icon(Icons.bolt, size: 15, color: Color(0xFF34D399)),
-                                    label: const Text('Modo 1: Saída Digital Relé (Q0.x ON/OFF)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFFA7F3D0),
-                                      backgroundColor: mvController.text.trim().toUpperCase() == 'MV_PID'
-                                          ? const Color(0xFF10B981).withValues(alpha: 0.22)
-                                          : const Color(0xFF151D28),
-                                      side: BorderSide(
-                                        color: mvController.text.trim().toUpperCase() == 'MV_PID'
-                                            ? const Color(0xFF10B981)
-                                            : const Color(0xFF334155),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        tagController.text = 'AI0.0';
-                                        mvController.text = 'MV_PID';
-                                        if (spController.text.trim().isEmpty) spController.text = '50';
-                                      });
-                                    },
-                                  ),
-                                  OutlinedButton.icon(
-                                    icon: const Icon(Icons.insights, size: 15, color: Color(0xFF38BDF8)),
-                                    label: const Text('Modo 2: Saída Analógica Proporcional AO0.0 (0-100% / 0-3,3V GPIO 25)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFFBAE6FD),
-                                      backgroundColor: mvController.text.trim().toUpperCase().startsWith('AO0')
-                                          ? const Color(0xFF38BDF8).withValues(alpha: 0.22)
-                                          : const Color(0xFF151D28),
-                                      side: BorderSide(
-                                        color: mvController.text.trim().toUpperCase().startsWith('AO0')
-                                            ? const Color(0xFF38BDF8)
-                                            : const Color(0xFF334155),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        tagController.text = 'AI0.0';
-                                        mvController.text = 'AO0.0';
-                                        if (spController.text.trim().isEmpty) spController.text = '50';
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  const Text('Entrada Direta (PV):', style: TextStyle(color: Color(0xFFA7F3D0), fontSize: 10.5, fontWeight: FontWeight.bold)),
-                                  for (final pvOpt in [
-                                    {'id': 'AI0.0', 'label': 'AI0.0 (Entrada Analógica 0 • 0-100%)'},
-                                    {'id': 'AI0.1', 'label': 'AI0.1 (Entrada Analógica 1 • 0-100%)'},
-                                  ])
-                                    InkWell(
-                                      onTap: () => setModalState(() => tagController.text = pvOpt['id']!),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: tagController.text.trim().toUpperCase() == pvOpt['id']
-                                              ? const Color(0xFF10B981).withValues(alpha: 0.25)
-                                              : const Color(0xFF151D28),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(
-                                            color: tagController.text.trim().toUpperCase() == pvOpt['id']
-                                                ? const Color(0xFF10B981)
-                                                : const Color(0xFF334155),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          pvOpt['label']!,
-                                          style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 10.0, fontWeight: FontWeight.bold, fontFamily: 'JetBrains Mono'),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                '• No Modo Digital (Relé): coloque uma Bobina (ex: Q0.1) à direita do PID na mesma linha. Quando o sensor estiver SECO (< Meta SP%), MV fica > 20% e liga o relé; na ÁGUA (>= Meta SP%), MV vai a 0% e desliga na hora.\n'
-                                '• No Modo Analógico Proporcional (AO0.0 = GPIO 25 ou AO0.1 = GPIO 26): o ESP32 regula continuamente de 0% a 100% (0,00V a 3,30V reais no DAC) proporcional ao erro (SP% - PV%)!',
-                                style: TextStyle(color: Color(0xFFA7F3D0), fontSize: 10.8, height: 1.35),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF151D28),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF334155)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Row(
-                                children: [
-                                  Icon(Icons.tune, size: 16, color: Color(0xFF38BDF8)),
-                                  SizedBox(width: 6),
-                                  Text('Configurações da Malha PID (Todos os valores em %)', style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold, fontSize: 13)),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              // Setpoint SP com Seletor de Tag e sufixo %
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: spController,
-                                      style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: FontWeight.bold),
-                                      decoration: const InputDecoration(
-                                        labelText: '2. Meta Desejada — Setpoint SP em % (0 a 100%)',
-                                        suffixText: '%',
-                                        suffixStyle: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14),
-                                        labelStyle: TextStyle(color: Color(0xFF8C98A8), fontSize: 11),
-                                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
-                                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  IconButton(
-                                    tooltip: 'Navegar tags para Setpoint (SP)',
-                                    icon: const Icon(Icons.table_chart_outlined, size: 18, color: Color(0xFF38BDF8)),
-                                    onPressed: () async {
-                                      final selected = await IndustrialTagBrowserDialog.show(
-                                        context,
-                                        tags: _project.tags,
-                                        initialSelectedTagId: spController.text,
-                                        title: 'Selecione Tag para Setpoint (SP)',
-                                      );
-                                      if (selected != null) {
-                                        setModalState(() => spController.text = selected);
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Atalhos rápidos de porcentagem para SP
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  const Text('Meta rápida:', style: TextStyle(color: Color(0xFF8C98A8), fontSize: 10.5)),
-                                  for (final pct in ['30', '40', '50', '60', '70', '80'])
-                                    InkWell(
-                                      onTap: () => setModalState(() => spController.text = pct),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: spController.text.replaceAll('%', '').trim() == pct
-                                              ? const Color(0xFF10B981).withValues(alpha: 0.25)
-                                              : const Color(0xFF1E293B),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(
-                                            color: spController.text.replaceAll('%', '').trim() == pct
-                                                ? const Color(0xFF10B981)
-                                                : const Color(0xFF334155),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '$pct%',
-                                          style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 10.5, fontWeight: FontWeight.bold, fontFamily: 'JetBrains Mono'),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              // Output MV com Seletor de Tag e sufixo %
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: mvController,
-                                      style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 12, fontWeight: FontWeight.bold),
-                                      decoration: const InputDecoration(
-                                        labelText: '3. Saída Proporcional — MV (0 a 100%: MV_PID, AO0.0 ou AO0.1)',
-                                        suffixText: '0..100%',
-                                        suffixStyle: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.bold, fontSize: 11),
-                                        labelStyle: TextStyle(color: Color(0xFF8C98A8), fontSize: 11),
-                                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
-                                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  IconButton(
-                                    tooltip: 'Navegar tags para Saída de Controle (MV)',
-                                    icon: const Icon(Icons.table_chart_outlined, size: 18, color: Color(0xFF38BDF8)),
-                                    onPressed: () async {
-                                      final selected = await IndustrialTagBrowserDialog.show(
-                                        context,
-                                        tags: _project.tags,
-                                        initialSelectedTagId: mvController.text,
-                                        title: 'Selecione Tag para Saída de Controle (MV)',
-                                      );
-                                      if (selected != null) {
-                                        setModalState(() => mvController.text = selected);
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  const Text('Saída MV:', style: TextStyle(color: Color(0xFF8C98A8), fontSize: 10.5)),
-                                  for (final mvOpt in [
-                                    {'id': 'MV_PID', 'label': 'MV_PID (Memória % + Pino ENO p/ Relé)'},
-                                    {'id': 'AO0.0', 'label': 'AO0.0 (GPIO 25 DAC 0-100% / 0-3,3V)'},
-                                    {'id': 'AO0.1', 'label': 'AO0.1 (GPIO 26 DAC 0-100% / 0-3,3V)'},
-                                  ])
-                                    InkWell(
-                                      onTap: () => setModalState(() => mvController.text = mvOpt['id']!),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: mvController.text.trim().toUpperCase() == mvOpt['id']
-                                              ? const Color(0xFF38BDF8).withValues(alpha: 0.25)
-                                              : const Color(0xFF1E293B),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(
-                                            color: mvController.text.trim().toUpperCase() == mvOpt['id']
-                                                ? const Color(0xFF38BDF8)
-                                                : const Color(0xFF334155),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          mvOpt['label']!,
-                                          style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 10.0, fontWeight: FontWeight.bold, fontFamily: 'JetBrains Mono'),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: kpController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono'),
-                                decoration: const InputDecoration(labelText: 'Kp (Ganho P)', labelStyle: TextStyle(color: Color(0xFF8C98A8), fontSize: 11)),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: kiController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono'),
-                                decoration: const InputDecoration(labelText: 'Ki (Ganho I)', labelStyle: TextStyle(color: Color(0xFF8C98A8), fontSize: 11)),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: kdController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono'),
-                                decoration: const InputDecoration(labelText: 'Kd (Ganho D)', labelStyle: TextStyle(color: Color(0xFF8C98A8), fontSize: 11)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                       const SizedBox(height: 24),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -1510,33 +1180,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                         ),
                         onPressed: () {
                           setState(() {
-                            String rawTagId = tagController.text.trim().toUpperCase();
-                            String rawMvId = mvController.text.trim().toUpperCase();
-                            String rawSpId = spController.text.replaceAll('%', '').trim().toUpperCase();
-
-                            // Se o usuário acidentalmente colocou Q0.x em PV e o sensor AI0.x/UMID_SOLO em MV, corrige automaticamente!
-                            if (node.type == NodeType.pid) {
-                              if ((rawTagId.startsWith('Q') || rawTagId.startsWith('Y')) &&
-                                  (rawMvId.startsWith('AI') || rawMvId.startsWith('%IW') || rawMvId == 'UMID_SOLO')) {
-                                rawTagId = rawMvId;
-                                rawMvId = 'MV_PID';
-                              } else if (rawTagId.isEmpty) {
-                                rawTagId = 'AI0.0';
-                              }
-                              if (rawMvId.isEmpty || rawMvId.startsWith('AI') || rawMvId == 'UMID_SOLO') {
-                                rawMvId = 'MV_PID';
-                              }
-                              if (rawSpId.isEmpty) {
-                                rawSpId = '50';
-                              }
-                            }
-
+                            final String rawTagId = tagController.text.trim().toUpperCase();
                             final tag = rawTagId.isNotEmpty ? rawTagId : null;
 
                             if (tag != null && !_project.tags.containsKey(tag)) {
                               final TagType tType;
                               final TagValue initVal;
-                              if (node.type == NodeType.pid || isMath) {
+                              if (isMath) {
                                 tType = TagType.real;
                                 initVal = TagValue.real(0.0);
                               } else if (node.type == NodeType.timerTON || node.type == NodeType.timerTOF) {
@@ -1592,13 +1242,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                             node.config = NodeConfig(
                               tagId: tag,
                               presetValue: presetVal,
-                              setpointTagId: node.type == NodeType.pid ? rawSpId : null,
-                              outputTagId: node.type == NodeType.pid
-                                  ? rawMvId
-                                  : (isMath ? mathDestController.text.trim().toUpperCase() : null),
-                              kp: node.type == NodeType.pid ? (double.tryParse(kpController.text) ?? 2.5) : null,
-                              ki: node.type == NodeType.pid ? (double.tryParse(kiController.text) ?? 0.5) : null,
-                              kd: node.type == NodeType.pid ? (double.tryParse(kdController.text) ?? 0.1) : null,
+                              outputTagId: isMath ? mathDestController.text.trim().toUpperCase() : null,
                             );
                             _selectedRungIndex = null;
                             _selectedNodeIndex = null;

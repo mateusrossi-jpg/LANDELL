@@ -43,13 +43,13 @@ void main() {
     }
 
     // Valida que os widgets do sensor de solo estão presentes na tela
-    expect(find.text('UMIDADE DO SOLO (AO - GPIO 34)'), findsOneWidget);
+    expect(find.text('UMIDADE DO SOLO (AI0.0 - GPIO 34/35)'), findsOneWidget);
     expect(find.text('CHAVE DIGITAL DO SOLO (DO - GPIO 17)'), findsOneWidget);
 
     // Simula telemetria real do ESP32 (44.6% de umidade)
     TelemetrySyncService.instance.processPveJson({
       "variables": [
-        {"id": 0, "name": "UMID_SOLO", "raw": 1827, "scaled": 446, "decimals": 1, "unit": "%"}
+        {"id": 0, "name": "AIN1", "raw": 1827, "scaled": 446, "decimals": 1, "unit": "%"}
       ]
     });
 
@@ -72,11 +72,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.textContaining('Controle de Irrigação'), findsOneWidget);
-    expect(find.text('UMID_SOLO'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('AI0.0'), findsAtLeastNWidgets(1));
 
     print("VALIDATION_SOIL_LADDER_SUCCESS");
 
-    // Testa e captura a Aba 2 (GPIO & TAGS com UMID_SOLO no GPIO 34 e I0.1 no GPIO 17)
+    // Testa e captura a Aba 2 (GPIO & TAGS com AI0.0 no GPIO 34 e I0.1 no GPIO 17)
     final menuFinder = find.byWidgetPredicate(
       (w) => w is Icon && (w.icon == Icons.menu || w.icon == Icons.menu_rounded),
     );
@@ -89,7 +89,7 @@ void main() {
     await tester.tap(gpioTile);
     await tester.pumpAndSettle();
 
-    expect(find.text('UMID_SOLO'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('AI0.0'), findsAtLeastNWidgets(1));
     expect(find.textContaining('GPIO 34'), findsAtLeastNWidgets(1));
 
     print("VALIDATION_SOIL_TAGS_SUCCESS");

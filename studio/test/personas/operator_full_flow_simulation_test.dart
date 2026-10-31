@@ -19,8 +19,8 @@ void main() {
     final demoProject = DemoProject.createDemoProject();
 
     // Injeta calibração universal de +10.0% de offset
-    final soilTag = demoProject.tags['UMID_SOLO']!;
-    demoProject.tags['UMID_SOLO'] = Tag(
+    final soilTag = demoProject.tags['AI0.0']!;
+    demoProject.tags['AI0.0'] = Tag(
       id: soilTag.id,
       name: soilTag.name,
       type: soilTag.type,
@@ -55,13 +55,13 @@ void main() {
     // Injeta telemetria crua de 44.6% vinda do ESP32 (scaled 446 com decimals=1)
     TelemetrySyncService.instance.processPveJson({
       "variables": [
-        {"name": "UMID_SOLO", "raw": 1827, "scaled": 446, "decimals": 1, "unit": "%"}
+        {"name": "AIN1", "raw": 1827, "scaled": 446, "decimals": 1, "unit": "%"}
       ]
     });
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('UMIDADE DO SOLO (AO - GPIO 34)'), findsOneWidget);
+    expect(find.text('UMIDADE DO SOLO (AI0.0 - GPIO 34/35)'), findsOneWidget);
     print('FLUXO 1 [OK]: Home Dashboard exibe com sucesso sensor de solo!');
 
     // 2. Valida Tab 1: Lógica Ladder IEC
@@ -86,7 +86,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Controle de Irrigação'), findsOneWidget);
-    expect(find.text('UMID_SOLO'), findsWidgets);
+    expect(find.textContaining('AI0.0'), findsWidgets);
     print('FLUXO 2 [OK]: Lógica Ladder IEC auditada: Rung de Controle de Irrigação ativa e usando Tag calibrada!');
 
     print('VALIDAÇÃO VIRTUAL DO OPERADOR: 100% SUCESSO');

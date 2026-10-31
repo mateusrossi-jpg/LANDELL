@@ -38,5 +38,6 @@ class Opcodes {
   static const int DIV = 0x53;
 
   // Controle de Processo
-  static const int PID = 0x60;
+  static const int PID = 0x60; // legado (12 bytes de operando)
+  static const int PIDX = 0x61; // PID industrial (23 bytes de operando)
 }

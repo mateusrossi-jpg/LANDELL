@@ -157,6 +157,8 @@ class NetworkManager extends ChangeNotifier {
   http.Client get _client => _httpClient ??= AuthenticatedHttpClient();
   Timer? _pollingTimer;
   int _heartbeatCount = 0;
+  int _consecutiveHeartbeatFailures = 0;
+  static const int _maxHeartbeatFailures = 2;
   static const int _rescanEveryNHeartbeats = 10;
 
   NetworkManager({http.Client? client, bool autoStartPeriodicCheck = false}) : _httpClient = client {
@@ -197,6 +199,7 @@ class NetworkManager extends ChangeNotifier {
       final pubResponse = await _client.get(pubStatusUri).timeout(const Duration(seconds: 2));
 
       if (pubResponse.statusCode == 200) {
+        _consecutiveHeartbeatFailures = 0;
         if (_connectionState != ConnectionState.hardwareOnline) {
           await _checkController();
           await _scanFieldNodes();
@@ -211,11 +214,17 @@ class NetworkManager extends ChangeNotifier {
         }
       } else {
         _heartbeatCount = 0;
-        await _handleHeartbeatFailure();
+        _consecutiveHeartbeatFailures++;
+        if (_consecutiveHeartbeatFailures >= _maxHeartbeatFailures) {
+          await _handleHeartbeatFailure();
+        }
       }
     } catch (_) {
       _heartbeatCount = 0;
-      await _handleHeartbeatFailure();
+      _consecutiveHeartbeatFailures++;
+      if (_consecutiveHeartbeatFailures >= _maxHeartbeatFailures) {
+        await _handleHeartbeatFailure();
+      }
     }
   }
 

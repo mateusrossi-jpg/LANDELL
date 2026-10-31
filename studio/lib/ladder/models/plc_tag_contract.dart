@@ -243,7 +243,6 @@ class PlcTagContract {
     'Q0.4': 23,
     'Q0.5': 32,
     'Q0.6': 14,
-    'Q0.7': 2,
     // Entradas Analógicas (AI)
     'AI0.0': 34,
     'AI0.1': 35,

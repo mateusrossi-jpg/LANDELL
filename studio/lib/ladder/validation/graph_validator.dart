@@ -2,6 +2,7 @@ import '../models/ladder_project.dart';
 import '../models/ladder_network.dart';
 import '../models/ladder_node.dart';
 import '../models/enums.dart';
+import '../runtime/evaluators/pid_evaluator.dart';
 import 'graph_validation_error.dart';
 import 'graph_validation_result.dart';
 import 'executable_graph.dart';
@@ -11,7 +12,7 @@ class GraphValidator {
     List<GraphValidationError> errors = [];
     
     for (var network in project.networks) {
-      _validateNetwork(network, errors);
+      _validateNetwork(project, network, errors);
     }
     
     if (errors.isNotEmpty) {
@@ -41,7 +42,7 @@ class GraphValidator {
     return result;
   }
 
-  void _validateNetwork(LadderNetwork network, List<GraphValidationError> errors) {
+  void _validateNetwork(LadderProject project, LadderNetwork network, List<GraphValidationError> errors) {
     if (network.nodes.isEmpty) {
       errors.add(GraphValidationError(
         type: GraphErrorType.invalidConnection,
@@ -128,6 +129,12 @@ class GraphValidator {
       }
     }
 
+    for (var node in allNodes) {
+      if (node.type == NodeType.pid) {
+        _validatePid(project, network, node, errors);
+      }
+    }
+
     final nodeIds = allNodes.map((n) => n.id).toSet();
     
     // 1. Deteccao de conexoes invalidas ou nos faltantes
@@ -192,6 +199,92 @@ class GraphValidator {
         networkId: network.id,
         affectedNodeIds: cycleNodes,
       ));
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // PID industrial: erros explícitos (nada de "correção silenciosa" de PV/MV).
+  // ---------------------------------------------------------------------------
+  static bool _isPhysicalInput(String id, LadderProject project) {
+    final addr = (project.tags[id]?.address ?? id).trim().toUpperCase();
+    return addr.startsWith('AI') || addr.startsWith('%IW') || RegExp(r'^(I|X|%IX)\d').hasMatch(addr);
+  }
+
+  void _validatePid(
+      LadderProject project, LadderNetwork network, LadderNode node, List<GraphValidationError> errors) {
+    final cfg = node.config;
+
+    void err(String msg) {
+      errors.add(GraphValidationError(
+        type: GraphErrorType.unconfiguredNode,
+        message: 'PID: $msg',
+        networkId: network.id,
+        affectedNodeIds: [node.id],
+      ));
+    }
+
+    final pv = (cfg.tagId ?? '').trim();
+    final mv = (cfg.outputTagId ?? '').trim();
+    final sp = (cfg.setpointTagId ?? '').replaceAll('%', '').trim();
+
+    if (pv.isEmpty) {
+      err('informe a Variável de Processo (PV), ex.: AI0.0.');
+    } else {
+      final pvTag = project.tags[pv];
+      if (pvTag != null && pvTag.type == TagType.bool) {
+        err('a PV "$pv" é digital. Use uma entrada analógica (AI0.x) ou memória numérica.');
+      }
+      if (RegExp(r'^[QY]\d').hasMatch(pv.toUpperCase())) {
+        err('a PV não pode ser uma saída ($pv). Use uma entrada analógica (AI0.x).');
+      }
+    }
+
+    if (mv.isEmpty) {
+      err('informe a Saída de Controle (MV): MV_PID, AO0.0, AO0.1 ou uma saída digital Q0.x.');
+    } else if (_isPhysicalInput(mv, project)) {
+      err('a MV "$mv" é uma entrada física e não pode ser escrita. Use MV_PID, AO0.x ou Q0.x.');
+    } else if (mv == pv) {
+      err('PV e MV não podem ser a mesma variável.');
+    }
+
+    if (sp.isEmpty) {
+      err('informe o Setpoint (valor em % ou tag).');
+    } else {
+      final lit = double.tryParse(sp);
+      if (lit != null) {
+        if (lit < 0 || lit > 100) err('Setpoint fora de 0..100 % ($sp).');
+      } else if (!project.tags.containsKey(sp)) {
+        err('Setpoint "$sp" não é número nem uma tag existente.');
+      }
+    }
+
+    for (final entry in {'Kp': cfg.kp, 'Ki': cfg.ki, 'Kd': cfg.kd}.entries) {
+      final v = entry.value;
+      if (v != null && (v < 0 || v > 655.35)) {
+        err('${entry.key} fora de 0..655,35.');
+      }
+    }
+
+    final params = PidEvaluator.paramsFromConfig(cfg);
+    if ((cfg.pidOutMin ?? 0) >= (cfg.pidOutMax ?? 100)) {
+      err('limite mínimo de saída deve ser menor que o máximo.');
+    } else if (!params.isValid) {
+      err('parâmetros industriais fora da faixa (limites 0..100 %, banda morta 0..25 %).');
+    }
+    if ((cfg.pidEnoHysteresis ?? 0) > (cfg.pidEnoThreshold ?? 0) && (cfg.pidEnoThreshold ?? 0) > 0) {
+      err('a histerese do ENO não pode exceder o limiar.');
+    }
+
+    final man = (cfg.pidManualTagId ?? '').trim();
+    if (man.isNotEmpty) {
+      if (!project.tags.containsKey(man)) {
+        err('a chave Auto/Manual "$man" não existe nas tags.');
+      }
+      final mo = (cfg.pidManualOut ?? '').replaceAll('%', '').trim();
+      final lit = double.tryParse(mo);
+      if (mo.isEmpty || (lit == null && !project.tags.containsKey(mo)) || (lit != null && (lit < 0 || lit > 100))) {
+        err('saída manual inválida (use 0..100 % ou uma tag).');
+      }
     }
   }
 }

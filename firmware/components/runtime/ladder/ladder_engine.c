@@ -1,4 +1,5 @@
 #include "ladder_engine.h"
+#include "ladder_pid.h"
 #include <string.h>
 #include <inttypes.h>
 #include "esp_log.h"
@@ -41,11 +42,13 @@ static bool s_has_program = false;
 #define OP_SUB            0x51
 #define OP_MUL            0x52
 #define OP_DIV            0x53
-#define OP_PID            0x60
+#define OP_PID            0x60 /* legado: 12 bytes de operando (sem recursos industriais) */
+#define OP_PIDX           0x61 /* PID industrial: 23 bytes de operando */
 
 #define MAX_TIMERS 16
 #define MAX_COUNTERS 16
-#define MAX_PIDS 4
+#define MAX_PIDS 8
+#define PIDX_OPERAND_LEN 23
 #define MAX_STACK 16
 
 typedef struct {
@@ -62,10 +65,8 @@ typedef struct {
 } counter_state_t;
 
 typedef struct {
-    uint16_t pv_tag_id;
-    int32_t last_error;
-    int32_t integral; // acumulador integral com escala x100
-    int32_t last_mv;  // última saída calculada MV (0..100%)
+    uint16_t key;                 // offset do opcode no bytecode (identifica o bloco; permite varios PIDs no mesmo PV)
+    ladder_pid_state_t st;
     int64_t last_time_ms;
 } pid_state_t;
 
@@ -76,19 +77,64 @@ static size_t s_counter_count = 0;
 static pid_state_t s_pids[MAX_PIDS];
 static size_t s_pid_count = 0;
 
-static pid_state_t* get_or_create_pid(uint16_t pv_tag_id) {
+static pid_state_t* get_or_create_pid(uint16_t key) {
     for (size_t i = 0; i < s_pid_count; i++) {
-        if (s_pids[i].pv_tag_id == pv_tag_id) return &s_pids[i];
+        if (s_pids[i].key == key) return &s_pids[i];
     }
     if (s_pid_count < MAX_PIDS) {
-        s_pids[s_pid_count].pv_tag_id = pv_tag_id;
-        s_pids[s_pid_count].last_error = 0;
-        s_pids[s_pid_count].integral = 0;
-        s_pids[s_pid_count].last_mv = 0;
-        s_pids[s_pid_count].last_time_ms = 0;
+        memset(&s_pids[s_pid_count], 0, sizeof(pid_state_t));
+        s_pids[s_pid_count].key = key;
         return &s_pids[s_pid_count++];
     }
     return NULL;
+}
+
+typedef struct {
+    uint16_t pv_tag_id;
+    uint16_t sp_tag_id;   // bit15 = constante literal (0..100 %)
+    uint16_t mv_tag_id;
+    uint16_t man_sel_tag; // bool: 1 = modo manual (0 = sem chave)
+    uint16_t man_out;     // bit15 = constante literal (0..100 %), senao tag
+    ladder_pid_params_t params;
+} pid_block_t;
+
+static uint16_t rd16(const uint8_t *b) { return (uint16_t)((b[0] << 8) | b[1]); }
+
+// Decodifica o operando de OP_PID (legado, 12 bytes) ou OP_PIDX (industrial, 23 bytes).
+static void pid_decode(uint8_t op, const uint8_t *b, pid_block_t *o)
+{
+    memset(o, 0, sizeof(*o));
+    o->pv_tag_id = rd16(b + 0);
+    o->sp_tag_id = rd16(b + 2);
+    o->mv_tag_id = rd16(b + 4);
+    o->params.kp_x100 = rd16(b + 6);
+    o->params.ki_x100 = rd16(b + 8);
+    o->params.kd_x100 = rd16(b + 10);
+    if (op == OP_PIDX) {
+        o->params.flags = b[12];
+        o->params.out_min = b[13];
+        o->params.out_max = b[14];
+        o->params.deadband_x10 = b[15];
+        o->params.eno_threshold = b[16];
+        o->params.eno_hysteresis = b[17];
+        o->params.safe_out = b[18];
+        o->man_sel_tag = rd16(b + 19);
+        o->man_out = rd16(b + 21);
+    } else {
+        // Legado: acao reversa, 0..100 %, ENO acima de 20 %
+        o->params.flags = 0;
+        o->params.out_min = 0;
+        o->params.out_max = 100;
+        o->params.eno_threshold = 20;
+    }
+}
+
+// Entradas fisicas (digitais 10..25 e analogicas escalonadas 72..79) nunca podem ser destino da MV.
+static bool pid_mv_is_writable(uint16_t id)
+{
+    if (id >= 10 && id <= 25) return false;
+    if (id >= 72 && id <= 79) return false;
+    return id != 0;
 }
 
 static timer_state_t* get_or_create_timer(uint16_t tag_id) {
@@ -225,6 +271,7 @@ esp_err_t ladder_engine_load_program(const uint8_t *buffer, size_t length)
     size_t pc = 5;
     size_t unique_timers = 0;
     size_t unique_counters = 0;
+    size_t unique_pids = 0;
     uint16_t timer_tags[MAX_TIMERS];
     uint16_t counter_tags[MAX_COUNTERS];
 
@@ -284,10 +331,24 @@ esp_err_t ladder_engine_load_program(const uint8_t *buffer, size_t length)
                 return ESP_ERR_INVALID_ARG;
             }
             pc += 7;
-        } else if (op == OP_PID) {
-            // pv(2) + sp(2) + mv(2) + kp(2) + ki(2) + kd(2) = 12 bytes
-            if (pc + 11 >= length) return ESP_ERR_INVALID_ARG;
-            pc += 12;
+        } else if (op == OP_PID || op == OP_PIDX) {
+            const size_t operand_len = (op == OP_PIDX) ? PIDX_OPERAND_LEN : 12;
+            if (pc + operand_len > length) return ESP_ERR_INVALID_ARG;
+            pid_block_t blk;
+            pid_decode(op, buffer + pc, &blk);
+            if (!ladder_pid_params_valid(&blk.params)) {
+                ESP_LOGE(TAG, "PID com parametros invalidos no offset %zu", pc - 1);
+                return ESP_ERR_INVALID_ARG;
+            }
+            if (!pid_mv_is_writable(blk.mv_tag_id)) {
+                ESP_LOGE(TAG, "PID: MV (tag %u) aponta para entrada fisica/invalida (offset %zu)", blk.mv_tag_id, pc - 1);
+                return ESP_ERR_INVALID_ARG;
+            }
+            if (++unique_pids > MAX_PIDS) {
+                ESP_LOGE(TAG, "Exceeded MAX_PIDS limit (%d)", MAX_PIDS);
+                return ESP_ERR_NO_MEM;
+            }
+            pc += operand_len;
         } else {
             ESP_LOGE(TAG, "Unknown Opcode 0x%02X at offset %zu", op, pc - 1);
             return ESP_ERR_INVALID_ARG;
@@ -412,141 +473,78 @@ void IRAM_ATTR ladder_engine_run(void)
             continue;
         }
 
-        if (opcode == OP_PID) {
-            if (pc + 11 >= s_bytecode_length) break;
-            uint16_t pv_tag_id = (s_bytecode[pc] << 8) | s_bytecode[pc + 1];
-            uint16_t sp_tag_id = (s_bytecode[pc + 2] << 8) | s_bytecode[pc + 3];
-            uint16_t mv_tag_id = (s_bytecode[pc + 4] << 8) | s_bytecode[pc + 5];
-            uint16_t kp_scaled = (s_bytecode[pc + 6] << 8) | s_bytecode[pc + 7];
-            uint16_t ki_scaled = (s_bytecode[pc + 8] << 8) | s_bytecode[pc + 9];
-            uint16_t kd_scaled = (s_bytecode[pc + 10] << 8) | s_bytecode[pc + 11];
-            pc += 12;
+        if (opcode == OP_PID || opcode == OP_PIDX) {
+            const size_t operand_len = (opcode == OP_PIDX) ? PIDX_OPERAND_LEN : 12;
+            if (pc + operand_len > s_bytecode_length) break;
+            const uint16_t block_key = (uint16_t)(pc - 1); // offset do opcode = identidade do bloco
+            pid_block_t blk;
+            pid_decode(opcode, &s_bytecode[pc], &blk);
+            pc += operand_len;
 
-            // Proteção caso o usuário tenha invertido PV (colocando Q0.x = 100..115) e MV (colocando AI0.x = 72..79)
-            if ((pv_tag_id >= 100 && pv_tag_id <= 115) && (mv_tag_id >= 72 && mv_tag_id <= 79)) {
-                pv_tag_id = mv_tag_id;
-                mv_tag_id = 33; // M0.7 (MV_PID)
-            } else if (mv_tag_id >= 72 && mv_tag_id <= 79) {
-                // Nunca sobrescrever registradores físicos de entrada analógica (AI0.0..AI0.3 = 72..75)
-                mv_tag_id = 33; // M0.7 (MV_PID)
-            }
-
-            // Se pv_tag_id apontar para canal físico bruto (22..25), redireciona para registrador escalonado 0..100% (72..75)
+            uint16_t pv_tag_id = blk.pv_tag_id;
+            // Canal fisico bruto (22..25, contagens de ADC) -> registrador escalonado em % (72..75)
             if (pv_tag_id >= 22 && pv_tag_id <= 25) {
                 pv_tag_id = (uint16_t)(72 + (pv_tag_id - 22));
             }
+            const uint16_t mv_tag_id = blk.mv_tag_id;
 
-            pid_state_t *p = get_or_create_pid(pv_tag_id);
-            int32_t current_mv = p ? p->last_mv : 0;
+            pid_state_t *p = get_or_create_pid(block_key);
+            int32_t current_mv = 0;
+            bool eno = false;
 
-            if (accumulator) {
-                int32_t pv = 0;
-                int32_t sp = 50;
-                state_get_int(pv_tag_id, &pv);
+            if (p) {
+                if (accumulator) {
+                    int32_t pv = 0;
+                    int32_t sp = 0;
+                    int32_t man_pct = 0;
+                    int32_t man_sel = 0;
+                    state_get_int(pv_tag_id, &pv);
 
-                if ((sp_tag_id & 0x8000) != 0) {
-                    // Constante literal codificada com bit 15 (ex: 50 -> 50%)
-                    sp = (int32_t)(sp_tag_id & 0x7FFF);
-                    if (sp > 100 && sp <= 4095) {
-                        if (sp >= 3800) sp = 5;
-                        else if (sp <= 1500) sp = 95;
-                        else sp = ((3800 - sp) * 100) / (3800 - 1500);
-                    }
-                    if (sp < 1) sp = 1;
-                    if (sp > 100) sp = 100;
-                } else if (sp_tag_id > 100 && sp_tag_id <= 4095) {
-                    // Caso o compilador legado tenha enviado um número literal > 100 (ex: 4000)
-                    sp = 50;
-                } else {
-                    state_get_int(sp_tag_id, &sp);
-                    if (sp_tag_id > 0 && (sp <= 5 || sp > 100)) {
-                        sp = 50;
-                        state_set_int(sp_tag_id, 50);
-                    }
-                }
-
-                if (p) {
-                    int64_t dt_ms = now_ms - p->last_time_ms;
-                    if (dt_ms >= 100 || p->last_time_ms == 0) {
-                        if (p->last_time_ms == 0 || dt_ms > 1000) dt_ms = 100;
-                        p->last_time_ms = now_ms;
-
-                        // Erro de Controle para Irrigação:
-                        // Quanto mais SECO (PV baixo), maior o erro -> Relé LIGA para irrigar.
-                        // Quando estiver ÚMIDO (PV >= SP), erro <= 0 -> Relé DESLIGA imediatamente.
-                        int32_t error = sp - pv;
-
-                        // Proporcional: (Kp * error) / 100
-                        int32_t p_term = ((int32_t)kp_scaled * error) / 100;
-
-                        // Integral com Anti-Windup e descarga imediata ao atingir o Setpoint (error <= 0):
-                        if (error <= 0) {
-                            p->integral = 0;
-                        } else {
-                            p->integral += (error * (int32_t)dt_ms) / 1000;
-                            if (p->integral > 200) p->integral = 200;
-                            if (p->integral < 0) p->integral = 0;
-                        }
-                        int32_t i_term = ((int32_t)ki_scaled * p->integral) / 100;
-
-                        // Derivativo
-                        int32_t d_term = 0;
-                        if (dt_ms > 0) {
-                            d_term = (((int32_t)kd_scaled * (error - p->last_error) * 1000) / (int32_t)dt_ms) / 100;
-                        }
-                        p->last_error = error;
-
-                        int32_t mv = p_term + i_term + d_term;
-                        if (mv < 0) mv = 0;
-                        if (mv > 100) mv = 100;
-
-                        p->last_mv = mv;
-                        current_mv = mv;
-                    }
-
-                    if (mv_tag_id >= 100 && mv_tag_id <= 115) {
-                        // Se MV apontar direto para uma saída digital Q0.x, atua como chave (MV > 20% = ON)
-                        state_set_int(mv_tag_id, (current_mv > 20) ? 1 : 0);
+                    if ((blk.sp_tag_id & 0x8000) != 0) {
+                        sp = (int32_t)(blk.sp_tag_id & 0x7FFF); // constante literal em %
                     } else {
-                        state_set_int(mv_tag_id, current_mv);
+                        state_get_int(blk.sp_tag_id, &sp);
                     }
-                    // Espelha sempre em M0.7 (33 = MV_PID) para telemetria na IHM/Studio
-                    if (mv_tag_id != 33) {
-                        state_set_int(33, current_mv);
+                    if (blk.man_sel_tag != 0) state_get_int(blk.man_sel_tag, &man_sel);
+                    if ((blk.man_out & 0x8000) != 0) {
+                        man_pct = (int32_t)(blk.man_out & 0x7FFF);
+                    } else if (blk.man_out != 0) {
+                        state_get_int(blk.man_out, &man_pct);
                     }
-                    // Se MV for MV_PID (33) ou AO0.0 (80), espelha na saída analógica proporcional AO0.0 (GPIO 25 / DAC1)
-                    if ((mv_tag_id == 33 || mv_tag_id == 80) && mv_tag_id != 80) {
-                        state_set_int(80, current_mv);
+
+                    int64_t dt_ms = now_ms - p->last_time_ms;
+                    const bool first_scan = !p->st.initialized;
+                    if (first_scan || dt_ms >= LADDER_PID_SAMPLE_MS) {
+                        if (first_scan || dt_ms > 1000) dt_ms = LADDER_PID_SAMPLE_MS;
+                        p->last_time_ms = now_ms;
+                        ladder_pid_step(&blk.params, &p->st, pv, sp, man_sel > 0, man_pct, (uint32_t)dt_ms);
                     }
+                } else {
+                    // Rung desenergizada (EN = 0): saida segura, estado rearmado
+                    ladder_pid_disable(&blk.params, &p->st);
+                    p->last_time_ms = 0;
                 }
-            } else {
-                // Rung desenergizada antes do PID: zera saída e acumulador
-                if (p) {
-                    p->integral = 0;
-                    p->last_error = 0;
-                    p->last_mv = 0;
-                }
-                current_mv = 0;
-                state_set_int(mv_tag_id, 0);
-                if (mv_tag_id != 33) {
-                    state_set_int(33, 0);
-                }
-                if (mv_tag_id == 33 || mv_tag_id == 80) {
-                    state_set_int(80, 0);
-                }
+                current_mv = ladder_pid_mv_percent(&p->st);
+                eno = p->st.eno;
             }
 
-            // Verifica se há uma Bobina ou instrução em série nesta mesma Rung após o bloco PID (pino ENO)
+            if (mv_tag_id >= 100 && mv_tag_id <= 115) {
+                // MV direto em saida digital Q0.x: atua como liga/desliga pelo ENO (limiar + histerese)
+                state_set_int(mv_tag_id, eno ? 1 : 0);
+            } else {
+                state_set_int(mv_tag_id, current_mv);
+            }
+
+            // Pino ENO: conduz energia para o que vem em serie na mesma rung enquanto ENO ativo
             uint8_t next_op = (pc < s_bytecode_length) ? s_bytecode[pc] : 0xFF;
             bool has_downstream_on_rung = (next_op == OP_ST || next_op == OP_SET || next_op == OP_RST ||
                                            next_op == OP_AND || next_op == OP_ANDN ||
                                            next_op == OP_TON || next_op == OP_TOF ||
                                            next_op == OP_CTU || next_op == OP_CTD);
             if (has_downstream_on_rung) {
-                // Pino ENO conduz energia para a Bobina quando MV > 20% (solo seco) e corta quando MV <= 20% (úmido/água)
-                accumulator = accumulator && (current_mv > 20);
+                accumulator = accumulator && eno;
             } else {
-                accumulator = true; // Reseta power flow para a próxima rung
+                accumulator = true; // Reseta power flow para a proxima rung
             }
             continue;
         }

@@ -34,7 +34,7 @@ void main() {
     TelemetrySyncService.instance.init(project: demoProject, runtime: runtime);
     TelemetrySyncService.instance.processPveJson({
       "variables": [
-        {"id": 0, "name": "UMID_SOLO", "raw": 2545, "scaled": 621, "decimals": 1, "unit": "%"}
+        {"id": 0, "name": "AIN1", "raw": 2545, "scaled": 621, "decimals": 1, "unit": "%"}
       ]
     });
 
@@ -56,7 +56,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('UMIDADE DO SOLO (AO - GPIO 34)'), findsOneWidget);
+    expect(find.text('UMIDADE DO SOLO (AI0.0 - GPIO 34/35)'), findsOneWidget);
     expect(find.text('CHAVE DIGITAL DO SOLO (DO - GPIO 17)'), findsOneWidget);
     expect(find.textContaining('VÁLVULA DE IRRIGAÇÃO (Q0.3'), findsOneWidget);
     await saveScreenshot(key, 'tab_0_home_dashboard.png');
@@ -87,7 +87,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.textContaining('Controle de Irrigação'), findsOneWidget);
-    expect(find.text('UMID_SOLO'), findsWidgets);
+    expect(find.textContaining('AI0.0'), findsWidgets);
     await saveScreenshot(key, 'tab_1_ladder_iec.png');
   });
 
@@ -115,8 +115,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('UMID_SOLO'), findsWidgets);
-    expect(find.text('I0.1'), findsWidgets);
+    expect(find.textContaining('AI0.0'), findsWidgets);
+    expect(find.textContaining('I0.1'), findsWidgets);
     await saveScreenshot(key, 'tab_2_gpio_tags.png');
   });
 

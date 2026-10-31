@@ -1,7 +1,6 @@
 import 'tag.dart';
 import 'plc_tag_contract.dart';
 import 'ladder_network.dart';
-import 'node_config.dart';
 import 'project_metadata.dart';
 import 'demo_project.dart';
 import '../../home/models/home_widget_config.dart';
@@ -68,7 +67,6 @@ class LadderProject {
           final parsed = (json['tags'] as Map?)?.map(
                 (k, v) => MapEntry(k.toString(), Tag.fromJson(Map<String, dynamic>.from(v as Map))),
               ) ?? {};
-          parsed.remove('UMID_SOLO');
           final defaults = DemoProject.createDefaultTags();
           for (final entry in defaults.entries) {
             parsed.putIfAbsent(entry.key, () => entry.value);
@@ -81,25 +79,10 @@ class LadderProject {
           }
           return parsed;
         }(),
-        networks: ((json['networks'] as List<dynamic>?)
+        networks: (json['networks'] as List<dynamic>?)
                 ?.map((e) => LadderNetwork.fromJson(Map<String, dynamic>.from(e as Map)))
                 .toList() ??
-            [])
-          ..forEach((net) {
-            for (final n in net.nodes) {
-              if (n.config.tagId == 'UMID_SOLO') {
-                n.config = NodeConfig(
-                  tagId: 'AI0.0',
-                  presetValue: n.config.presetValue,
-                  setpointTagId: n.config.setpointTagId,
-                  outputTagId: n.config.outputTagId,
-                  kp: n.config.kp,
-                  ki: n.config.ki,
-                  kd: n.config.kd,
-                );
-              }
-            }
-          }),
+            [],
         metadata: json['metadata'] != null
             ? ProjectMetadata.fromJson(Map<String, dynamic>.from(json['metadata'] as Map))
             : ProjectMetadata(),

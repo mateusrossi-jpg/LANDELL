@@ -610,6 +610,7 @@ static esp_err_t wifi_manager_start_ap_fallback(bool credentials_saved,
     err = esp_wifi_start(); esp_wifi_set_max_tx_power(52);
     if (err != ESP_OK)
         goto fail;
+    esp_wifi_set_ps(WIFI_PS_NONE);
 
     wifi_driver_started = true;
     captive_dns_start();
@@ -654,6 +655,7 @@ static esp_err_t wifi_manager_start_sta_with_config(wifi_config_t *sta_config,
             err = esp_wifi_start(); esp_wifi_set_max_tx_power(52);
             if (err != ESP_OK)
                 goto fail;
+            esp_wifi_set_ps(WIFI_PS_NONE);
             wifi_driver_started = true;
         }
         else
@@ -680,6 +682,7 @@ static esp_err_t wifi_manager_start_sta_with_config(wifi_config_t *sta_config,
     err = esp_wifi_start(); esp_wifi_set_max_tx_power(52);
     if (err != ESP_OK)
         goto fail;
+    esp_wifi_set_ps(WIFI_PS_NONE);
 
     wifi_driver_started = true;
     return ESP_OK;
@@ -882,6 +885,7 @@ static void wifi_event_handler(void* arg,
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
+        esp_wifi_set_ps(WIFI_PS_NONE);
         if (wifi_target_mode == WIFI_TARGET_MODE_STA || wifi_target_mode == WIFI_TARGET_MODE_APSTA_TRANSITION)
         {
             ESP_LOGI(TAG, "Conectando WiFi em STA...");
@@ -890,6 +894,7 @@ static void wifi_event_handler(void* arg,
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
+        esp_wifi_set_ps(WIFI_PS_NONE);
         if (wifi_target_mode == WIFI_TARGET_MODE_STA || wifi_target_mode == WIFI_TARGET_MODE_APSTA_TRANSITION)
             ESP_LOGI(TAG, "STA associada ao ponto de acesso");
     }
@@ -963,6 +968,7 @@ static void wifi_event_handler(void* arg,
     {
         const ip_event_got_ip_t *event = (const ip_event_got_ip_t *)event_data;
 
+        esp_wifi_set_ps(WIFI_PS_NONE);
         ESP_LOGI(TAG, "WiFi conectado com IP");
         wifi_status_mark_sta_connected();
         network_ready_publish_up(
@@ -1060,6 +1066,7 @@ void wifi_manager_init(void)
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
             ESP_ERROR_CHECK(esp_wifi_start()); esp_wifi_set_max_tx_power(52);
+            esp_wifi_set_ps(WIFI_PS_NONE);
             esp_wifi_set_channel(6, WIFI_SECOND_CHAN_NONE);
             captive_dns_start();
         }
@@ -1067,6 +1074,7 @@ void wifi_manager_init(void)
         {
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
             ESP_ERROR_CHECK(esp_wifi_start()); esp_wifi_set_max_tx_power(52);
+            esp_wifi_set_ps(WIFI_PS_NONE);
             esp_wifi_set_channel(6, WIFI_SECOND_CHAN_NONE);
         }
 
@@ -1095,12 +1103,14 @@ void wifi_manager_init(void)
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
             ESP_ERROR_CHECK(esp_wifi_start()); esp_wifi_set_max_tx_power(52);
+            esp_wifi_set_ps(WIFI_PS_NONE);
             captive_dns_start();
         }
         else
         {
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
             ESP_ERROR_CHECK(esp_wifi_start()); esp_wifi_set_max_tx_power(52);
+            esp_wifi_set_ps(WIFI_PS_NONE);
         }
 
         wifi_driver_started = true;
@@ -1126,6 +1136,7 @@ void wifi_manager_init(void)
     
     wifi_driver_started = true;
     ESP_ERROR_CHECK(esp_wifi_start()); esp_wifi_set_max_tx_power(52);
+    esp_wifi_set_ps(WIFI_PS_NONE);
     char ssid[WIFI_SSID_MAX_LEN + 1U] = {0};
     char pass[WIFI_PASS_MAX_LEN + 1U] = {0};
     wifi_config_t sta_config = {0};

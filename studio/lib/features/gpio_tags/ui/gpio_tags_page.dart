@@ -61,7 +61,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
     widget.networkManager.addListener(_onNetworkManagerChanged);
     TelemetrySyncService.instance.addListener(_onTelemetryUpdated);
     _refreshHardware();
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 600), (_) => _refreshHardware());
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshHardware());
   }
 
   void _onTelemetryUpdated() {

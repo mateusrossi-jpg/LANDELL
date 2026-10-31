@@ -103,19 +103,17 @@ class LadderNetworkCanvas extends StatelessWidget {
                       newNode = LadderNode(
                         id: 'node_$ts',
                         type: data,
-                        config: NodeConfig(
-                          tagId: (data == NodeType.pid || isCompare || isMath) ? 'AI0.0' : null,
-                          presetValue: isTimer
-                              ? TagValue.integer(3000)
-                              : (isCounter
-                                  ? TagValue.integer(5)
-                                  : (isCompare ? TagValue.integer(50) : (isMath ? TagValue.integer(1) : null))),
-                          setpointTagId: data == NodeType.pid ? '50' : null,
-                          outputTagId: data == NodeType.pid ? 'MV_PID' : (isMath ? 'M0.6' : null),
-                          kp: data == NodeType.pid ? 2.5 : null,
-                          ki: data == NodeType.pid ? 0.5 : null,
-                          kd: data == NodeType.pid ? 0.1 : null,
-                        ),
+                        config: data == NodeType.pid
+                            ? NodeConfig.pid()
+                            : NodeConfig(
+                                tagId: (isCompare || isMath) ? 'AI0.0' : null,
+                                presetValue: isTimer
+                                    ? TagValue.integer(3000)
+                                    : (isCounter
+                                        ? TagValue.integer(5)
+                                        : (isCompare ? TagValue.integer(50) : (isMath ? TagValue.integer(1) : null))),
+                                outputTagId: isMath ? 'M0.6' : null,
+                              ),
                       );
                     }
                     if (wire.parallelNodeIndex != null && wire.branchIndex != null) {

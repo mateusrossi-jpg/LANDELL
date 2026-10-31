@@ -61,11 +61,11 @@ void main() {
   testWidgets('NumericSparklineWidget renders real trend and no fake points', (tester) async {
     final project = DemoProject.createDemoProject();
     final runtime = LadderRuntime();
-    runtime.tagStore.setValue('UMID_SOLO', TagValue.real(62.5));
+    runtime.tagStore.setValue('AI0.0', TagValue.real(62.5));
 
     final config = HomeWidgetConfig(
       id: 'spark_test',
-      tagId: 'UMID_SOLO',
+      tagId: 'AI0.0',
       templateType: WidgetTemplateType.sparkline,
       title: 'TESTE SPARKLINE REAL',
       unit: '%',

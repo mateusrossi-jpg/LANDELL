@@ -79,23 +79,17 @@ class TelemetrySyncService extends ChangeNotifier {
     String? gatewayIp,
     List<String>? controllerIps,
   }) {
+    _status = TelemetryConnectionStatus.offline;
+    _consecutiveFailures = 0;
     _project = project;
     _runtime = runtime;
-    final normalizedIp =
-        (gatewayIp == null ||
-            gatewayIp.trim().isEmpty ||
-            gatewayIp.trim() == '192.168.4.1' ||
-            gatewayIp.trim() == '192.168.0.27')
+    final normalizedIp = (gatewayIp == null || gatewayIp.trim().isEmpty || gatewayIp.trim() == '192.168.4.1')
         ? '192.168.0.229'
         : gatewayIp.trim();
     _gatewayIp = normalizedIp;
     if (controllerIps != null && controllerIps.isNotEmpty) {
       _controllerIps = controllerIps
-          .map(
-            (ip) => (ip == '192.168.4.1' || ip == '192.168.0.27')
-                ? '192.168.0.229'
-                : ip.trim(),
-          )
+          .map((ip) => (ip == '192.168.4.1') ? '192.168.0.229' : ip.trim())
           .where((ip) => ip.isNotEmpty)
           .toSet()
           .toList();
@@ -109,10 +103,7 @@ class TelemetrySyncService extends ChangeNotifier {
 
   /// Atualiza o IP do gateway e reinicia o polling se ativo
   Future<void> updateGatewayIp(String ip) async {
-    final clean =
-        (ip.trim() == '192.168.4.1' ||
-            ip.trim() == '192.168.0.27' ||
-            ip.trim().isEmpty)
+    final clean = (ip.trim() == '192.168.4.1' || ip.trim().isEmpty)
         ? '192.168.0.229'
         : ip.trim();
     _gatewayIp = clean;
@@ -143,8 +134,8 @@ class TelemetrySyncService extends ChangeNotifier {
     _controllerIps = cleaned;
   }
 
-  /// Inicia o ciclo de polling periódico (100 ms para tempo real responsivo)
-  void start({Duration interval = const Duration(milliseconds: 100)}) {
+  /// Inicia o ciclo de polling periódico (250 ms para tempo real estável e leve)
+  void start({Duration interval = const Duration(milliseconds: 250)}) {
     stop();
     _isPolling = true;
 
@@ -161,6 +152,7 @@ class TelemetrySyncService extends ChangeNotifier {
     _pollingTimer?.cancel();
     _pollingTimer = null;
     _isPolling = false;
+    _consecutiveFailures = 0;
     _setStatus(TelemetryConnectionStatus.offline);
   }
 
@@ -176,6 +168,8 @@ class TelemetrySyncService extends ChangeNotifier {
   Map<String, dynamic>? get lastIoMap => _lastIoMap;
 
   int _pollCycleCount = 0;
+  int _consecutiveFailures = 0;
+  static const int _maxFailuresBeforeOffline = 3;
 
   /// Executa uma única requisição de telemetria e processa o retorno de forma concorrente
   Future<bool> pollOnce() async {
@@ -189,9 +183,14 @@ class TelemetrySyncService extends ChangeNotifier {
     bool anyOnline = false;
     bool primaryOnline = false;
     try {
-      final hostsToTry = <String>[..._controllerIps];
-      if (!hostsToTry.contains('192.168.0.229')) {
-        hostsToTry.add('192.168.0.229');
+      final hostsToTry = <String>[];
+      if (_gatewayIp.isNotEmpty) {
+        hostsToTry.add(_gatewayIp);
+      }
+      for (final ip in _controllerIps) {
+        if (!hostsToTry.contains(ip)) {
+          hostsToTry.add(ip);
+        }
       }
       if (kIsWeb &&
           Uri.base.authority.isNotEmpty &&
@@ -211,10 +210,7 @@ class TelemetrySyncService extends ChangeNotifier {
       for (final res in results) {
         if (res.isOnline && res.ioData != null) {
           _lastIoMap = res.ioData;
-          if (res.ip != _gatewayIp &&
-              (res.ip == '192.168.0.229' ||
-                  _gatewayIp == '192.168.4.1' ||
-                  _gatewayIp == '192.168.0.27')) {
+          if (_controllerIps.length <= 1 && res.ip != _gatewayIp && res.ip == '192.168.0.229') {
             _gatewayIp = res.ip;
           }
           processIoMapJson(
@@ -230,11 +226,15 @@ class TelemetrySyncService extends ChangeNotifier {
         }
       }
 
-      _setStatus(
-        primaryOnline || anyOnline
-            ? TelemetryConnectionStatus.online
-            : TelemetryConnectionStatus.offline,
-      );
+      if (primaryOnline) {
+        _consecutiveFailures = 0;
+        _setStatus(TelemetryConnectionStatus.online);
+      } else {
+        _consecutiveFailures++;
+        if (_controllerIps.length > 1 || _consecutiveFailures >= _maxFailuresBeforeOffline) {
+          _setStatus(TelemetryConnectionStatus.offline);
+        }
+      }
       return anyOnline;
     } finally {
       _isFetching = false;
@@ -250,7 +250,7 @@ class TelemetrySyncService extends ChangeNotifier {
       final url = Uri.parse('http://$ip/api/io/map');
       final response = await _client
           .get(url)
-          .timeout(const Duration(milliseconds: 1500));
+          .timeout(const Duration(milliseconds: 1200));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data is Map<String, dynamic>) {
@@ -264,7 +264,7 @@ class TelemetrySyncService extends ChangeNotifier {
           final pveUrl = Uri.parse('http://$ip/api/pve');
           final pveRes = await _client
               .get(pveUrl)
-              .timeout(const Duration(milliseconds: 1500));
+              .timeout(const Duration(milliseconds: 1200));
           if (pveRes.statusCode == 200) {
             final pData = jsonDecode(pveRes.body);
             if (pData is Map<String, dynamic>) {
@@ -404,7 +404,7 @@ class TelemetrySyncService extends ChangeNotifier {
       final isDhtTemp = name == 'TEMP_DHT';
       final isDhtHum = name == 'HUM_DHT';
 
-      final isSoilMoisture = name == 'UMID_SOLO' || name == 'AIN1';
+      final isSoilMoisture = name == 'AIN1';
 
       if (isSoilMoisture) {
         matchedKeys.addAll(['%IW0.0', 'AI0.0', 'AIN1', name]);
@@ -491,19 +491,25 @@ class TelemetrySyncService extends ChangeNotifier {
 
     if (localChannelId != null) {
       // Desloca o canal local para o byte global do controlador (apenas I/Q digitais).
-      final bool isLocalIo =
-          (localChannelId >= 10 && localChannelId <= 21) ||
+      final bool isLocalIo = (localChannelId >= 10 && localChannelId <= 25) ||
           (localChannelId >= 100 && localChannelId <= 115);
       resolvedChannelId = isLocalIo
           ? (localChannelId + controllerIndex * 8)
           : localChannelId;
 
-      if (resolvedChannelId >= 22 && resolvedChannelId <= 25) {
+      final entryName = (entry['name'] ?? entry['tagId'] ?? '').toString().toUpperCase();
+      final entryType = entry['type']?.toString().toLowerCase();
+      final isAnalogInput = entryType == 'analog_input' ||
+          entryName.startsWith('AI') ||
+          entryName.startsWith('AIN') ||
+          entryName.startsWith('%IW');
+
+      if (isAnalogInput && resolvedChannelId >= 22 && resolvedChannelId <= 25) {
         // Entradas analógicas mapeadas em inputs (22 = AI0.0 / %IW0.0, 23 = AI0.1 / %IW0.1)
         final analogIdx = resolvedChannelId - 22;
         plcAddress = 'AI0.$analogIdx';
         canonicalAddress = '%IW0.$analogIdx';
-      } else if (resolvedChannelId >= 10 && resolvedChannelId <= 21) {
+      } else if (resolvedChannelId >= 10 && resolvedChannelId <= 25) {
         final rel = resolvedChannelId - 10;
         final byteIdx = rel ~/ 8;
         final bitIdx = rel % 8;
@@ -710,17 +716,15 @@ class TelemetrySyncService extends ChangeNotifier {
         StudioEventBus.instance.emit(
           type: 'TELEMETRY_ONLINE',
           source: 'HARDWARE',
-          message:
-              'Telemetria do Gateway $_gatewayIp ONLINE • Sincronização 100ms ativa',
+          message: 'Telemetria do Gateway $_gatewayIp ONLINE • Sincronização 250ms ativa',
           severity: EventSeverity.info,
         );
       } else if (old == TelemetryConnectionStatus.online) {
         StudioEventBus.instance.emit(
           type: 'TELEMETRY_OFFLINE',
           source: 'HARDWARE',
-          message:
-              'Comunicação com Gateway $_gatewayIp OFFLINE • Falha no polling de E/S',
-          severity: EventSeverity.critical,
+          message: 'Comunicação com Gateway $_gatewayIp OFFLINE • Falha no polling de E/S',
+          severity: EventSeverity.warning,
         );
       }
     }

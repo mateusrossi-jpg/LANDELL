@@ -208,20 +208,17 @@ class BytecodeDisassembler {
         activeNetwork.rebuildConnections();
         project.networks.add(activeNetwork);
         currentNetwork = null;
-      } else if (opcode == Opcodes.PID) {
-        if (pc + 12 > bytecode.length) break;
-        final pvAddr = (bytecode[pc] << 8) | bytecode[pc + 1];
-        pc += 2;
-        final spAddr = (bytecode[pc] << 8) | bytecode[pc + 1];
-        pc += 2;
-        final mvAddr = (bytecode[pc] << 8) | bytecode[pc + 1];
-        pc += 2;
-        final kpRaw = (bytecode[pc] << 8) | bytecode[pc + 1];
-        pc += 2;
-        final kiRaw = (bytecode[pc] << 8) | bytecode[pc + 1];
-        pc += 2;
-        final kdRaw = (bytecode[pc] << 8) | bytecode[pc + 1];
-        pc += 2;
+      } else if (opcode == Opcodes.PID || opcode == Opcodes.PIDX) {
+        final isExt = opcode == Opcodes.PIDX;
+        final operandLen = isExt ? 23 : 12;
+        if (pc + operandLen > bytecode.length) break;
+        int r16(int o) => (bytecode[pc + o] << 8) | bytecode[pc + o + 1];
+        final pvAddr = r16(0);
+        final spAddr = r16(2);
+        final mvAddr = r16(4);
+        final kpRaw = r16(6);
+        final kiRaw = r16(8);
+        final kdRaw = r16(10);
 
         final pvTag = _getOrCreateTag(project, pvAddr, TagType.real);
         final String spTag = (spAddr & 0x8000) != 0
@@ -229,17 +226,43 @@ class BytecodeDisassembler {
             : _getOrCreateTag(project, spAddr, TagType.real);
         final mvTag = _getOrCreateTag(project, mvAddr, TagType.real);
 
+        final cfg = NodeConfig(
+          tagId: pvTag,
+          setpointTagId: spTag,
+          outputTagId: mvTag,
+          kp: kpRaw / 100.0,
+          ki: kiRaw / 100.0,
+          kd: kdRaw / 100.0,
+        );
+
+        if (isExt) {
+          final flags = bytecode[pc + 12];
+          cfg.pidDirect = (flags & 0x01) != 0;
+          cfg.pidDerivativeOnError = (flags & 0x02) != 0;
+          cfg.pidOutMin = bytecode[pc + 13];
+          cfg.pidOutMax = bytecode[pc + 14];
+          cfg.pidDeadband = bytecode[pc + 15] / 10.0;
+          cfg.pidEnoThreshold = bytecode[pc + 16];
+          cfg.pidEnoHysteresis = bytecode[pc + 17];
+          cfg.pidSafeOut = bytecode[pc + 18];
+          final manSel = r16(19);
+          final manOut = r16(21);
+          if ((flags & 0x04) != 0 && manSel != 0) {
+            cfg.pidManualTagId = _getOrCreateTag(project, manSel, TagType.bool);
+            cfg.pidManualOut = (manOut & 0x8000) != 0
+                ? (manOut & 0x7FFF).toString()
+                : _getOrCreateTag(project, manOut, TagType.real);
+          }
+        } else {
+          // Legado: ENO acima de 20 %
+          cfg.pidEnoThreshold = 20;
+        }
+        pc += operandLen;
+
         activeNetwork.nodes.add(LadderNode(
           id: 'node_${nodeCounter++}',
           type: NodeType.pid,
-          config: NodeConfig(
-            tagId: pvTag,
-            setpointTagId: spTag,
-            outputTagId: mvTag,
-            kp: kpRaw / 100.0,
-            ki: kiRaw / 100.0,
-            kd: kdRaw / 100.0,
-          ),
+          config: cfg,
         ));
 
         // Se o próximo opcode na sequência for uma Bobina (ST/SET/RST) na mesma rung, mantém a rung aberta

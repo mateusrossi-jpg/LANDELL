@@ -9597,18 +9597,15 @@ void http_server_start(void)
     core_mem_audit("HTTP_POST_BUFFERS");
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    /* O projeto usa um teto global enxuto de sockets no lwIP.
-       O default do esp_http_server (7 clientes + 3 internos) consome
-       sozinho todo o orcamento de CONFIG_LWIP_MAX_SOCKETS=10, deixando
-       cluster/DNS/rede sem margem e provocando accept() -> ENFILE (23).
-       Para a dashboard embarcada V1, 3 sessoes simultaneas bastam:
-       1 WebSocket + 1/2 requests HTTP concorrentes do operador. */
-    config.max_open_sockets = 3;
+    /* CONFIG_LWIP_MAX_SOCKETS=16 permite ate 7 conexoes no http_server
+       (1 WebSocket + 6 requests HTTP concorrentes/keep-alive do Studio Windows/Web)
+       mantendo margem segura para DNS, cluster e sockets internos. */
+    config.max_open_sockets = 7;
     config.max_uri_handlers = HTTPD_MAX_URI_HANDLERS;
     config.stack_size = HTTPD_STACK_SIZE;
     config.lru_purge_enable = true;
-    config.recv_wait_timeout = 2;
-    config.send_wait_timeout = 2;
+    config.recv_wait_timeout = 5;
+    config.send_wait_timeout = 5;
 
     /* Aba fechada/desconexao de WS eh ruido normal de browser. */
     esp_log_level_set("httpd_ws", ESP_LOG_ERROR);

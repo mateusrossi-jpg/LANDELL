@@ -603,6 +603,15 @@ class DemoProject {
             kp: 2.5,
             ki: 0.5,
             kd: 0.1,
+            // PID industrial: ação reversa (solo seco -> MV sobe), ENO liga o relé acima de 20%
+            // e só desliga abaixo de 15% (histerese evita trepidar a válvula).
+            pidDirect: false,
+            pidOutMin: 0,
+            pidOutMax: 100,
+            pidDeadband: 1.0,
+            pidEnoThreshold: 20,
+            pidEnoHysteresis: 5,
+            pidSafeOut: 0,
           ),
         ),
         LadderNode(
@@ -757,7 +766,7 @@ class DemoProject {
     ];
 
     return LadderProject(
-      id: 'proj_bancada_tcc_v4_pid_clean',
+      id: 'proj_bancada_tcc_v5_pid_industrial',
       name: 'Bancada Didática ENDAP (Fonte ATX + Sensor Capacitivo AI0.0 + Botoeiras + 4 Relés)',
       tags: tags,
       networks: [
@@ -1003,7 +1012,7 @@ class DemoProject {
       tags: tags,
       networks: [
         network1,   // 1. I0.0 -> Q0.0
-        network2,   // 2. PID (UMID_SOLO & SP_PID -> MV_PID)
+        network2,   // 2. PID (AI0.0 & SP -> MV_PID)
         network3,   // 3. [MV_PID > 20%] -> Q0.1
         network4,   // 4. I0.2 -> SET Q0.2
         network5,   // 5. I0.3 -> RESET Q0.2
@@ -1210,9 +1219,9 @@ class DemoProject {
             ),
             HomeWidgetConfig(
               id: 'w_umid_solo',
-              tagId: 'UMID_SOLO',
+              tagId: 'AI0.0',
               templateType: WidgetTemplateType.gauge,
-              title: 'UMIDADE DO SOLO (AO - GPIO 34)',
+              title: 'UMIDADE DO SOLO (AI0.0 - GPIO 34/35)',
               unit: '%',
               minValue: 0,
               maxValue: 100,
@@ -1242,9 +1251,9 @@ class DemoProject {
           widgets: [
             HomeWidgetConfig(
               id: 'w_umid_solo',
-              tagId: 'UMID_SOLO',
+              tagId: 'AI0.0',
               templateType: WidgetTemplateType.gauge,
-              title: 'UMIDADE DO SOLO (AO - GPIO 34)',
+              title: 'UMIDADE DO SOLO (AI0.0 - GPIO 34/35)',
               unit: '%',
               minValue: 0,
               maxValue: 100,

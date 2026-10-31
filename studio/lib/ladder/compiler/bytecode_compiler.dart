@@ -4,6 +4,7 @@ import '../models/ladder_network.dart';
 import '../models/ladder_node.dart';
 import '../models/enums.dart';
 import 'opcodes.dart';
+import '../runtime/evaluators/pid_evaluator.dart';
 
 class BytecodeCompiler {
   /// Compila um projeto Ladder num buffer binário.
@@ -136,54 +137,62 @@ class BytecodeCompiler {
       bytecode.add(destAddress & 0xFF);
     }
     else if (node.type == NodeType.pid) {
-      String pvTagId = (node.config.tagId ?? 'AI0.0').trim();
-      String mvTagId = (node.config.outputTagId ?? 'MV_PID').trim();
-
-      // Proteção contra inversão acidental de PV (Q0.x) e MV (AI0.x)
-      if ((pvTagId.startsWith('Q') || pvTagId.startsWith('Y')) &&
-          (mvTagId.startsWith('AI') || mvTagId.startsWith('%IW') || mvTagId == 'UMID_SOLO')) {
-        pvTagId = 'AI0.0';
-        mvTagId = 'MV_PID';
-      } else if (mvTagId.startsWith('AI') || mvTagId.startsWith('%IW') || mvTagId == 'UMID_SOLO') {
-        mvTagId = 'MV_PID';
-      }
-      if (pvTagId == 'UMID_SOLO') pvTagId = 'AI0.0';
-
-      final pvAddress = project.getTagAddress(pvTagId);
-
-      final spTagId = (node.config.setpointTagId ?? '50').replaceAll('%', '').trim();
-      final spLiteral = double.tryParse(spTagId)?.round();
-      final int spAddress;
-      if (spLiteral != null) {
-        // Bit 15 (0x8000) sinaliza constante literal de Setpoint (ex: 50 -> 50%)
-        final clampedSp = spLiteral.clamp(0, 10000);
-        spAddress = 0x8000 | (clampedSp & 0x7FFF);
-      } else {
-        spAddress = project.getTagAddress(spTagId);
-      }
-
-      final mvAddress = project.getTagAddress(mvTagId);
-
-      final kpRaw = ((node.config.kp ?? 2.5) * 100).round() & 0xFFFF;
-      final kiRaw = ((node.config.ki ?? 0.5) * 100).round() & 0xFFFF;
-      final kdRaw = ((node.config.kd ?? 0.1) * 100).round() & 0xFFFF;
-
-      bytecode.add(Opcodes.PID);
-      bytecode.add((pvAddress >> 8) & 0xFF);
-      bytecode.add(pvAddress & 0xFF);
-      bytecode.add((spAddress >> 8) & 0xFF);
-      bytecode.add(spAddress & 0xFF);
-      bytecode.add((mvAddress >> 8) & 0xFF);
-      bytecode.add(mvAddress & 0xFF);
-      bytecode.add((kpRaw >> 8) & 0xFF);
-      bytecode.add(kpRaw & 0xFF);
-      bytecode.add((kiRaw >> 8) & 0xFF);
-      bytecode.add(kiRaw & 0xFF);
-      bytecode.add((kdRaw >> 8) & 0xFF);
-      bytecode.add(kdRaw & 0xFF);
+      emitPid(project, node, bytecode);
     }
   }
 }
+
+  /// Emite o PID industrial (OP_PIDX = 0x61, 23 bytes de operando):
+  /// pv(2) sp(2) mv(2) kp(2) ki(2) kd(2) flags(1) outMin(1) outMax(1) deadband×10(1)
+  /// enoThr(1) enoHys(1) safeOut(1) manSelTag(2) manOut(2)
+  /// Os ganhos vão ×100; SP/manOut literais usam o bit 15 (0x8000 | %).
+  static void emitPid(LadderProject project, LadderNode node, List<int> bytecode) {
+    final cfg = node.config;
+    final pvTagId = (cfg.tagId ?? 'AI0.0').trim();
+    final mvTagId = (cfg.outputTagId ?? 'MV_PID').trim();
+
+    final pvAddress = project.getTagAddress(pvTagId);
+    final mvAddress = project.getTagAddress(mvTagId);
+
+    int percentOperand(String raw, String fallbackLiteral) {
+      final clean = raw.replaceAll('%', '').trim();
+      final literal = double.tryParse(clean.isEmpty ? fallbackLiteral : clean);
+      if (literal != null) {
+        return 0x8000 | (literal.round().clamp(0, 100) & 0x7FFF);
+      }
+      return project.getTagAddress(clean);
+    }
+
+    final spAddress = percentOperand(cfg.setpointTagId ?? '50', '50');
+
+    final manTag = (cfg.pidManualTagId ?? '').trim();
+    final manSelAddress = manTag.isEmpty ? 0 : project.getTagAddress(manTag);
+    final manOutAddress = manTag.isEmpty ? 0 : percentOperand(cfg.pidManualOut ?? '0', '0');
+
+    final params = PidEvaluator.paramsFromConfig(cfg);
+
+    void w16(int v) {
+      bytecode.add((v >> 8) & 0xFF);
+      bytecode.add(v & 0xFF);
+    }
+
+    bytecode.add(Opcodes.PIDX);
+    w16(pvAddress);
+    w16(spAddress);
+    w16(mvAddress);
+    w16(params.kpX100);
+    w16(params.kiX100);
+    w16(params.kdX100);
+    bytecode.add(params.flags);
+    bytecode.add(params.outMin);
+    bytecode.add(params.outMax);
+    bytecode.add(params.deadbandX10);
+    bytecode.add(params.enoThreshold);
+    bytecode.add(params.enoHysteresis);
+    bytecode.add(params.safeOut);
+    w16(manSelAddress);
+    w16(manOutAddress);
+  }
 
   void _emit(List<int> bytecode, int opcode, int operand) {
     bytecode.add(opcode);
