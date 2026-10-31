@@ -21,6 +21,8 @@ bool ladder_engine_run_self_test(void);
 
 size_t ladder_engine_get_program(uint8_t *out_buf, size_t max_len);
 
+bool ladder_engine_get_timer_state(uint16_t tag_id, bool *out_active, int64_t *out_elapsed_ms);
+
 #ifdef __cplusplus
 }
 #endif

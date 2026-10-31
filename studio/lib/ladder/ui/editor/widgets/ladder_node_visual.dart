@@ -425,13 +425,26 @@ class LadderNodeVisual extends StatelessWidget {
         final int storeAcc = runtime.tagStore.getInt('$tId.ACC') > 0
             ? runtime.tagStore.getInt('$tId.ACC')
             : runtime.tagStore.getInt('$tId.ET');
-        final int accValue = isTimer 
+        final bool storeDn = runtime.tagStore.getBool('$tId.DN') ||
+            runtime.tagStore.getBool(tId) ||
+            runtime.tagStore.getBool('$tId.Q');
+        final bool storeEn = runtime.tagStore.getBool('$tId.EN') ||
+            runtime.tagStore.getBool('$tId.IN');
+        final bool storeTt = runtime.tagStore.getBool('$tId.TT');
+        final bool isBlockEnergized = node.isEnergized || storeEn || storeTt || storeDn || (runState?.energized ?? false);
+        final bool isBlockConducting = node.isConducting || storeDn || (runState?.runtimeFlags['DN'] ?? false);
+
+        int accValue = isTimer 
             ? ((runState?.accumulatedTimeMs ?? 0) > 0 ? (runState?.accumulatedTimeMs ?? 0) : storeAcc)
             : ((runState?.counterValue ?? 0) > 0 ? (runState?.counterValue ?? 0) : runtime.tagStore.getInt('$tId.CV'));
 
         final int presetMs = isTimer
             ? TimerEvaluator.resolveNodePreset(node, runtime.tagStore)
             : (node.config.presetValue?.intValue ?? 5);
+
+        if (isTimer && isBlockConducting && accValue == 0) {
+          accValue = presetMs;
+        }
 
         final String presetStr;
         if (isTimer) {
@@ -464,7 +477,7 @@ class LadderNodeVisual extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: isSelected
                         ? const Color(0xFF38BDF8)
-                        : (node.isEnergized ? const Color(0xFF10B981) : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8))),
+                        : (isBlockEnergized ? const Color(0xFF10B981) : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8))),
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -476,7 +489,7 @@ class LadderNodeVisual extends StatelessWidget {
                 height: 2,
                 top: 31,
                 child: Container(
-                  color: node.isEnergized ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                  color: isBlockEnergized ? const Color(0xFF10B981) : const Color(0xFF64748B),
                 ),
               ),
               // Block Box (width: 96, from left: 10 to 106)
@@ -489,11 +502,11 @@ class LadderNodeVisual extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFCBD5E1),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF38BDF8) : (node.isEnergized ? const Color(0xFF10B981) : const Color(0xFF334155)),
+                      color: isSelected ? const Color(0xFF38BDF8) : (isBlockEnergized ? const Color(0xFF10B981) : const Color(0xFF334155)),
                       width: 1.5,
                     ),
                     boxShadow: [
-                      if (node.isEnergized)
+                      if (isBlockEnergized)
                         BoxShadow(
                           color: const Color(0xFF10B981).withValues(alpha: glowOpacity),
                           blurRadius: glowRadius,
@@ -507,14 +520,14 @@ class LadderNodeVisual extends StatelessWidget {
                       Container(
                         width: double.infinity,
                         height: 18,
-                        color: const Color(0xFF1E293B),
+                        color: isBlockEnergized ? const Color(0xFF064E3B) : const Color(0xFF1E293B),
                         alignment: Alignment.center,
                         child: Text(
                           prefix,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: isBlockEnergized ? const Color(0xFF86EFAC) : Colors.white,
                             fontFamily: 'monospace',
                             letterSpacing: 0.5,
                           ),
@@ -535,7 +548,7 @@ class LadderNodeVisual extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 8.5,
                                       fontWeight: FontWeight.bold,
-                                      color: node.isEnergized ? const Color(0xFF047857) : const Color(0xFF1E293B),
+                                      color: isBlockEnergized ? const Color(0xFF047857) : const Color(0xFF1E293B),
                                       fontFamily: 'monospace',
                                     ),
                                   ),
@@ -544,7 +557,7 @@ class LadderNodeVisual extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 8.5,
                                       fontWeight: FontWeight.bold,
-                                      color: node.isConducting ? const Color(0xFF047857) : const Color(0xFF1E293B),
+                                      color: isBlockConducting ? const Color(0xFF047857) : const Color(0xFF1E293B),
                                       fontFamily: 'monospace',
                                     ),
                                   ),
@@ -568,7 +581,7 @@ class LadderNodeVisual extends StatelessWidget {
                                       style: TextStyle(
                                         fontSize: 8.0,
                                         fontWeight: FontWeight.bold,
-                                        color: node.isEnergized ? const Color(0xFF047857) : const Color(0xFF334155),
+                                        color: isBlockEnergized ? const Color(0xFF047857) : const Color(0xFF334155),
                                         fontFamily: 'monospace',
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -592,7 +605,7 @@ class LadderNodeVisual extends StatelessWidget {
                 height: 2,
                 top: 31,
                 child: Container(
-                  color: node.isConducting ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                  color: isBlockConducting ? const Color(0xFF10B981) : const Color(0xFF64748B),
                 ),
               ),
             ],

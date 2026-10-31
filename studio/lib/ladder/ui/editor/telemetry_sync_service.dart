@@ -625,6 +625,18 @@ class TelemetrySyncService extends ChangeNotifier {
         resolvedChannelId <= 71 &&
         plcAddress != null) {
       keysToUpdate.addAll(['$plcAddress.DN', '$plcAddress.Q']);
+      if (resolvedChannelId >= 40 && resolvedChannelId <= 55) {
+        final active = entry['active'] == true;
+        final elapsed = entry['elapsed'] is num ? (entry['elapsed'] as num).toInt() : 0;
+        final isDone = rawValue == 1 || rawValue == true;
+        _runtime!.tagStore.setBool('$plcAddress.EN', active || isDone);
+        _runtime!.tagStore.setBool('$plcAddress.IN', active || isDone);
+        _runtime!.tagStore.setBool('$plcAddress.TT', active && !isDone);
+        if (elapsed > 0) {
+          _runtime!.tagStore.setInt('$plcAddress.ACC', elapsed);
+          _runtime!.tagStore.setInt('$plcAddress.ET', elapsed);
+        }
+      }
     }
 
     Tag? targetTag;

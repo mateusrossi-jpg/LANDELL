@@ -118,6 +118,36 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                     child: _buildControllerOrganizer(),
                   ),
                   const VerticalDivider(width: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
+                ] else ...[
+                  Material(
+                    color: IndustrialTokens.bgSurface,
+                    child: InkWell(
+                      onTap: () => setState(() => _showProjectTree = true),
+                      child: Container(
+                        width: 28,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Column(
+                          children: const [
+                            Icon(Icons.chevron_right, size: 16, color: IndustrialTokens.telemetryCyan),
+                            SizedBox(height: 12),
+                            RotatedBox(
+                              quarterTurns: 3,
+                              child: Text(
+                                'ORGANIZER',
+                                style: TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const VerticalDivider(width: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
                 ],
 
                 // Área Central: Abas de Documentos e Editores
@@ -169,6 +199,38 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                           height: 125,
                           child: _buildCompilationConsole(),
                         ),
+                      ] else ...[
+                        const Divider(height: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
+                        Material(
+                          color: IndustrialTokens.bgPanel,
+                          child: InkWell(
+                            onTap: () => setState(() => _showConsole = true),
+                            child: Container(
+                              height: 24,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.keyboard_arrow_up, size: 14, color: IndustrialTokens.telemetryCyan),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'CONSOLE DE COMPILAÇÃO',
+                                    style: TextStyle(color: IndustrialTokens.telemetryCyan, fontSize: 9.5, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _consoleLogs.isNotEmpty ? _consoleLogs.first : 'Console em repouso determinístico',
+                                      style: const TextStyle(color: Colors.white38, fontSize: 9.0, fontFamily: 'monospace'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const Icon(Icons.open_in_full, size: 12, color: Colors.white38),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -218,6 +280,39 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
             ),
             tooltip: _showConsole ? 'Ocultar Console de Compilação' : 'Exibir Console de Compilação',
             onPressed: () => setState(() => _showConsole = !_showConsole),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Modo Foco / Maximizar Área do Ladder
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: (!_showProjectTree && !_showConsole) ? IndustrialTokens.telemetryCyan : Colors.white70,
+              side: BorderSide(
+                color: (!_showProjectTree && !_showConsole) ? IndustrialTokens.telemetryCyan : IndustrialTokens.borderSubtle,
+                width: 1,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            icon: Icon(
+              (!_showProjectTree && !_showConsole) ? Icons.fullscreen_exit : Icons.fullscreen,
+              size: 14,
+            ),
+            label: Text(
+              (!_showProjectTree && !_showConsole) ? 'Restaurar Painéis' : 'Modo Foco (Maximizar Ladder)',
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () {
+              setState(() {
+                if (!_showProjectTree && !_showConsole) {
+                  _showProjectTree = true;
+                  _showConsole = true;
+                } else {
+                  _showProjectTree = false;
+                  _showConsole = false;
+                }
+              });
+            },
           ),
 
           const SizedBox(width: 8),
@@ -319,10 +414,10 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             color: IndustrialTokens.bgPanel,
             child: Row(
-              children: const [
-                Icon(Icons.account_tree, size: 15, color: IndustrialTokens.telemetryCyan),
-                SizedBox(width: 8),
-                Expanded(
+              children: [
+                const Icon(Icons.account_tree, size: 15, color: IndustrialTokens.telemetryCyan),
+                const SizedBox(width: 8),
+                const Expanded(
                   child: Text(
                     'CONTROLLER ORGANIZER',
                     style: TextStyle(
@@ -333,6 +428,17 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Tooltip(
+                  message: 'Recolher Organizer',
+                  child: InkWell(
+                    onTap: () => setState(() => _showProjectTree = false),
+                    borderRadius: BorderRadius.circular(4),
+                    child: const Padding(
+                      padding: EdgeInsets.all(2.0),
+                      child: Icon(Icons.chevron_left, size: 16, color: Colors.white70),
+                    ),
                   ),
                 ),
               ],
@@ -556,10 +662,10 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.terminal, color: IndustrialTokens.telemetryCyan, size: 16),
-              SizedBox(width: 8),
-              Expanded(
+            children: [
+              const Icon(Icons.terminal, color: IndustrialTokens.telemetryCyan, size: 16),
+              const SizedBox(width: 8),
+              const Expanded(
                 child: Text(
                   'BUILD & DETERMINISM CONSOLE',
                   style: TextStyle(
@@ -572,13 +678,25 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(width: 8),
-              Flexible(
+              const SizedBox(width: 8),
+              const Flexible(
                 child: Text(
                   'BYTECODE ENDP v1 • DETERMINISTIC VM COMPLIANT',
                   style: TextStyle(color: IndustrialTokens.runGreen, fontSize: 9.5, fontFamily: 'monospace', fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Recolher Console',
+                child: InkWell(
+                  onTap: () => setState(() => _showConsole = false),
+                  borderRadius: BorderRadius.circular(4),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2.0),
+                    child: Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.white70),
+                  ),
                 ),
               ),
             ],

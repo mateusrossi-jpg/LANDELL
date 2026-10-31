@@ -6399,9 +6399,12 @@ static esp_err_t io_map_handler(httpd_req_t *req)
         uint16_t t_id = (uint16_t)(40 + t_idx);
         int32_t t_val = 0;
         (void)state_get_int(t_id, &t_val);
+        bool t_active = false;
+        int64_t t_elapsed = 0;
+        (void)ladder_engine_get_timer_state(t_id, &t_active, &t_elapsed);
         offset += (size_t)snprintf(buf + offset, buf_size - offset,
-            ",{\"channel_id\":%u,\"name\":\"T%d\",\"type\":\"timer\",\"state\":%" PRId32 "}",
-            (unsigned int)t_id, t_idx, t_val);
+            ",{\"channel_id\":%u,\"name\":\"T%d\",\"type\":\"timer\",\"state\":%" PRId32 ",\"active\":%s,\"elapsed\":%" PRId64 "}",
+            (unsigned int)t_id, t_idx, t_val, t_active ? "true" : "false", t_elapsed);
     }
 
     for (int c_idx = 0; c_idx < 16; c_idx++)

@@ -70,6 +70,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   bool _showSearchBar = false;
+  bool _showToolbox = true;
 
   Timer? _simulationTimer;
   final int _scanPeriodMs = 100;
@@ -482,10 +483,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         break;
       case EditorMode.simulateHardware:
         // No modo hardware real, as tags I/Q/M/AI são mantidas pela telemetria do MCU via TelemetrySyncService.
-        // Se a telemetria estiver ativa, sincronizamos nós diretamente; se estiver sem resposta, roda varredura local.
-        if (!TelemetrySyncService.instance.isOnline) {
-          _runtime.singleScan(_scanPeriodMs);
-        }
+        // Executa varredura de ciclo determinístico para propagar fluxo de potência e calcular temporizadores (TON/TOF) em tempo real
+        _runtime.singleScan(_scanPeriodMs);
         _syncOutputs();
         _syncNodeEnergization();
         if (mounted) {
@@ -504,11 +503,25 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       bool newConducting = false;
       if (state != null) {
         if (node.type == NodeType.timerTON || node.type == NodeType.timerTOF) {
-          newEnergized = state.runtimeFlags['EN'] == true || state.runtimeFlags['TT'] == true || state.energized;
-          newConducting = state.runtimeFlags['DN'] == true;
+          final tTag = node.config.tagId ?? '';
+          final storeDn = _runtime.tagStore.getBool('$tTag.DN') ||
+              _runtime.tagStore.getBool(tTag) ||
+              _runtime.tagStore.getBool('$tTag.Q');
+          final storeEn = _runtime.tagStore.getBool('$tTag.EN') ||
+              _runtime.tagStore.getBool('$tTag.IN');
+          final storeTt = _runtime.tagStore.getBool('$tTag.TT');
+          newEnergized = state.runtimeFlags['EN'] == true ||
+              state.runtimeFlags['TT'] == true ||
+              state.energized ||
+              storeEn ||
+              storeTt ||
+              storeDn;
+          newConducting = state.runtimeFlags['DN'] == true || storeDn;
         } else if (node.type == NodeType.counterCTU || node.type == NodeType.counterCTD) {
+          final cTag = node.config.tagId ?? '';
+          final storeDn = _runtime.tagStore.getBool('$cTag.DN') || _runtime.tagStore.getBool(cTag);
           newEnergized = state.runtimeFlags['CU'] == true || state.runtimeFlags['CD'] == true || state.energized;
-          newConducting = state.runtimeFlags['DN'] == true;
+          newConducting = state.runtimeFlags['DN'] == true || storeDn;
         } else if (node.type == NodeType.pid) {
           newEnergized = state.runtimeFlags['EN'] == true || state.energized;
           newConducting = state.runtimeFlags['DN'] ?? state.energized;
@@ -1629,6 +1642,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                         );
                       },
                     ),
+                    const SizedBox(width: 4),
+                    _buildActionButton(
+                      icon: _showToolbox ? Icons.view_compact_alt : Icons.view_compact_alt_outlined,
+                      label: _showToolbox ? 'Ocultar Paleta' : 'Paleta Componentes',
+                      hideLabel: isCompact,
+                      onPressed: () => setState(() => _showToolbox = !_showToolbox),
+                    ),
                   ],
                 ),
                 Row(
@@ -2546,25 +2566,80 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   Widget _buildComponentToolboxWrapper() {
-    return LadderToolbox(
-      isDraggingNode: _isDraggingNode,
-      onNodeTapped: (nodeType) {
-        if (_project.networks.isNotEmpty) {
-          setState(() {
-            final newNode = _createConfiguredNode(nodeType);
-            _project.networks.first.addNode(newNode);
-            _project.networks.first.rebuildConnections();
-            _saveProject();
-          });
-        }
-      },
-      onNodeDeleted: (srcRung, srcNode) {
-        setState(() {
-          _project.networks[srcRung].removeNodeAt(srcNode);
-          _saveProject();
-          _isDraggingNode = false;
-        });
-      },
+    if (!_showToolbox) {
+      return Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppTokens.panel,
+          border: Border(bottom: BorderSide(color: AppTokens.line, width: 1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.widgets_outlined, size: 12, color: Color(0xFF94A3B8)),
+            const SizedBox(width: 6),
+            const Text(
+              'Paleta de Componentes Oculta (Mais espaço para visualização)',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
+            InkWell(
+              onTap: () => setState(() => _showToolbox = true),
+              child: Row(
+                children: const [
+                  Text('Exibir Componentes', style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down, size: 14, color: Color(0xFF4FD1C5)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Stack(
+      children: [
+        LadderToolbox(
+          isDraggingNode: _isDraggingNode,
+          onNodeTapped: (nodeType) {
+            if (_project.networks.isNotEmpty) {
+              setState(() {
+                final newNode = _createConfiguredNode(nodeType);
+                _project.networks.first.addNode(newNode);
+                _project.networks.first.rebuildConnections();
+                _saveProject();
+              });
+            }
+          },
+          onNodeDeleted: (srcRung, srcNode) {
+            setState(() {
+              _project.networks[srcRung].removeNodeAt(srcNode);
+              _saveProject();
+              _isDraggingNode = false;
+            });
+          },
+        ),
+        Positioned(
+          right: 8,
+          top: 6,
+          child: Tooltip(
+            message: 'Recolher paleta para ampliar visualização do Ladder',
+            child: InkWell(
+              onTap: () => setState(() => _showToolbox = false),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF131722),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFF334155), width: 0.8),
+                ),
+                child: const Icon(Icons.keyboard_arrow_up, size: 14, color: Color(0xFF94A3B8)),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

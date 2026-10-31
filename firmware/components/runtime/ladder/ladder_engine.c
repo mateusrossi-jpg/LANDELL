@@ -791,3 +791,24 @@ fail:
     }
     return false;
 }
+
+bool ladder_engine_get_timer_state(uint16_t tag_id, bool *out_active, int64_t *out_elapsed_ms)
+{
+    for (size_t i = 0; i < s_timer_count; i++) {
+        if (s_timers[i].tag_id == tag_id) {
+            if (out_active) *out_active = s_timers[i].active;
+            if (out_elapsed_ms) {
+                if (s_timers[i].active && s_timers[i].start_time_ms > 0) {
+                    int64_t now_ms = esp_timer_get_time() / 1000;
+                    *out_elapsed_ms = (now_ms > s_timers[i].start_time_ms) ? (now_ms - s_timers[i].start_time_ms) : 0;
+                } else {
+                    *out_elapsed_ms = 0;
+                }
+            }
+            return true;
+        }
+    }
+    if (out_active) *out_active = false;
+    if (out_elapsed_ms) *out_elapsed_ms = 0;
+    return false;
+}
