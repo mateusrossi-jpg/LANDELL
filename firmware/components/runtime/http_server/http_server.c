@@ -5166,8 +5166,10 @@ static esp_err_t wifi_save_handler(httpd_req_t *req)
 
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
     {
-        httpd_query_key_value(query, "ssid", ssid, sizeof(ssid));
-        httpd_query_key_value(query, "pass", pass, sizeof(pass));
+        if (httpd_query_key_value(query, "ssid", ssid, sizeof(ssid)) == ESP_OK)
+            http_url_decode_inplace(ssid);
+        if (httpd_query_key_value(query, "pass", pass, sizeof(pass)) == ESP_OK)
+            http_url_decode_inplace(pass);
     }
 
     err = wifi_manager_save(ssid, pass);
@@ -5361,6 +5363,7 @@ static query_value_status_t query_get_value(httpd_req_t *req,
     if (err != ESP_OK)
         return QUERY_VALUE_INVALID;
 
+    http_url_decode_inplace(out_value);
     return QUERY_VALUE_OK;
 }
 
@@ -5949,7 +5952,13 @@ static bool failsafe_query_get_value(httpd_req_t *req,
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK)
         return false;
 
-    return httpd_query_key_value(query, key, out, out_size) == ESP_OK;
+    if (httpd_query_key_value(query, key, out, out_size) == ESP_OK)
+    {
+        http_url_decode_inplace(out);
+        return true;
+    }
+
+    return false;
 }
 
 static bool failsafe_body_or_query_value(httpd_req_t *req,
