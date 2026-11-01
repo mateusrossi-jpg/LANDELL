@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show File;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 import '../../design_system/tokens.dart';
 import '../network/authenticated_http_client.dart';
 import '../services/network_manager.dart';
@@ -56,6 +60,19 @@ class _NetworksPageState extends State<NetworksPage> {
   int _mqttReconnects = 0;
   bool get _isHybridGateway => widget.networkManager.isHybridGateway;
 
+  // Firmware OTA State
+  bool _otaUploading = false;
+  bool _otaDownloading = false;
+  double _otaProgress = 0.0;
+  String _otaStatusMessage = '';
+  String? _selectedFirmwareName;
+  Uint8List? _selectedFirmwareBytes;
+  Map<String, dynamic>? _remoteOtaInfo;
+  bool _fetchingOtaInfo = false;
+  final TextEditingController _githubOtaUrlController = TextEditingController(
+    text: 'https://raw.githubusercontent.com/mateusrossi-jpg/LANDELL/main/firmware/build/ENDAP.bin',
+  );
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +81,7 @@ class _NetworksPageState extends State<NetworksPage> {
         : widget.networkManager.gatewayIp.trim();
     _ipController = TextEditingController(text: initialIp);
     _fetchMqttConfig();
+    _fetchOtaInfo();
   }
 
   @override
@@ -77,6 +95,7 @@ class _NetworksPageState extends State<NetworksPage> {
     _mqttPassController.dispose();
     _mqttBaseTopicController.dispose();
     _mqttIntervalController.dispose();
+    _githubOtaUrlController.dispose();
     _client.close();
     super.dispose();
   }
@@ -365,6 +384,7 @@ class _NetworksPageState extends State<NetworksPage> {
                     onRefresh: () async {
                       await widget.networkManager.scanNetwork();
                       await _fetchMqttConfig();
+                      await _fetchOtaInfo();
                     },
                     color: AppTokens.focus,
                     backgroundColor: AppTokens.panel,
@@ -378,6 +398,8 @@ class _NetworksPageState extends State<NetworksPage> {
                         _buildWifiSection(),
                         const SizedBox(height: 14),
                         _buildMqttSection(),
+                        const SizedBox(height: 14),
+                        _buildFirmwareOtaSection(),
                       ],
                     ),
                   );
@@ -1604,6 +1626,513 @@ class _NetworksPageState extends State<NetworksPage> {
         const SizedBox(height: 2),
         Text(label, style: const TextStyle(color: AppTokens.muted, fontSize: 10)),
       ],
+    );
+  }
+
+  Future<void> _fetchOtaInfo() async {
+    final targetIp = _ipController.text.trim();
+    if (targetIp.isEmpty) return;
+    setState(() => _fetchingOtaInfo = true);
+    try {
+      final res = await _client
+          .get(Uri.parse('http://$targetIp/api/system/ota/status'))
+          .timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body) as Map<String, dynamic>;
+        if (mounted) {
+          setState(() => _remoteOtaInfo = data);
+        }
+      }
+    } catch (_) {
+      // Offline ou rota antiga
+    } finally {
+      if (mounted) setState(() => _fetchingOtaInfo = false);
+    }
+  }
+
+  Future<void> _pickLocalFirmware() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        dialogTitle: 'Selecionar Binário de Firmware (.bin)',
+        type: FileType.custom,
+        allowedExtensions: ['bin'],
+        withData: true,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        Uint8List? bytes = file.bytes;
+        if (bytes == null && file.path != null && !kIsWeb) {
+          bytes = await File(file.path!).readAsBytes();
+        }
+        if (bytes != null) {
+          final nonNullBytes = bytes;
+          setState(() {
+            _selectedFirmwareBytes = nonNullBytes;
+            _selectedFirmwareName = file.name;
+            _otaStatusMessage = 'Binário selecionado: ${file.name} (${(nonNullBytes.length / 1024).toStringAsFixed(1)} KB)';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: AppTokens.error, content: Text('Erro ao selecionar arquivo: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadFromGithubAndDeploy() async {
+    final urlStr = _githubOtaUrlController.text.trim();
+    if (urlStr.isEmpty) return;
+    final targetIp = _ipController.text.trim();
+    if (targetIp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(backgroundColor: AppTokens.error, content: Text('Informe o IP do CLP antes de iniciar o OTA.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _otaDownloading = true;
+      _otaProgress = 0.0;
+      _otaStatusMessage = 'Conectando ao GitHub para download do firmware...';
+    });
+
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(urlStr));
+      final streamedResponse = await client.send(request);
+
+      if (streamedResponse.statusCode != 200) {
+        throw Exception('HTTP ${streamedResponse.statusCode} ao baixar do GitHub');
+      }
+
+      final contentLength = streamedResponse.contentLength ?? 1550000;
+      final bytesBuilder = BytesBuilder(copy: false);
+      int downloaded = 0;
+
+      await for (final chunk in streamedResponse.stream) {
+        bytesBuilder.add(chunk);
+        downloaded += chunk.length;
+        if (mounted) {
+          setState(() {
+            _otaProgress = (downloaded / contentLength).clamp(0.0, 1.0);
+            _otaStatusMessage = 'Baixando do GitHub: ${(downloaded / 1024).toStringAsFixed(0)} KB / ${(contentLength / 1024).toStringAsFixed(0)} KB (${(_otaProgress * 100).toStringAsFixed(0)}%)';
+          });
+        }
+      }
+
+      final firmwareBytes = bytesBuilder.takeBytes();
+      setState(() {
+        _selectedFirmwareBytes = firmwareBytes;
+        _selectedFirmwareName = 'GitHub (ENDAP.bin)';
+        _otaDownloading = false;
+      });
+
+      // Inicia imediatamente o envio OTA para o CLP
+      await _uploadFirmwareOta(firmwareBytes, targetIp);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _otaDownloading = false;
+          _otaStatusMessage = 'Falha no download do GitHub: $e';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: AppTokens.error, content: Text('Erro no download: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadFirmwareOta(Uint8List bytes, String targetIp) async {
+    setState(() {
+      _otaUploading = true;
+      _otaProgress = 0.0;
+      _otaStatusMessage = 'Iniciando gravação OTA no CLP ($targetIp)...';
+    });
+
+    try {
+      final uri = Uri.parse('http://$targetIp/api/system/ota');
+      
+      final request = http.StreamedRequest('POST', uri);
+      request.headers['Content-Type'] = 'application/octet-stream';
+      request.contentLength = bytes.length;
+
+      final uploadFuture = request.send();
+
+      const chunkSize = 4096;
+      int uploaded = 0;
+      for (int i = 0; i < bytes.length; i += chunkSize) {
+        final end = (i + chunkSize < bytes.length) ? i + chunkSize : bytes.length;
+        final slice = bytes.sublist(i, end);
+        request.sink.add(slice);
+        uploaded += slice.length;
+        if (mounted) {
+          setState(() {
+            _otaProgress = (uploaded / bytes.length).clamp(0.0, 1.0);
+            _otaStatusMessage = 'Gravando OTA no CLP: ${(uploaded / 1024).toStringAsFixed(0)} KB / ${(bytes.length / 1024).toStringAsFixed(0)} KB (${(_otaProgress * 100).toStringAsFixed(0)}%)';
+          });
+        }
+        await Future.delayed(const Duration(milliseconds: 2));
+      }
+      await request.sink.close();
+
+      final response = await uploadFuture;
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic>? data;
+        try {
+          data = json.decode(responseBody) as Map<String, dynamic>;
+        } catch (_) {}
+        setState(() {
+          _otaUploading = false;
+          _otaProgress = 1.0;
+          _otaStatusMessage = data?['message'] ?? 'Firmware gravado com sucesso! Reiniciando CLP...';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF10B981),
+              content: Text(_otaStatusMessage),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
+      } else {
+        throw Exception('Falha na gravação OTA (HTTP ${response.statusCode}): $responseBody');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _otaUploading = false;
+          _otaStatusMessage = 'Falha no OTA: $e';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: AppTokens.error, content: Text('Erro ao enviar OTA: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildFirmwareOtaSection() {
+    final isBusy = _otaUploading || _otaDownloading;
+    final statusColor = isBusy
+        ? const Color(0xFFE0A430)
+        : (_remoteOtaInfo != null && _remoteOtaInfo!['ok'] == true)
+            ? const Color(0xFF3FBF5A)
+            : const Color(0xFF8C98A8);
+    final statusText = isBusy
+        ? (_otaDownloading ? 'BAIXANDO...' : 'GRAVANDO...')
+        : (_remoteOtaInfo != null && _remoteOtaInfo!['ok'] == true)
+            ? 'OTA DISPONÍVEL'
+            : 'CLP OFFLINE';
+
+    return Card(
+      color: AppTokens.panel,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isBusy ? const Color(0xFFE0A430).withOpacity(0.5) : AppTokens.panel2,
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.system_update_alt, color: Color(0xFF10B981), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Deploy de Firmware OTA (ESP32)',
+                        style: TextStyle(
+                          color: AppTokens.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _remoteOtaInfo != null
+                            ? 'Partição ativa: ${_remoteOtaInfo!['running_partition'] ?? 'ota_0'} (Próxima: ${_remoteOtaInfo!['next_partition'] ?? 'ota_1'}) · Versão: ${_remoteOtaInfo!['running_version'] ?? 'dev'}'
+                            : 'Atualização Over-The-Air do FreeRTOS/ESP-IDF via Wi-Fi sem necessidade de cabo USB.',
+                        style: const TextStyle(color: AppTokens.muted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: isBusy ? null : _fetchOtaInfo,
+                  icon: _fetchingOtaInfo
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTokens.focus),
+                        )
+                      : const Icon(Icons.refresh, color: AppTokens.muted, size: 16),
+                  tooltip: 'Atualizar status do firmware',
+                ),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: statusColor.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        statusText,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'JetBrains Mono',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: AppTokens.line, height: 1),
+            const SizedBox(height: 16),
+
+            // Barra de Progresso quando ocupado
+            if (isBusy || _otaStatusMessage.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTokens.panel2,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: isBusy ? const Color(0xFFE0A430).withOpacity(0.4) : AppTokens.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isBusy ? Icons.sync : Icons.info_outline,
+                          size: 16,
+                          color: isBusy ? const Color(0xFFE0A430) : AppTokens.focus,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _otaStatusMessage,
+                            style: const TextStyle(
+                              color: AppTokens.text,
+                              fontSize: 12,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                        ),
+                        if (isBusy)
+                          Text(
+                            '${(_otaProgress * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              color: Color(0xFFE0A430),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (isBusy) ...[
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: _otaProgress > 0 ? _otaProgress : null,
+                          minHeight: 6,
+                          backgroundColor: AppTokens.panel2,
+                          color: const Color(0xFF10B981),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Opção 1: Arquivo Local (.bin)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTokens.panel2,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTokens.line),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.folder_open, size: 16, color: AppTokens.focus),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '1. Upload de Binário Local (.bin)',
+                        style: TextStyle(
+                          color: AppTokens.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const Spacer(),
+                      ElevatedButton.icon(
+                        onPressed: isBusy ? null : _pickLocalFirmware,
+                        icon: const Icon(Icons.file_upload_outlined, size: 14),
+                        label: const Text('Selecionar .bin', style: TextStyle(fontSize: 11)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTokens.panel,
+                          foregroundColor: AppTokens.text,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          minimumSize: Size.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_selectedFirmwareBytes != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${_selectedFirmwareName ?? 'ENDAP.bin'} (${((_selectedFirmwareBytes?.length ?? 0) / 1024).toStringAsFixed(1)} KB)',
+                            style: const TextStyle(color: AppTokens.muted, fontSize: 11, fontFamily: 'JetBrains Mono'),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: isBusy
+                              ? null
+                              : () {
+                                  final ip = _ipController.text.trim();
+                                  if (ip.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        backgroundColor: AppTokens.error,
+                                        content: Text('Informe o IP do CLP antes de gravar.'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  _uploadFirmwareOta(_selectedFirmwareBytes!, ip);
+                                },
+                          icon: const Icon(Icons.bolt, size: 14),
+                          label: const Text('Gravar no CLP via OTA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            minimumSize: Size.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Opção 2: Baixar do GitHub e Gravar
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTokens.panel2,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTokens.line),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.cloud_download_outlined, size: 16, color: Color(0xFF03A9F4)),
+                      SizedBox(width: 8),
+                      Text(
+                        '2. Baixar Atualização do GitHub & Gravar OTA',
+                        style: TextStyle(
+                          color: AppTokens.text,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _githubOtaUrlController,
+                          enabled: !isBusy,
+                          style: const TextStyle(color: AppTokens.text, fontSize: 11, fontFamily: 'JetBrains Mono'),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            hintText: 'https://raw.githubusercontent.com/.../ENDAP.bin',
+                            hintStyle: const TextStyle(color: AppTokens.muted, fontSize: 10),
+                            fillColor: AppTokens.panel,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide: const BorderSide(color: AppTokens.line),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: isBusy ? null : _downloadFromGithubAndDeploy,
+                        icon: const Icon(Icons.download_for_offline_outlined, size: 14),
+                        label: const Text('Baixar & Gravar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          minimumSize: Size.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

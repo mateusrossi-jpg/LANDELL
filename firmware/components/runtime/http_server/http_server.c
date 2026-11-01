@@ -40,6 +40,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_system.h"
+#include "esp_ota_ops.h"
+#include "esp_app_format.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -9303,6 +9305,135 @@ static esp_err_t automation_ladder_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t ota_status_handler(httpd_req_t *req)
+{
+    http_set_public_json_headers(req);
+
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
+    esp_app_desc_t running_desc;
+    memset(&running_desc, 0, sizeof(running_desc));
+    if (running) {
+        esp_ota_get_partition_description(running, &running_desc);
+    }
+
+    char resp[512];
+    snprintf(resp, sizeof(resp),
+             "{\"ok\":true,\"running_partition\":\"%s\",\"running_version\":\"%s\",\"project_name\":\"%s\","
+             "\"compile_time\":\"%s %s\",\"idf_version\":\"%s\",\"next_partition\":\"%s\","
+             "\"partition_size\":%" PRIu32 "}",
+             running ? running->label : "unknown",
+             running_desc.version[0] ? running_desc.version : "dev",
+             running_desc.project_name[0] ? running_desc.project_name : "ENDAP",
+             running_desc.date, running_desc.time,
+             running_desc.idf_ver,
+             next ? next->label : "none",
+             next ? next->size : 0);
+
+    httpd_resp_sendstr(req, resp);
+    return ESP_OK;
+}
+
+static esp_err_t ota_upload_handler(httpd_req_t *req)
+{
+    http_set_public_json_headers(req);
+
+    if (req->method == HTTP_OPTIONS) {
+        httpd_resp_send(req, NULL, 0);
+        return ESP_OK;
+    }
+
+    if (!http_auth_require_cap(req, AUTH_CAP_AUTOMATION_WRITE))
+        return ESP_OK;
+
+    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+    if (!update_partition) {
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"no_ota_partition\"}");
+        return ESP_OK;
+    }
+
+    if (req->content_len <= 0 || req->content_len > update_partition->size) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"invalid_content_length\"}");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Iniciando gravacao OTA na particao %s (0x%" PRIx32 ", tamanho: %d bytes)...",
+             update_partition->label, update_partition->address, req->content_len);
+
+    esp_ota_handle_t update_handle = 0;
+    esp_err_t err = esp_ota_begin(update_partition, OTA_WITH_SEQUENTIAL_WRITES, &update_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_begin falhou: %s", esp_err_to_name(err));
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"ota_begin_failed\"}");
+        return ESP_OK;
+    }
+
+    const size_t chunk_size = 2048;
+    char *chunk = malloc(chunk_size);
+    if (!chunk) {
+        esp_ota_abort(update_handle);
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"out_of_memory\"}");
+        return ESP_OK;
+    }
+
+    int remaining = req->content_len;
+    while (remaining > 0) {
+        int to_recv = (remaining < (int)chunk_size) ? remaining : (int)chunk_size;
+        int received = httpd_req_recv(req, chunk, to_recv);
+        if (received <= 0) {
+            if (received == HTTPD_SOCK_ERR_TIMEOUT) {
+                continue;
+            }
+            ESP_LOGE(TAG, "Erro de recepcao OTA: %d", received);
+            free(chunk);
+            esp_ota_abort(update_handle);
+            httpd_resp_set_status(req, "500 Internal Server Error");
+            httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"socket_receive_error\"}");
+            return ESP_OK;
+        }
+
+        err = esp_ota_write(update_handle, (const void *)chunk, received);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "esp_ota_write falhou: %s", esp_err_to_name(err));
+            free(chunk);
+            esp_ota_abort(update_handle);
+            httpd_resp_set_status(req, "500 Internal Server Error");
+            httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"flash_write_error\"}");
+            return ESP_OK;
+        }
+
+        remaining -= received;
+    }
+
+    free(chunk);
+
+    err = esp_ota_end(update_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_end falhou (imagem invalida): %s", esp_err_to_name(err));
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"invalid_firmware_image\"}");
+        return ESP_OK;
+    }
+
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition falhou: %s", esp_err_to_name(err));
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"set_boot_partition_failed\"}");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Firmware OTA gravado com sucesso! Agendando reinicializacao...");
+    httpd_resp_sendstr(req, "{\"ok\":true,\"status\":\"ota_success\",\"message\":\"Firmware gravado com sucesso! Reiniciando CLP em 1s...\"}");
+
+    xTaskCreate(reboot_task, "esp_reboot", 2048, NULL, 5, NULL);
+    return ESP_OK;
+}
+
 static esp_err_t automation_add_handler(httpd_req_t *req)
 {
     int input = 0;
@@ -9899,6 +10030,16 @@ void http_server_start(void)
             .uri = "/api/ladder/bytecode", .method = HTTP_POST, .handler = automation_ladder_handler });
         httpd_register_uri_handler(server, &(httpd_uri_t){
             .uri = "/api/ladder/bytecode", .method = HTTP_OPTIONS, .handler = options_handler });
+
+        /* OTA FIRMWARE DEPLOY */
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/api/system/ota/status", .method = HTTP_GET, .handler = ota_status_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/api/system/ota/status", .method = HTTP_OPTIONS, .handler = options_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/api/system/ota", .method = HTTP_POST, .handler = ota_upload_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/api/system/ota", .method = HTTP_OPTIONS, .handler = options_handler });
 
 
         httpd_register_uri_handler(server, &(httpd_uri_t){

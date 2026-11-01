@@ -29,4 +29,5 @@ idf_component_register(
     ethernet_manager
     network_v1
     mqtt_service
+    app_update
 )
