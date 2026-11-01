@@ -107,15 +107,22 @@ class _NetworksPageState extends State<NetworksPage> {
     try {
       final res = await _client
           .get(Uri.parse('http://$targetIp/api/wifi/scan'))
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 15));
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         setState(() => _scannedNetworks = data['networks'] ?? []);
       }
     } catch (e) {
       if (mounted) {
+        final hint = targetIp != '192.168.4.1'
+            ? ' Verifique se seu computador está conectado à rede do CLP (ex: ENDAP_SETUP-xxxx, senha: 12345678) e tente o IP padrão 192.168.4.1.'
+            : ' Verifique se o seu computador permanece conectado ao Wi-Fi gerado pelo CLP.';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(backgroundColor: const Color(0xFFD9503F), content: Text('Falha ao escanear Wi-Fi: $e')),
+          SnackBar(
+            backgroundColor: const Color(0xFFD9503F),
+            duration: const Duration(seconds: 7),
+            content: Text('Falha ao escanear Wi-Fi em $targetIp: $e.$hint'),
+          ),
         );
       }
     } finally {
@@ -1056,8 +1063,11 @@ class _NetworksPageState extends State<NetworksPage> {
                         final currentIp = widget.networkManager.controller.ip.trim().isNotEmpty
                             ? widget.networkManager.controller.ip.trim()
                             : widget.networkManager.gatewayIp.trim();
+                        // Se o IP estiver vazio ou não for da rede local, sugere o IP padrão do modo AP
                         if (currentIp.isNotEmpty) {
                            _ipController.text = currentIp;
+                        } else {
+                           _ipController.text = '192.168.4.1';
                         }
                         _provisionStep = 1;
                       } else {
@@ -1073,6 +1083,28 @@ class _NetworksPageState extends State<NetworksPage> {
               const Divider(color: AppTokens.line, height: 1),
               const SizedBox(height: 14),
               if (_provisionStep == 1) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppTokens.panel2,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTokens.line),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: AppTokens.focus),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Passo 1: Se o CLP estiver em modo de configuração (SSID ENDAP_SETUP-xxxx, senha: 12345678), conecte o Wi-Fi do computador nesta rede e utilize o IP 192.168.4.1.',
+                          style: TextStyle(color: AppTokens.textDim, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const Text('IP do Controlador Alvo (em modo AP):', style: TextStyle(color: AppTokens.textDim, fontSize: 11)),
                 const SizedBox(height: 6),
                 Row(
@@ -1110,23 +1142,47 @@ class _NetworksPageState extends State<NetworksPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    ActionChip(
+                      backgroundColor: AppTokens.panel2,
+                      side: const BorderSide(color: AppTokens.line),
+                      label: const Text('192.168.4.1 (Modo AP)', style: TextStyle(fontSize: 10, color: AppTokens.text)),
+                      onPressed: () => setState(() => _ipController.text = '192.168.4.1'),
+                    ),
+                    ActionChip(
+                      backgroundColor: AppTokens.panel2,
+                      side: const BorderSide(color: AppTokens.line),
+                      label: const Text('192.168.0.229 (Bancada STA)', style: TextStyle(fontSize: 10, color: AppTokens.text)),
+                      onPressed: () => setState(() => _ipController.text = '192.168.0.229'),
+                    ),
+                  ],
+                ),
               ] else if (_provisionStep == 2) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Selecione ou digite a rede Wi-Fi:', style: TextStyle(color: AppTokens.textDim, fontSize: 11)),
+                    Text('Redes Wi-Fi encontradas via ${_ipController.text}:', style: const TextStyle(color: AppTokens.textDim, fontSize: 11)),
                     IconButton(
                       icon: _isScanning
                           ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTokens.focus))
                           : const Icon(Icons.refresh, size: 16, color: AppTokens.focus),
+                      tooltip: 'Escanear novamente',
                       onPressed: _isScanning ? null : _scanNetworks,
                     ),
                   ],
                 ),
-                if (_scannedNetworks.isNotEmpty) ...[
+                if (_isScanning) ...[
+                  const SizedBox(height: 10),
+                  const LinearProgressIndicator(color: AppTokens.focus, backgroundColor: AppTokens.panel2),
+                  const SizedBox(height: 8),
+                  const Text('Varrendo canais de rádio 2.4 GHz...', style: TextStyle(color: AppTokens.textDim, fontSize: 10, fontStyle: FontStyle.italic)),
+                ] else if (_scannedNetworks.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Container(
-                    constraints: const BoxConstraints(maxHeight: 120),
+                    constraints: const BoxConstraints(maxHeight: 140),
                     decoration: BoxDecoration(
                       color: AppTokens.panel2,
                       borderRadius: BorderRadius.circular(8),
@@ -1139,16 +1195,40 @@ class _NetworksPageState extends State<NetworksPage> {
                         final net = _scannedNetworks[i];
                         final ssid = net['ssid'] ?? '';
                         final rssi = net['rssi'] ?? 0;
+                        final isSelected = _ssidController.text == ssid;
                         return ListTile(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          title: Text(ssid, style: const TextStyle(color: AppTokens.text, fontSize: 11)),
+                          leading: const Icon(Icons.wifi, size: 16, color: AppTokens.focus),
+                          title: Text(ssid, style: TextStyle(color: isSelected ? AppTokens.focus : AppTokens.text, fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
                           subtitle: Text('Sinal: $rssi dBm', style: const TextStyle(color: AppTokens.textDim, fontSize: 9.5)),
+                          trailing: isSelected ? const Icon(Icons.check, size: 14, color: AppTokens.focus) : null,
                           onTap: () {
                             setState(() => _ssidController.text = ssid);
                           },
                         );
                       },
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTokens.panel2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTokens.line),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('Nenhuma rede encontrada na última varredura.', style: TextStyle(color: AppTokens.textDim, fontSize: 11)),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: _scanNetworks,
+                          icon: const Icon(Icons.refresh, size: 14),
+                          label: const Text('Tentar Novamente', style: TextStyle(fontSize: 11)),
+                        ),
+                      ],
                     ),
                   ),
                 ],
