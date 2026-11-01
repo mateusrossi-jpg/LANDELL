@@ -5952,7 +5952,13 @@ static bool failsafe_query_get_value(httpd_req_t *req,
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK)
         return false;
 
-    return httpd_query_key_value(query, key, out, out_size) == ESP_OK;
+    if (httpd_query_key_value(query, key, out, out_size) == ESP_OK)
+    {
+        http_url_decode_inplace(out);
+        return true;
+    }
+
+    return false;
 }
 
 static bool failsafe_body_or_query_value(httpd_req_t *req,
