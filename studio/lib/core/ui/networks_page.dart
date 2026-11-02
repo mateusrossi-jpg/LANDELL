@@ -2078,18 +2078,27 @@ class _NetworksPageState extends State<NetworksPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: [
-                      const Icon(Icons.folder_open, size: 16, color: AppTokens.focus),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '1. Upload de Binário Local (.bin)',
-                        style: TextStyle(
-                          color: AppTokens.text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                    children: const [
+                      Icon(Icons.folder_open, size: 16, color: AppTokens.focus),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '1. Upload de Binário Local (.bin)',
+                          style: TextStyle(
+                            color: AppTokens.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
                       ElevatedButton.icon(
                         onPressed: isBusy ? null : _pickLocalFirmware,
                         icon: const Icon(Icons.file_upload_outlined, size: 14),
@@ -2101,19 +2110,17 @@ class _NetworksPageState extends State<NetworksPage> {
                           minimumSize: Size.zero,
                         ),
                       ),
-                    ],
-                  ),
-                  if (_selectedFirmwareBytes != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${_selectedFirmwareName ?? 'ENDAP.bin'} (${((_selectedFirmwareBytes?.length ?? 0) / 1024).toStringAsFixed(1)} KB)',
-                            style: const TextStyle(color: AppTokens.muted, fontSize: 11, fontFamily: 'JetBrains Mono'),
-                          ),
+                      if (_selectedFirmwareBytes != null) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF10B981)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${_selectedFirmwareName ?? 'ENDAP.bin'} (${((_selectedFirmwareBytes?.length ?? 0) / 1024).toStringAsFixed(1)} KB)',
+                              style: const TextStyle(color: AppTokens.muted, fontSize: 11, fontFamily: 'JetBrains Mono'),
+                            ),
+                          ],
                         ),
                         ElevatedButton.icon(
                           onPressed: isBusy
@@ -2141,8 +2148,8 @@ class _NetworksPageState extends State<NetworksPage> {
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -2164,20 +2171,26 @@ class _NetworksPageState extends State<NetworksPage> {
                     children: const [
                       Icon(Icons.cloud_download_outlined, size: 16, color: Color(0xFF03A9F4)),
                       SizedBox(width: 8),
-                      Text(
-                        '2. Baixar Atualização do GitHub & Gravar OTA',
-                        style: TextStyle(
-                          color: AppTokens.text,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                      Expanded(
+                        child: Text(
+                          '2. Baixar Atualização do GitHub & Gravar OTA',
+                          style: TextStyle(
+                            color: AppTokens.text,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Expanded(
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 180, maxWidth: 420),
                         child: TextField(
                           controller: _githubOtaUrlController,
                           enabled: !isBusy,
@@ -2196,7 +2209,6 @@ class _NetworksPageState extends State<NetworksPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: isBusy ? null : _downloadFromGithubAndDeploy,
                         icon: const Icon(Icons.download_for_offline_outlined, size: 14),

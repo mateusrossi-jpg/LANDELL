@@ -389,6 +389,8 @@ void main() {
         manager.startPeriodicCheck(interval: const Duration(seconds: 3));
         async.elapse(const Duration(seconds: 3));
         async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 3));
+        async.flushMicrotasks();
         expect(manager.controller.isOnline, isFalse);
         expect(manager.nodes, isEmpty);
 

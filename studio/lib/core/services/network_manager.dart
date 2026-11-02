@@ -99,7 +99,7 @@ class NetworkManager extends ChangeNotifier {
   }
 
   static const String _prefGatewayIpKey = 'firmware_gateway_ip';
-  static const String _defaultGatewayIp = '192.168.0.229';
+  static const String _defaultGatewayIp = '192.168.4.1';
 
   static const String mdnsHost = 'endap.local';
 
@@ -255,6 +255,7 @@ class NetworkManager extends ChangeNotifier {
     final found = <ControllerInfo>[];
     final candidates = <String>{
       if (gatewayIp.isNotEmpty) gatewayIp,
+      '192.168.4.1',
       mdnsHost,
       if (kIsWeb && Uri.base.authority.isNotEmpty) Uri.base.authority,
       if (_lastStaIp.isNotEmpty && _lastStaIp != gatewayIp) _lastStaIp,
@@ -363,6 +364,7 @@ class NetworkManager extends ChangeNotifier {
   Future<String?> _discoverControllerAddress() async {
     final candidates = <String>{
       if (kIsWeb && Uri.base.authority.isNotEmpty) Uri.base.authority,
+      '192.168.4.1',
       '192.168.0.229',
       '192.168.0.27',
       mdnsHost,

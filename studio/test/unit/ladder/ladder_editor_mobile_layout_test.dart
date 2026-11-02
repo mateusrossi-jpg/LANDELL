@@ -114,7 +114,7 @@ void main() {
         expect(find.text('0002'), findsOneWidget);
 
         // Expandir Monitor I/O para o estado Semi
-        await tester.tap(find.byIcon(Icons.keyboard_arrow_up));
+        await tester.tap(find.byIcon(Icons.keyboard_arrow_up).last);
         await tester.pumpAndSettle();
 
         // Verificar lista de variáveis rápidas e campo de tag personalizada

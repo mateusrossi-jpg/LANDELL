@@ -251,7 +251,7 @@ void main() {
       // 3. Cluster e Registro de Nós
       expect(netManager.nodes.length, 1);
       expect(netManager.nodes.first.status, NodeStatus.online);
-      expect(netManager.nodes.first.ip, anyOf('192.168.0.27', '192.168.0.229'));
+      expect(netManager.nodes.first.ip, anyOf('192.168.4.1', '192.168.0.27', '192.168.0.229'));
     });
 
     // =======================================================================
