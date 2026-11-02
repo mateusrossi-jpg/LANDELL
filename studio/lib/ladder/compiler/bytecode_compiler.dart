@@ -11,7 +11,8 @@ class BytecodeCompiler {
   /// Se [targetControllerId] for especificado (e não for 'ALL' ou 'GLOBAL'),
   /// compila apenas os rungs destinados àquele controlador (ou rungs marcados como 'GLOBAL').
   /// Rungs com [isEnabled == false] são ignorados na compilação.
-  Uint8List compile(LadderProject project, {String? targetControllerId}) {
+  /// [useLegacyPid] permite compilar usando OP_PID (0x60, 12 bytes) para compatibilidade retroativa.
+  Uint8List compile(LadderProject project, {String? targetControllerId, bool useLegacyPid = false}) {
     final List<int> bytecode = [];
     
     // Header Magic (ENDP)
@@ -30,7 +31,7 @@ class BytecodeCompiler {
           continue;
         }
       }
-      _compileNetwork(network, project, bytecode);
+      _compileNetwork(network, project, bytecode, useLegacyPid: useLegacyPid);
     }
     
     // Terminator (0xFF)
@@ -39,12 +40,12 @@ class BytecodeCompiler {
     return Uint8List.fromList(bytecode);
   }
 
-  void _compileNetwork(LadderNetwork network, LadderProject project, List<int> bytecode) {
+  void _compileNetwork(LadderNetwork network, LadderProject project, List<int> bytecode, {bool useLegacyPid = false}) {
     if (network.nodes.isEmpty) return;
-    _compileNodeList(network.nodes, project, bytecode, isFirstOfNetwork: true);
+    _compileNodeList(network.nodes, project, bytecode, isFirstOfNetwork: true, useLegacyPid: useLegacyPid);
   }
 
-  void _compileNodeList(List<LadderNode> nodes, LadderProject project, List<int> bytecode, {bool isFirstOfNetwork = false}) {
+  void _compileNodeList(List<LadderNode> nodes, LadderProject project, List<int> bytecode, {bool isFirstOfNetwork = false, bool useLegacyPid = false}) {
     for (int i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       final isFirst = i == 0 && isFirstOfNetwork;
@@ -54,7 +55,7 @@ class BytecodeCompiler {
            bytecode.add(Opcodes.OR_BLOCK_START);
            for (int b = 0; b < node.branches!.length; b++) {
                if (b > 0) bytecode.add(Opcodes.OR_BLOCK_NEXT);
-               _compileNodeList(node.branches![b], project, bytecode, isFirstOfNetwork: true);
+               _compileNodeList(node.branches![b], project, bytecode, isFirstOfNetwork: true, useLegacyPid: useLegacyPid);
            }
            bytecode.add(Opcodes.OR_BLOCK_END);
         }
@@ -137,16 +138,15 @@ class BytecodeCompiler {
       bytecode.add(destAddress & 0xFF);
     }
     else if (node.type == NodeType.pid) {
-      emitPid(project, node, bytecode);
+      emitPid(project, node, bytecode, useLegacyPid: useLegacyPid);
     }
   }
 }
 
-  /// Emite o PID industrial (OP_PIDX = 0x61, 23 bytes de operando):
-  /// pv(2) sp(2) mv(2) kp(2) ki(2) kd(2) flags(1) outMin(1) outMax(1) deadband×10(1)
-  /// enoThr(1) enoHys(1) safeOut(1) manSelTag(2) manOut(2)
+  /// Emite o PID industrial (OP_PIDX = 0x61, 23 bytes de operando) ou legado (OP_PID = 0x60, 12 bytes):
+  /// pv(2) sp(2) mv(2) kp(2) ki(2) kd(2) [flags(1) outMin(1) outMax(1) deadband×10(1) enoThr(1) enoHys(1) safeOut(1) manSelTag(2) manOut(2)]
   /// Os ganhos vão ×100; SP/manOut literais usam o bit 15 (0x8000 | %).
-  static void emitPid(LadderProject project, LadderNode node, List<int> bytecode) {
+  static void emitPid(LadderProject project, LadderNode node, List<int> bytecode, {bool useLegacyPid = false}) {
     final cfg = node.config;
     final pvTagId = (cfg.tagId ?? 'AI0.0').trim();
     final mvTagId = (cfg.outputTagId ?? 'MV_PID').trim();
@@ -165,16 +165,28 @@ class BytecodeCompiler {
 
     final spAddress = percentOperand(cfg.setpointTagId ?? '50', '50');
 
-    final manTag = (cfg.pidManualTagId ?? '').trim();
-    final manSelAddress = manTag.isEmpty ? 0 : project.getTagAddress(manTag);
-    final manOutAddress = manTag.isEmpty ? 0 : percentOperand(cfg.pidManualOut ?? '0', '0');
-
     final params = PidEvaluator.paramsFromConfig(cfg);
 
     void w16(int v) {
       bytecode.add((v >> 8) & 0xFF);
       bytecode.add(v & 0xFF);
     }
+
+    if (useLegacyPid) {
+      // Compatibilidade retroativa com firmware antigo v1.0
+      bytecode.add(Opcodes.PID);
+      w16(pvAddress);
+      w16(spAddress);
+      w16(mvAddress);
+      w16(params.kpX100);
+      w16(params.kiX100);
+      w16(params.kdX100);
+      return;
+    }
+
+    final manTag = (cfg.pidManualTagId ?? '').trim();
+    final manSelAddress = manTag.isEmpty ? 0 : project.getTagAddress(manTag);
+    final manOutAddress = manTag.isEmpty ? 0 : percentOperand(cfg.pidManualOut ?? '0', '0');
 
     bytecode.add(Opcodes.PIDX);
     w16(pvAddress);

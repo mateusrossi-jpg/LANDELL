@@ -6,11 +6,12 @@ import '../../../core/services/studio_event_bus.dart';
 import '../../models/ladder_project.dart';
 import '../../compiler/bytecode_compiler.dart';
 import '../../compiler/bytecode_disassembler.dart';
+import '../../compiler/opcodes.dart';
 
 /// Serviço responsável por sincronizar regras compiladas (Bytecode) com o ESP32.
 class FirmwareSyncService {
   static const String _prefGatewayIpKey = 'firmware_gateway_ip';
-  static const String _defaultGatewayIp = '192.168.0.229';
+  static const String _defaultGatewayIp = '192.168.4.1';
 
   final http.Client _client;
 
@@ -21,7 +22,7 @@ class FirmwareSyncService {
     try {
       final prefs = await SharedPreferences.getInstance().timeout(const Duration(milliseconds: 500));
       final saved = prefs.getString(_prefGatewayIpKey)?.trim();
-      if (saved == null || saved.isEmpty || saved == '192.168.4.1' || saved == '192.168.0.27') {
+      if (saved == null || saved.isEmpty) {
         await prefs.setString(_prefGatewayIpKey, _defaultGatewayIp);
         return _defaultGatewayIp;
       }
@@ -51,19 +52,32 @@ class FirmwareSyncService {
 
       // 1. Gera o Bytecode Binário usando o Compiler
       final compiler = BytecodeCompiler();
-      final bytecode = compiler.compile(project, targetControllerId: targetControllerId);
+      var bytecode = compiler.compile(project, targetControllerId: targetControllerId);
       
       final url = Uri.parse('http://$gatewayIp/api/automation/ladder');
       debugPrint('Enviando payload binário (${bytecode.length} bytes) para $url');
 
       // 2. Envia o Binário Puro (Octet-stream)
-      final response = await _client.post(
+      var response = await _client.post(
         url,
         headers: {
           'Content-Type': 'application/octet-stream',
         },
         body: bytecode,
       ).timeout(const Duration(seconds: 5));
+
+      // Se o controlador rejeitar com invalid_bytecode e contiver PIDX (0x61), tenta fallback legado OP_PID (0x60)
+      if (response.statusCode == 400 && response.body.contains('invalid_bytecode') && bytecode.contains(Opcodes.PIDX)) {
+        debugPrint('ESP32 rejeitou OP_PIDX (0x61). Tentando fallback com OP_PID legado (0x60)...');
+        bytecode = compiler.compile(project, targetControllerId: targetControllerId, useLegacyPid: true);
+        response = await _client.post(
+          url,
+          headers: {
+            'Content-Type': 'application/octet-stream',
+          },
+          body: bytecode,
+        ).timeout(const Duration(seconds: 5));
+      }
 
       if (response.statusCode == 200) {
         debugPrint('Lógica binária sincronizada com sucesso no firmware.');

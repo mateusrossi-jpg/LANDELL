@@ -28,7 +28,7 @@ class TelemetrySyncService extends ChangeNotifier {
 
   LadderProject? _project;
   LadderRuntime? _runtime;
-  String _gatewayIp = '192.168.0.229';
+  String _gatewayIp = '192.168.4.1';
 
   /// Lista de IPs dos controladores consultados pela telemetria.
   /// O índice do item na lista é o índice do controlador (0 = primário),
@@ -83,13 +83,13 @@ class TelemetrySyncService extends ChangeNotifier {
     _consecutiveFailures = 0;
     _project = project;
     _runtime = runtime;
-    final normalizedIp = (gatewayIp == null || gatewayIp.trim().isEmpty || gatewayIp.trim() == '192.168.4.1')
-        ? '192.168.0.229'
+    final normalizedIp = (gatewayIp == null || gatewayIp.trim().isEmpty)
+        ? '192.168.4.1'
         : gatewayIp.trim();
     _gatewayIp = normalizedIp;
     if (controllerIps != null && controllerIps.isNotEmpty) {
       _controllerIps = controllerIps
-          .map((ip) => (ip == '192.168.4.1') ? '192.168.0.229' : ip.trim())
+          .map((ip) => ip.trim())
           .where((ip) => ip.isNotEmpty)
           .toSet()
           .toList();
@@ -103,8 +103,8 @@ class TelemetrySyncService extends ChangeNotifier {
 
   /// Atualiza o IP do gateway e reinicia o polling se ativo
   Future<void> updateGatewayIp(String ip) async {
-    final clean = (ip.trim() == '192.168.4.1' || ip.trim().isEmpty)
-        ? '192.168.0.229'
+    final clean = (ip.trim().isEmpty)
+        ? '192.168.4.1'
         : ip.trim();
     _gatewayIp = clean;
     if (_controllerIps.isEmpty) {
@@ -210,7 +210,7 @@ class TelemetrySyncService extends ChangeNotifier {
       for (final res in results) {
         if (res.isOnline && res.ioData != null) {
           _lastIoMap = res.ioData;
-          if (_controllerIps.length <= 1 && res.ip != _gatewayIp && res.ip == '192.168.0.229') {
+          if (_controllerIps.length <= 1 && res.ip != _gatewayIp) {
             _gatewayIp = res.ip;
           }
           processIoMapJson(

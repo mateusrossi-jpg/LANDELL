@@ -500,101 +500,135 @@ class LadderNodeVisual extends StatelessWidget {
                 height: 48,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
+                    color: isBlockEnergized ? const Color(0xFF0F231D) : const Color(0xFF1E2430),
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF38BDF8) : (isBlockEnergized ? const Color(0xFF10B981) : const Color(0xFF334155)),
-                      width: 1.5,
+                      color: isSelected
+                          ? const Color(0xFF38BDF8)
+                          : (isBlockConducting
+                              ? const Color(0xFF10B981)
+                              : (isBlockEnergized ? const Color(0xFF34D399) : const Color(0xFF334155))),
+                      width: isSelected || isBlockEnergized ? 1.5 : 1.0,
                     ),
                     boxShadow: [
                       if (isBlockEnergized)
                         BoxShadow(
-                          color: const Color(0xFF10B981).withValues(alpha: glowOpacity),
-                          blurRadius: glowRadius,
-                          spreadRadius: glowRadius / 2,
+                          color: (isBlockConducting ? const Color(0xFF10B981) : const Color(0xFF34D399)).withValues(alpha: 0.35),
+                          blurRadius: 6.0,
+                          spreadRadius: 1.5,
                         ),
                     ],
                   ),
-                  child: Column(
-                    children: [
-                      // Dark header banner with bold white text
-                      Container(
-                        width: double.infinity,
-                        height: 18,
-                        color: isBlockEnergized ? const Color(0xFF064E3B) : const Color(0xFF1E293B),
-                        alignment: Alignment.center,
-                        child: Text(
-                          prefix,
-                          style: TextStyle(
-                            fontSize: 10.0,
-                            fontWeight: FontWeight.bold,
-                            color: isBlockEnergized ? const Color(0xFF86EFAC) : Colors.white,
-                            fontFamily: 'monospace',
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      // Pin labels (IN / Q at top row, PT / ET at bottom row)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    inPin,
-                                    style: TextStyle(
-                                      fontSize: 8.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: isBlockEnergized ? const Color(0xFF047857) : const Color(0xFF1E293B),
-                                      fontFamily: 'monospace',
-                                    ),
-                                  ),
-                                  Text(
-                                    outPin,
-                                    style: TextStyle(
-                                      fontSize: 8.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: isBlockConducting ? const Color(0xFF047857) : const Color(0xFF1E293B),
-                                      fontFamily: 'monospace',
-                                    ),
-                                  ),
-                                ],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: Stack(
+                      children: [
+                        Column(
+                          children: [
+                            // Header banner
+                            Container(
+                              width: double.infinity,
+                              height: 18,
+                              color: isBlockConducting
+                                  ? const Color(0xFF065F46)
+                                  : (isBlockEnergized ? const Color(0xFF064E3B) : const Color(0xFF111827)),
+                              alignment: Alignment.center,
+                              child: Text(
+                                prefix,
+                                style: TextStyle(
+                                  fontSize: 10.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: isBlockEnergized ? const Color(0xFF86EFAC) : Colors.white,
+                                  fontFamily: 'monospace',
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      presetStr,
-                                      style: const TextStyle(fontSize: 8.0, fontWeight: FontWeight.bold, color: Color(0xFF334155), fontFamily: 'monospace'),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
+                            ),
+                            // Pin labels
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          inPin,
+                                          style: TextStyle(
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isBlockEnergized ? const Color(0xFF34D399) : const Color(0xFF94A3B8),
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                        Text(
+                                          outPin,
+                                          style: TextStyle(
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isBlockConducting ? const Color(0xFF34D399) : const Color(0xFF94A3B8),
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Flexible(
-                                    child: Text(
-                                      accStr,
-                                      style: TextStyle(
-                                        fontSize: 8.0,
-                                        fontWeight: FontWeight.bold,
-                                        color: isBlockEnergized ? const Color(0xFF047857) : const Color(0xFF334155),
-                                        fontFamily: 'monospace',
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            presetStr,
+                                            style: const TextStyle(
+                                              fontSize: 8.0,
+                                              color: Color(0xFFCBD5E1),
+                                              fontFamily: 'monospace',
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Flexible(
+                                          child: Text(
+                                            accStr,
+                                            style: TextStyle(
+                                              fontSize: 8.0,
+                                              fontWeight: isBlockEnergized ? FontWeight.bold : FontWeight.normal,
+                                              color: isBlockConducting
+                                                  ? const Color(0xFF34D399)
+                                                  : (isBlockEnergized ? const Color(0xFFFBBF24) : const Color(0xFF94A3B8)),
+                                              fontFamily: 'monospace',
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        if (isTimer && (accValue > 0) && (presetMs > 0))
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: 2.5,
+                            child: LinearProgressIndicator(
+                              value: (accValue / presetMs).clamp(0.0, 1.0),
+                              backgroundColor: Colors.transparent,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                isBlockConducting ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

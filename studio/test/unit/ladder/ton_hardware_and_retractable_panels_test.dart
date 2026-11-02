@@ -189,7 +189,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Paleta Componentes'), findsOneWidget);
-      expect(find.text('Paleta de Componentes Oculta (Mais espaço para visualização)'), findsOneWidget);
+      expect(find.text('Paleta de Componentes Oculta'), findsOneWidget);
 
       // Clica para reexibir
       await tester.tap(find.text('Exibir Componentes'));

@@ -49,7 +49,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
 
   String get _gatewayIp {
     final ip = widget.networkManager.gatewayIp.trim();
-    return (ip.isEmpty || ip == '192.168.4.1' || ip == '192.168.0.27') ? '192.168.0.229' : ip;
+    return ip.isNotEmpty ? ip : '192.168.4.1';
   }
 
   @override

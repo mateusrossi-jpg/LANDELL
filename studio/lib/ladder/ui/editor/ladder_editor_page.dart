@@ -112,23 +112,23 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
   String _resolveGatewayIpSync() {
     final nm = widget.networkManager;
-    if (nm != null && nm.controller.isOnline && nm.controller.ip.trim().isNotEmpty && nm.controller.ip.trim() != '192.168.4.1' && nm.controller.ip.trim() != '192.168.0.27') {
+    if (nm != null && nm.controller.isOnline && nm.controller.ip.trim().isNotEmpty) {
       return nm.controller.ip.trim();
     }
-    if (nm != null && nm.gatewayIp.trim().isNotEmpty && nm.gatewayIp.trim() != '192.168.4.1' && nm.gatewayIp.trim() != '192.168.0.27') {
+    if (nm != null && nm.gatewayIp.trim().isNotEmpty) {
       return nm.gatewayIp.trim();
     }
-    return '192.168.0.229';
+    return '192.168.4.1';
   }
 
   Future<String> _resolveGatewayIp() async {
     final syncIp = _resolveGatewayIpSync();
-    if (syncIp != '192.168.4.1' && syncIp != '192.168.0.27') return syncIp;
+    if (syncIp.isNotEmpty) return syncIp;
     try {
       final saved = await FirmwareSyncService.getSavedGatewayIp();
-      if (saved.isNotEmpty && saved != '192.168.4.1' && saved != '192.168.0.27') return saved;
+      if (saved.isNotEmpty) return saved;
     } catch (_) {}
-    return '192.168.0.229';
+    return '192.168.4.1';
   }
 
   @override
@@ -2569,7 +2569,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     if (!_showToolbox) {
       return Container(
         height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: AppTokens.panel,
           border: Border(bottom: BorderSide(color: AppTokens.line, width: 1)),
@@ -2578,14 +2578,18 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
           children: [
             const Icon(Icons.widgets_outlined, size: 12, color: Color(0xFF94A3B8)),
             const SizedBox(width: 6),
-            const Text(
-              'Paleta de Componentes Oculta (Mais espaço para visualização)',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w600),
+            const Expanded(
+              child: Text(
+                'Paleta de Componentes Oculta',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             InkWell(
               onTap: () => setState(() => _showToolbox = true),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: const [
                   Text('Exibir Componentes', style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10, fontWeight: FontWeight.bold)),
                   SizedBox(width: 4),

@@ -38,7 +38,8 @@ class EngineeringWorkspaceView extends StatefulWidget {
 class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _showProjectTree = true;
-  bool _showConsole = true;
+  bool _showConsole = false;
+  bool _showWorkbenchToolbar = true;
   String _selectedTreeItem = 'MainProgram';
   List<String> _consoleLogs = [];
 
@@ -245,6 +246,8 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
 
   // 1. Barra de Ferramentas Secundária de Engenharia
   Widget _buildWorkbenchToolbar() {
+    if (!_showWorkbenchToolbar) return const SizedBox.shrink();
+
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -260,138 +263,144 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
         child: Row(
           children: [
             // Toggle Tree
-          IconButton(
-            icon: Icon(
-              _showProjectTree ? Icons.account_tree : Icons.account_tree_outlined,
-              size: 16,
-              color: _showProjectTree ? IndustrialTokens.telemetryCyan : Colors.white54,
-            ),
-            tooltip: _showProjectTree ? 'Ocultar Controller Organizer' : 'Exibir Controller Organizer',
-            onPressed: () => setState(() => _showProjectTree = !_showProjectTree),
-          ),
-          const SizedBox(width: 4),
-
-          // Toggle Console
-          IconButton(
-            icon: Icon(
-              _showConsole ? Icons.terminal : Icons.terminal_outlined,
-              size: 16,
-              color: _showConsole ? IndustrialTokens.telemetryCyan : Colors.white54,
-            ),
-            tooltip: _showConsole ? 'Ocultar Console de Compilação' : 'Exibir Console de Compilação',
-            onPressed: () => setState(() => _showConsole = !_showConsole),
-          ),
-
-          const SizedBox(width: 8),
-
-          // Modo Foco / Maximizar Área do Ladder
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: (!_showProjectTree && !_showConsole) ? IndustrialTokens.telemetryCyan : Colors.white70,
-              side: BorderSide(
-                color: (!_showProjectTree && !_showConsole) ? IndustrialTokens.telemetryCyan : IndustrialTokens.borderSubtle,
-                width: 1,
+            IconButton(
+              icon: Icon(
+                _showProjectTree ? Icons.account_tree : Icons.account_tree_outlined,
+                size: 16,
+                color: _showProjectTree ? IndustrialTokens.telemetryCyan : Colors.white54,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              tooltip: _showProjectTree ? 'Ocultar Controller Organizer' : 'Exibir Controller Organizer',
+              onPressed: () => setState(() => _showProjectTree = !_showProjectTree),
             ),
-            icon: Icon(
-              (!_showProjectTree && !_showConsole) ? Icons.fullscreen_exit : Icons.fullscreen,
-              size: 14,
-            ),
-            label: Text(
-              (!_showProjectTree && !_showConsole) ? 'Restaurar Painéis' : 'Modo Foco (Maximizar Ladder)',
-              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
-            ),
-            onPressed: () {
-              setState(() {
-                if (!_showProjectTree && !_showConsole) {
-                  _showProjectTree = true;
-                  _showConsole = true;
-                } else {
-                  _showProjectTree = false;
-                  _showConsole = false;
-                }
-              });
-            },
-          ),
+            const SizedBox(width: 4),
 
-          const SizedBox(width: 8),
-          const VerticalDivider(color: IndustrialTokens.borderSubtle, indent: 8, endIndent: 8),
-          const SizedBox(width: 8),
-
-          // Botão Verificar Sintaxe & Determinismo
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: IndustrialTokens.runGreen,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            // Toggle Console
+            IconButton(
+              icon: Icon(
+                _showConsole ? Icons.terminal : Icons.terminal_outlined,
+                size: 16,
+                color: _showConsole ? IndustrialTokens.telemetryCyan : Colors.white54,
+              ),
+              tooltip: _showConsole ? 'Ocultar Console de Compilação' : 'Exibir Console de Compilação',
+              onPressed: () => setState(() => _showConsole = !_showConsole),
             ),
-            icon: const Icon(Icons.check_circle_outline, size: 14),
-            label: const Text('Verificar Lógica', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              _runCheckAndCompile(silent: false);
-              final validator = GraphValidator();
-              final valResult = validator.validate(widget.project);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    valResult.isValid
-                        ? '✓ Grafo IEC 61131-3 válido: ${widget.project.networks.length} Rung(s), ${widget.project.tags.length} Tag(s).'
-                        : '✕ Erros detectados: ${valResult.errors.map((e) => e.message).join(", ")}',
+
+            const SizedBox(width: 8),
+
+            // Modo Foco / Maximizar Área do Ladder
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: (!_showProjectTree && !_showConsole) ? IndustrialTokens.telemetryCyan : Colors.white70,
+                side: BorderSide(
+                  color: (!_showProjectTree && !_showConsole) ? IndustrialTokens.telemetryCyan : IndustrialTokens.borderSubtle,
+                  width: 1,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              icon: Icon(
+                (!_showProjectTree && !_showConsole) ? Icons.fullscreen_exit : Icons.fullscreen,
+                size: 14,
+              ),
+              label: Text(
+                (!_showProjectTree && !_showConsole) ? 'Restaurar Painéis' : 'Modo Foco (Maximizar Ladder)',
+                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                setState(() {
+                  if (!_showProjectTree && !_showConsole) {
+                    _showProjectTree = true;
+                    _showConsole = true;
+                  } else {
+                    _showProjectTree = false;
+                    _showConsole = false;
+                  }
+                });
+              },
+            ),
+
+            const SizedBox(width: 8),
+            const VerticalDivider(color: IndustrialTokens.borderSubtle, indent: 8, endIndent: 8),
+            const SizedBox(width: 8),
+
+            // Botão Verificar Sintaxe & Determinismo
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: IndustrialTokens.runGreen,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              icon: const Icon(Icons.check_circle_outline, size: 14),
+              label: const Text('Verificar Lógica', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                _runCheckAndCompile(silent: false);
+                final validator = GraphValidator();
+                final valResult = validator.validate(widget.project);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      valResult.isValid
+                          ? '✓ Grafo IEC 61131-3 válido: ${widget.project.networks.length} Rung(s), ${widget.project.tags.length} Tag(s).'
+                          : '✕ Erros detectados: ${valResult.errors.map((e) => e.message).join(", ")}',
+                    ),
+                    backgroundColor: valResult.isValid ? const Color(0xFF064E3B) : const Color(0xFFDC2626),
                   ),
-                  backgroundColor: valResult.isValid ? const Color(0xFF064E3B) : const Color(0xFFDC2626),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(width: 6),
-
-          // Botão Compilar Bytecode ENDP
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: IndustrialTokens.infoBlue,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                );
+              },
             ),
-            icon: const Icon(Icons.build_circle_outlined, size: 14),
-            label: const Text('Compilar Bytecode', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              _runCheckAndCompile(silent: false);
-              final compiler = BytecodeCompiler();
-              final bytes = compiler.compile(widget.project);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('✓ Bytecode compilado: ${bytes.length} bytes gerados para a VM do ESP32.'),
-                  backgroundColor: const Color(0xFF1E3A8A),
-                ),
-              );
-            },
-          ),
 
-          const SizedBox(width: 24),
+            const SizedBox(width: 6),
 
-          // Indicador de Alvo
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: IndustrialTokens.bgCanvas,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: IndustrialTokens.borderSubtle),
+            // Botão Compilar Bytecode ENDP
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: IndustrialTokens.infoBlue,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              icon: const Icon(Icons.build_circle_outlined, size: 14),
+              label: const Text('Compilar Bytecode', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                _runCheckAndCompile(silent: false);
+                final compiler = BytecodeCompiler();
+                final bytes = compiler.compile(widget.project);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('✓ Bytecode compilado: ${bytes.length} bytes gerados para a VM do ESP32.'),
+                    backgroundColor: const Color(0xFF1E3A8A),
+                  ),
+                );
+              },
             ),
-            child: Row(
-              children: const [
-                Icon(Icons.memory, size: 13, color: Colors.white70),
-                SizedBox(width: 6),
-                Text(
-                  'TARGET: ESP32-WROOM-32 (1ms Deterministic VM)',
-                  style: TextStyle(color: Colors.white70, fontSize: 9.5, fontFamily: 'monospace'),
-                ),
-              ],
+
+            const SizedBox(width: 24),
+
+            // Indicador de Alvo
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: IndustrialTokens.bgCanvas,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: IndustrialTokens.borderSubtle),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.memory, size: 13, color: Colors.white70),
+                  SizedBox(width: 6),
+                  Text(
+                    'TARGET: ESP32-WROOM-32 (1ms Deterministic VM)',
+                    style: TextStyle(color: Colors.white70, fontSize: 9.5, fontFamily: 'monospace'),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 12),
+            IconButton(
+              icon: const Icon(Icons.close, size: 14, color: Colors.white54),
+              tooltip: 'Recolher Barra de Ferramentas',
+              onPressed: () => setState(() => _showWorkbenchToolbar = false),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -603,51 +612,121 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
   // 3. Barra de Abas do Editor Central
   Widget _buildEditorTabBar() {
     return Container(
-      height: 34,
+      height: 36,
       decoration: const BoxDecoration(
         color: IndustrialTokens.bgPanel,
         border: Border(
           bottom: BorderSide(color: IndustrialTokens.borderSubtle, width: 1),
         ),
       ),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: true,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white54,
-        indicatorColor: IndustrialTokens.telemetryCyan,
-        indicatorWeight: 2,
-        tabAlignment: TabAlignment.start,
-        labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        tabs: const [
-          Tab(
-            child: Row(
-              children: [
-                Icon(Icons.table_rows, size: 14),
-                SizedBox(width: 6),
-                Text('Lógica Ladder IEC'),
+      child: Row(
+        children: [
+          Expanded(
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white54,
+              indicatorColor: IndustrialTokens.telemetryCyan,
+              indicatorWeight: 2,
+              tabAlignment: TabAlignment.start,
+              labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              unselectedLabelStyle: const TextStyle(fontSize: 11),
+              tabs: const [
+                Tab(
+                  child: Row(
+                    children: [
+                      Icon(Icons.table_rows, size: 14),
+                      SizedBox(width: 6),
+                      Text('Lógica Ladder IEC'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    children: [
+                      Icon(Icons.list_alt, size: 14),
+                      SizedBox(width: 6),
+                      Text('Mapeamento de I/O & Tags'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    children: [
+                      Icon(Icons.hub_outlined, size: 14),
+                      SizedBox(width: 6),
+                      Text('Rede & Topologia de Nós'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          Tab(
-            child: Row(
-              children: [
-                Icon(Icons.list_alt, size: 14),
-                SizedBox(width: 6),
-                Text('Mapeamento de I/O & Tags'),
-              ],
+          // Painéis retráteis de acesso rápido
+          IconButton(
+            icon: Icon(
+              _showProjectTree ? Icons.account_tree : Icons.account_tree_outlined,
+              size: 15,
+              color: _showProjectTree ? IndustrialTokens.telemetryCyan : Colors.white38,
             ),
+            tooltip: _showProjectTree ? 'Recolher Controller Organizer' : 'Exibir Controller Organizer',
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            onPressed: () => setState(() => _showProjectTree = !_showProjectTree),
           ),
-          Tab(
-            child: Row(
-              children: [
-                Icon(Icons.hub_outlined, size: 14),
-                SizedBox(width: 6),
-                Text('Rede & Topologia de Nós'),
-              ],
+          IconButton(
+            icon: Icon(
+              _showWorkbenchToolbar ? Icons.tune : Icons.tune_outlined,
+              size: 15,
+              color: _showWorkbenchToolbar ? IndustrialTokens.telemetryCyan : Colors.white38,
             ),
+            tooltip: _showWorkbenchToolbar ? 'Ocultar Barra de Ferramentas' : 'Exibir Barra de Ferramentas de Engenharia',
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            onPressed: () => setState(() => _showWorkbenchToolbar = !_showWorkbenchToolbar),
           ),
+          IconButton(
+            icon: Icon(
+              _showConsole ? Icons.terminal : Icons.terminal_outlined,
+              size: 15,
+              color: _showConsole ? IndustrialTokens.telemetryCyan : Colors.white38,
+            ),
+            tooltip: _showConsole ? 'Recolher Console de Compilação' : 'Exibir Console de Compilação',
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            onPressed: () => setState(() => _showConsole = !_showConsole),
+          ),
+          IconButton(
+            icon: Icon(
+              (!_showProjectTree && !_showConsole && !_showWorkbenchToolbar)
+                  ? Icons.fullscreen_exit
+                  : Icons.fullscreen,
+              size: 16,
+              color: (!_showProjectTree && !_showConsole && !_showWorkbenchToolbar)
+                  ? IndustrialTokens.telemetryCyan
+                  : Colors.white60,
+            ),
+            tooltip: (!_showProjectTree && !_showConsole && !_showWorkbenchToolbar)
+                ? 'Restaurar Painéis'
+                : 'Modo Foco (Maximizar Ladder)',
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            onPressed: () {
+              setState(() {
+                if (!_showProjectTree && !_showConsole && !_showWorkbenchToolbar) {
+                  _showProjectTree = true;
+                  _showWorkbenchToolbar = false;
+                  _showConsole = false;
+                } else {
+                  _showProjectTree = false;
+                  _showWorkbenchToolbar = false;
+                  _showConsole = false;
+                }
+              });
+            },
+          ),
+          const SizedBox(width: 6),
         ],
       ),
     );
