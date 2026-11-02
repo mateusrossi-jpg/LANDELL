@@ -1184,30 +1184,33 @@ class _NetworksPageState extends State<NetworksPage> {
                   Container(
                     constraints: const BoxConstraints(maxHeight: 140),
                     decoration: BoxDecoration(
-                      color: AppTokens.panel2,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppTokens.line),
                     ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _scannedNetworks.length,
-                      itemBuilder: (ctx, i) {
-                        final net = _scannedNetworks[i];
-                        final ssid = net['ssid'] ?? '';
-                        final rssi = net['rssi'] ?? 0;
-                        final isSelected = _ssidController.text == ssid;
-                        return ListTile(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          leading: const Icon(Icons.wifi, size: 16, color: AppTokens.focus),
-                          title: Text(ssid, style: TextStyle(color: isSelected ? AppTokens.focus : AppTokens.text, fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                          subtitle: Text('Sinal: $rssi dBm', style: const TextStyle(color: AppTokens.textDim, fontSize: 9.5)),
-                          trailing: isSelected ? const Icon(Icons.check, size: 14, color: AppTokens.focus) : null,
-                          onTap: () {
-                            setState(() => _ssidController.text = ssid);
-                          },
-                        );
-                      },
+                    clipBehavior: Clip.antiAlias,
+                    child: Material(
+                      color: AppTokens.panel2,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _scannedNetworks.length,
+                        itemBuilder: (ctx, i) {
+                          final net = _scannedNetworks[i];
+                          final ssid = net['ssid'] ?? '';
+                          final rssi = net['rssi'] ?? 0;
+                          final isSelected = _ssidController.text == ssid;
+                          return ListTile(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            leading: const Icon(Icons.wifi, size: 16, color: AppTokens.focus),
+                            title: Text(ssid, style: TextStyle(color: isSelected ? AppTokens.focus : AppTokens.text, fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                            subtitle: Text('Sinal: $rssi dBm', style: const TextStyle(color: AppTokens.textDim, fontSize: 9.5)),
+                            trailing: isSelected ? const Icon(Icons.check, size: 14, color: AppTokens.focus) : null,
+                            onTap: () {
+                              setState(() => _ssidController.text = ssid);
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ] else ...[
