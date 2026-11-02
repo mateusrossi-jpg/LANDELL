@@ -3,7 +3,6 @@ import '../models/home_widget_config.dart';
 import '../../ladder/models/ladder_project.dart';
 import '../../ladder/runtime/ladder_runtime.dart';
 import '../../core/services/network_manager.dart';
-import '../../ladder/ui/editor/telemetry_sync_service.dart';
 import 'numeric_sparkline_widget.dart';
 import 'gauge_widget.dart';
 import 'digital_widget.dart';

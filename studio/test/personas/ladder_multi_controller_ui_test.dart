@@ -8,7 +8,6 @@ import 'package:endap_studio/ladder/models/node_config.dart';
 import 'package:endap_studio/ladder/models/tag.dart';
 import 'package:endap_studio/ladder/models/tag_value.dart';
 import 'package:endap_studio/ladder/ui/editor/ladder_editor_page.dart';
-import 'package:endap_studio/core/services/network_manager.dart';
 
 void main() {
   group('LadderEditorPage Multi-Controller UI Integration Tests', () {

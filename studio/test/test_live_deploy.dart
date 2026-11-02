@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../lib/ladder/models/demo_project.dart';
-import '../lib/ladder/compiler/bytecode_compiler.dart';
+import 'package:endap_studio/ladder/models/demo_project.dart';
+import 'package:endap_studio/ladder/compiler/bytecode_compiler.dart';
 
 void main() async {
   print('Criando projeto limpo da bancada TCC...');

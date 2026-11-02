@@ -5,7 +5,6 @@ import 'package:endap_studio/core/ui/personas/engineering_workspace_view.dart';
 import 'package:endap_studio/core/ui/widgets/industrial_ribbon_bar.dart';
 import 'package:endap_studio/home/models/home_widget_config.dart';
 import 'package:endap_studio/home/renderers/numeric_sparkline_widget.dart';
-import 'package:endap_studio/ladder/models/ladder_project.dart';
 import 'package:endap_studio/ladder/models/demo_project.dart';
 import 'package:endap_studio/ladder/runtime/ladder_runtime.dart';
 import 'package:endap_studio/ladder/models/tag_value.dart';

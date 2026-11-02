@@ -26,7 +26,6 @@ class DigitalWidget extends StatelessWidget {
     bool isOn = false;
     bool isForced = false;
     bool hasValue = false;
-    bool isFromInitialValue = false;
     String? address;
     String? description;
 
@@ -42,7 +41,6 @@ class DigitalWidget extends StatelessWidget {
           (tag.address != null && (runtime?.tagStore.isForced(tag.address!) ?? false));
       hasValue = isForced || tagVal?.boolValue != null || tag.initialValue?.boolValue != null;
       isOn = tagVal?.boolValue ?? tag.initialValue?.boolValue ?? false;
-      isFromInitialValue = tagVal?.boolValue == null && !isForced;
     }
 
     final stateText = !hasValue

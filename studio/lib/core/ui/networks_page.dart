@@ -1322,52 +1322,6 @@ class _NetworksPageState extends State<NetworksPage> {
     );
   }
 
-  Widget _buildPinBadge(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppTokens.panel2,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppTokens.line),
-      ),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 11, fontFamily: 'JetBrains Mono'),
-          children: [
-            TextSpan(text: '$label: ', style: const TextStyle(color: AppTokens.textDim)),
-            TextSpan(text: value, style: const TextStyle(color: AppTokens.text, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricTile(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: AppTokens.panel2,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(color: AppTokens.textDim, fontSize: 10)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'JetBrains Mono',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMqttSection() {
     final isDesktop = MediaQuery.of(context).size.width >= 700;
     final statusColor = !_mqttEnabled

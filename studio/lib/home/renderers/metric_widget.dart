@@ -21,7 +21,6 @@ class MetricWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     String displayValue = '---';
     String unit = config.unit ?? '';
-    bool isFromInitialValue = false;
 
     if (config.tagId != null && project.tags.containsKey(config.tagId)) {
       final tag = project.tags[config.tagId!]!;
@@ -37,7 +36,6 @@ class MetricWidget extends StatelessWidget {
         if (hasBoolValue) {
           final boolVal = tagVal?.boolValue ?? tag.initialValue!.boolValue!;
           displayValue = boolVal ? config.onText : config.offText;
-          isFromInitialValue = tagVal?.boolValue == null;
         }
         // Sem valor lógico real: mantém '---' (SEM DADOS).
       } else {
@@ -46,10 +44,8 @@ class MetricWidget extends StatelessWidget {
 
         if (realVal != null) {
           displayValue = realVal.toStringAsFixed(config.decimalPlaces);
-          isFromInitialValue = tagVal?.realValue == null;
         } else if (intVal != null) {
           displayValue = intVal.toString();
-          isFromInitialValue = tagVal?.intValue == null;
         }
         // Sem valor real: mantém '---' (SEM DADOS).
       }
