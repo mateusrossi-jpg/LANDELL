@@ -98,7 +98,7 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 850;
+    final isSmallScreen = MediaQuery.of(context).size.width < 700;
 
     return Container(
       color: IndustrialTokens.bgCanvas,
@@ -112,43 +112,45 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Painel Esquerdo: Controller Organizer (Árvore de Projeto)
-                if (_showProjectTree) ...[
-                  SizedBox(
-                    width: isSmallScreen ? 180 : 250,
-                    child: _buildControllerOrganizer(),
-                  ),
-                  const VerticalDivider(width: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
-                ] else ...[
-                  Material(
-                    color: IndustrialTokens.bgSurface,
-                    child: InkWell(
-                      onTap: () => setState(() => _showProjectTree = true),
-                      child: Container(
-                        width: 28,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Column(
-                          children: const [
-                            Icon(Icons.chevron_right, size: 16, color: IndustrialTokens.telemetryCyan),
-                            SizedBox(height: 12),
-                            RotatedBox(
-                              quarterTurns: 3,
-                              child: Text(
-                                'ORGANIZER',
-                                style: TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.0,
+                // Painel Esquerdo: Controller Organizer (Árvore de Projeto) em telas médias/largas
+                if (!isSmallScreen) ...[
+                  if (_showProjectTree) ...[
+                    SizedBox(
+                      width: 250,
+                      child: _buildControllerOrganizer(),
+                    ),
+                    const VerticalDivider(width: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
+                  ] else ...[
+                    Material(
+                      color: IndustrialTokens.bgSurface,
+                      child: InkWell(
+                        onTap: () => setState(() => _showProjectTree = true),
+                        child: Container(
+                          width: 28,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            children: const [
+                              Icon(Icons.chevron_right, size: 16, color: IndustrialTokens.telemetryCyan),
+                              SizedBox(height: 12),
+                              RotatedBox(
+                                quarterTurns: 3,
+                                child: Text(
+                                  'ORGANIZER',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const VerticalDivider(width: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
+                    const VerticalDivider(width: 1, thickness: 1, color: IndustrialTokens.borderSubtle),
+                  ],
                 ],
 
                 // Área Central: Abas de Documentos e Editores
@@ -170,6 +172,7 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                               runtime: widget.runtime,
                               networkManager: widget.networkManager,
                               onOpenDrawer: widget.onOpenDrawer,
+                              onProjectUpdated: widget.onProjectUpdated,
                               isActive: widget.isActive && _tabController.index == 0,
                               embedded: true,
                             ),

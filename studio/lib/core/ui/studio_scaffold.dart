@@ -8,7 +8,6 @@ import '../../ladder/validation/graph_validator.dart';
 import '../../ladder/ui/editor/firmware_sync_service.dart';
 import '../../ladder/ui/editor/telemetry_sync_service.dart';
 import '../../features/gpio_tags/ui/gpio_tags_page.dart';
-import '../../ladder/ui/editor/ladder_editor_page.dart';
 import '../auth/session_manager.dart';
 import 'widgets/export_project_dialog.dart';
 import 'widgets/audit_log_dialog.dart';
@@ -168,7 +167,7 @@ class _StudioScaffoldState extends State<StudioScaffold> {
           _selectedIndex = 0;
           break;
         case 'ENGENHEIRO':
-          _selectedIndex = 6; // Workspace Completo
+          _selectedIndex = 1; // Unificado: tanto pelo cabeçalho quanto pelo menu hambúrguer
           break;
         case 'MANUTENÇÃO':
           _selectedIndex = 4;
@@ -684,14 +683,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
         onKioskModeChanged: (isKiosk) => setState(() => _isKioskMode = isKiosk),
         embedded: true,
       ),
-      // 1: Lógica Ladder IEC
-      LadderEditorPage(
-        initialProject: _project,
-        onOpenDrawer: _openDrawer,
+      // 1: Lógica Ladder IEC (Workspace Unificado de Engenharia e Referência)
+      EngineeringWorkspaceView(
+        key: const PageStorageKey('engineering_workspace_view_1'),
+        project: _project,
         runtime: _runtime,
-        isActive: _selectedIndex == 1,
         networkManager: widget.networkManager,
-        embedded: true,
+        onProjectUpdated: _handleProjectUpdated,
+        onOpenDrawer: _openDrawer,
+        isActive: _selectedIndex == 1 || _selectedIndex == 6,
       ),
       // 2: GPIO / TAGS
       GpioTagsPage(
@@ -721,12 +721,13 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       ),
       // 6: Workspace Completo de Engenharia (IDE)
       EngineeringWorkspaceView(
+        key: const PageStorageKey('engineering_workspace_view_6'),
         project: _project,
         runtime: _runtime,
         networkManager: widget.networkManager,
         onProjectUpdated: _handleProjectUpdated,
         onOpenDrawer: _openDrawer,
-        isActive: _selectedIndex == 6,
+        isActive: _selectedIndex == 1 || _selectedIndex == 6,
       ),
     ];
 

@@ -37,6 +37,7 @@ class LadderEditorPage extends StatefulWidget {
   final bool isActive;
   final NetworkManager? networkManager;
   final bool embedded;
+  final VoidCallback? onProjectUpdated;
 
   const LadderEditorPage({
     super.key,
@@ -46,6 +47,7 @@ class LadderEditorPage extends StatefulWidget {
     this.isActive = true,
     this.networkManager,
     this.embedded = false,
+    this.onProjectUpdated,
   });
 
   @override
@@ -246,6 +248,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     await saveCurrentLadder(_project);
     _runPassiveValidation();
     _updateRuntimeProject();
+    widget.onProjectUpdated?.call();
   }
 
   void _updateRuntimeProject() {
