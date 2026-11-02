@@ -7,3 +7,7 @@
 ## 2025-05-19 - Ladder Logic Toolbox Tooltips & Screen Reader Semantics
 **Learning:** Industrial control symbols abbreviated with short technical acronyms (NO, NC, TON, CTU, PID, EQU, LES) lack clarity for new operators and are opaque to screen readers when rendered purely as text or custom painter icons. Wrapping toolbox action elements with explicit `Tooltip` and `Semantics(button: true, label: description)` provides hover guidance and accessibility without altering workspace footprint.
 **Action:** Always wrap symbol/abbreviation action buttons in industrial toolbars with both `Tooltip` for visual hover and `Semantics` for accessibility.
+
+## 2025-05-20 - Ladder Rung Deletion Safeguard & Semantics
+**Learning:** In ladder logic / industrial IDEs, single-click deletion on dense row toolbars easily causes accidental deletion of complex rungs. Prompting for confirmation only when the rung has content (nodes or name) avoids data loss while preserving frictionless deletion of empty/accidental rungs. Wrapping the delete action with explicit Semantics identifying the target rung index makes row actions accessible to screen readers.
+**Action:** When providing destructive actions on list items, check if the item contains user data before showing a confirmation modal, and always add numbered Semantics labels to row-level action buttons.

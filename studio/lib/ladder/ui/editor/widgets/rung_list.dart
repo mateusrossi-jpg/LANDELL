@@ -371,17 +371,18 @@ class _RungListState extends State<RungList> {
                                 // Delete Rung Button
                                 Tooltip(
                                   message: 'Excluir Rung',
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(4),
-                                    onTap: () {
-                                      widget.project.networks.removeAt(originalIndex);
-                                      widget.onProjectChanged();
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 4, vertical: 2),
-                                      child: const Icon(Icons.close,
-                                          size: 14, color: Color(0xFF94A3B8)),
+                                  child: Semantics(
+                                    button: true,
+                                    label: 'Excluir Rung ${(originalIndex + 1).toString().padLeft(4, '0')}',
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(4),
+                                      onTap: () => _confirmDeleteRung(context, rung, originalIndex),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 2),
+                                        child: Icon(Icons.close,
+                                            size: 14, color: Color(0xFF94A3B8)),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -541,6 +542,73 @@ class _RungListState extends State<RungList> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteRung(BuildContext context, LadderNetwork rung, int index) async {
+    final rungNumber = (index + 1).toString().padLeft(4, '0');
+    final hasContent = rung.nodes.isNotEmpty || rung.name.isNotEmpty;
+
+    if (!hasContent) {
+      widget.project.networks.removeAt(index);
+      widget.onProjectChanged();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTokens.panel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: AppTokens.line, width: 1.0),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppTokens.fault, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Excluir Rung $rungNumber?',
+                style: TextStyle(
+                  color: AppTokens.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          rung.name.isNotEmpty
+              ? 'Deseja excluir permanentemente o Rung $rungNumber ("${rung.name}") e todos os seus ${rung.nodes.length} elemento(s)?'
+              : 'Deseja excluir permanentemente o Rung $rungNumber com seus ${rung.nodes.length} elemento(s)?',
+          style: TextStyle(color: AppTokens.muted, fontSize: 12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar', style: TextStyle(color: AppTokens.muted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTokens.fault,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir Rung', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() {
+        widget.project.networks.removeAt(index);
+        widget.onProjectChanged();
+      });
+    }
   }
 
   void _showEditCommentDialog(BuildContext context, LadderNetwork rung, int index) {
