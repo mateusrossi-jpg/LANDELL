@@ -848,7 +848,7 @@ static void auth_record_login_success(const char *username, bool bootstrap_sessi
     auth_audit_log("login_success", detail);
 }
 
-static void __attribute__((unused)) auth_record_login_failure(const char *username)
+static void auth_record_login_failure(const char *username)
 {
     uint32_t block_seconds = 0U;
     char detail[80];
@@ -923,9 +923,16 @@ auth_login_result_t auth_login(const char *username,
     char normalized_username[AUTH_USERNAME_LEN + 1] = {0};
     int account_index = -1;
     uint32_t expires_in = 0U;
+    uint32_t retry_after = 0U;
 
     auth_init();
 
+    /* Rate limiting guard: mitigate brute-force attempts on credentials */
+    if (!auth_rate_limit_check(&retry_after))
+    {
+        auth_fill_status(out_status, false, -1, 0U);
+        return AUTH_LOGIN_RATE_LIMITED;
+    }
 
     if (!auth_username_normalize(username, normalized_username, sizeof(normalized_username), true) ||
         !password || password[0] == '\0')
