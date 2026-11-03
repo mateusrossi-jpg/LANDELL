@@ -50,113 +50,132 @@ class DigitalWidget extends StatelessWidget {
         ? const Color(0xFFF59E0B)
         : (isOn ? const Color(0xFF10B981) : const Color(0xFF64748B));
 
-    return InkWell(
-      onTap: (config.tagId != null && runtime != null)
-          ? () {
-              IoForceDialog.show(
-                context,
-                tagId: config.tagId!,
-                address: address,
-                description: description,
-                runtime: runtime,
-                networkManager: networkManager,
-                source: 'DIGITAL_WIDGET',
-                onStateChanged: () => onStateChanged?.call(),
-              );
-            }
-          : null,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A202E),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isForced
-                ? const Color(0xFFF59E0B).withValues(alpha: 0.4)
-                : (isOn ? const Color(0xFF10B981).withValues(alpha: 0.25) : const Color(0xFF222B3D)),
-            width: 1.0,
+    final canInteract = config.tagId != null && runtime != null;
+    final String tagLabel = address ?? config.tagId ?? config.title;
+    final String statusInfo = '$tagLabel: $stateText${isForced ? " (FORÇADO)" : ""}';
+
+    final Widget content = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canInteract
+            ? () {
+                IoForceDialog.show(
+                  context,
+                  tagId: config.tagId!,
+                  address: address,
+                  description: description,
+                  runtime: runtime,
+                  networkManager: networkManager,
+                  source: 'DIGITAL_WIDGET',
+                  onStateChanged: () => onStateChanged?.call(),
+                );
+              }
+            : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A202E),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isForced
+                  ? const Color(0xFFF59E0B).withValues(alpha: 0.4)
+                  : (isOn ? const Color(0xFF10B981).withValues(alpha: 0.25) : const Color(0xFF222B3D)),
+              width: 1.0,
+            ),
           ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: dotColor,
-                          shape: BoxShape.circle,
-                          boxShadow: (isOn || isForced)
-                              ? [
-                                  BoxShadow(
-                                    color: dotColor.withValues(alpha: 0.45),
-                                    blurRadius: 5,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                      ),
-                      if (isForced)
-                        const Positioned(
-                          right: -3,
-                          top: -3,
-                          child: Icon(Icons.lock, size: 8, color: Color(0xFFF59E0B)),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isOn
-                        ? 'ATIVO (1)'
-                        : (hasValue ? 'DESLIGADO (0)' : 'SEM DADOS'),
-                    style: TextStyle(
-                      color: isOn ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'monospace',
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: dotColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: dotColor.withValues(alpha: 0.3), width: 1.0),
-                ),
-                child: Row(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: dotColor,
+                            shape: BoxShape.circle,
+                            boxShadow: (isOn || isForced)
+                                ? [
+                                    BoxShadow(
+                                      color: dotColor.withValues(alpha: 0.45),
+                                      blurRadius: 5,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                        if (isForced)
+                          const Positioned(
+                            right: -3,
+                            top: -3,
+                            child: Icon(Icons.lock, size: 8, color: Color(0xFFF59E0B)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      stateText,
+                      isOn
+                          ? 'ATIVO (1)'
+                          : (hasValue ? 'DESLIGADO (0)' : 'SEM DADOS'),
                       style: TextStyle(
-                        color: dotColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        color: isOn ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         fontFamily: 'monospace',
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: dotColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: dotColor.withValues(alpha: 0.3), width: 1.0),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        stateText,
+                        style: TextStyle(
+                          color: dotColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+
+    return Tooltip(
+      message: canInteract
+          ? '$statusInfo • Clique para forçar ponto de I/O'
+          : statusInfo,
+      child: Semantics(
+        label: statusInfo,
+        button: canInteract,
+        container: true,
+        child: content,
       ),
     );
   }
