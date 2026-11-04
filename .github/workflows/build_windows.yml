@@ -1,7 +1,12 @@
-name: Build Windows EXE
+name: Build Windows & Installer
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'studio/**'
+      - '.github/workflows/build_windows.yml'
 
 jobs:
   build_windows:
@@ -17,15 +22,29 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
+
+      - name: Instalar Inno Setup
+        run: choco install innosetup --no-progress -y
 
       - name: Baixar dependências
         run: flutter pub get
 
-      - name: Build do Windows sem assinatura
-        run: flutter build windows
+      - name: Build do Windows Release
+        run: flutter build windows --release
 
-      - name: Disponibilizar artefato
+      - name: Compilar Instalador Inno Setup
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\installer\landell_installer.iss
+
+      - name: Disponibilizar Instalador (Setup .exe)
         uses: actions/upload-artifact@v4
         with:
-          name: Studio-Windows
+          name: LANDELL-Studio-Windows-Installer
+          path: studio/windows/installer/Output/LANDELL_Studio_Setup_x64.exe
+
+      - name: Disponibilizar Versão Portável (Pasta Release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANDELL-Studio-Windows-Portable
           path: studio/build/windows/x64/runner/Release/

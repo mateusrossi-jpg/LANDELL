@@ -1,0 +1,53 @@
+name: Build Android APK & AAB
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'studio/**'
+      - '.github/workflows/build_android.yml'
+
+jobs:
+  build_android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./studio
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Baixar dependências
+        run: flutter pub get
+
+      - name: Build do APK Release
+        run: flutter build apk --release
+
+      - name: Build do Android App Bundle (AAB para Google Play)
+        run: flutter build appbundle --release
+
+      - name: Disponibilizar APK Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANDELL-Studio-Android-APK
+          path: studio/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Disponibilizar AAB Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANDELL-Studio-Android-AAB
+          path: studio/build/app/outputs/bundle/release/app-release.aab
