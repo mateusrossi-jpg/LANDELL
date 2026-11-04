@@ -25,6 +25,8 @@ class ExportProjectDialog {
             borderRadius: BorderRadius.circular(14),
             side: const BorderSide(color: AppTokens.line, width: 1.0),
           ),
+          actionsOverflowDirection: VerticalDirection.down,
+          actionsOverflowButtonSpacing: 8,
           title: Row(
             children: [
               Container(

@@ -326,7 +326,10 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
         side: const BorderSide(color: AppTokens.line, width: 1.0),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 600),
+        constraints: BoxConstraints(
+          maxWidth: 440,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           physics: const BouncingScrollPhysics(),
@@ -336,39 +339,38 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
             children: [
               // Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTokens.panel2,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTokens.panel2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
+                    ),
+                    child: const Icon(Icons.tune, color: AppTokens.focus, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.existingWidget != null ? 'EDITAR WIDGET' : 'CONFIGURAR WIDGET',
+                          style: const TextStyle(
+                            color: AppTokens.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        child: const Icon(Icons.tune, color: AppTokens.focus, size: 18),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.existingWidget != null ? 'EDITAR WIDGET' : 'CONFIGURAR WIDGET',
-                            style: const TextStyle(
-                              color: AppTokens.text,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          Text(
-                            widget.templateType.label,
-                            style: const TextStyle(color: AppTokens.focus, fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ],
+                        Text(
+                          widget.templateType.label,
+                          style: const TextStyle(color: AppTokens.focus, fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: AppTokens.textDim, size: 18),

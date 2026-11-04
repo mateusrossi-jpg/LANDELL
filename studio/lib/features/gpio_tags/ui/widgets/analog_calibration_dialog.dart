@@ -245,8 +245,13 @@ class _AnalogCalibrationDialogState extends State<AnalogCalibrationDialog> {
           ),
         ],
       ),
-      content: SizedBox(
-        width: 480,
+      actionsOverflowDirection: VerticalDirection.down,
+      actionsOverflowButtonSpacing: 8,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 480,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -46,8 +46,13 @@ class LadderNodeVisual extends StatelessWidget {
               // Tag Address Header directly above contact (matching base.png / rockwell.png)
               Positioned(
                 top: 4,
+                left: 0,
+                right: 0,
                 child: Text(
                   displayTag,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11.0,
                     fontWeight: FontWeight.bold,
@@ -67,15 +72,6 @@ class LadderNodeVisual extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: wireColor,
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -89,15 +85,6 @@ class LadderNodeVisual extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: wireColor,
                     borderRadius: BorderRadius.circular(0.5),
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -111,15 +98,6 @@ class LadderNodeVisual extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: wireColor,
                     borderRadius: BorderRadius.circular(0.5),
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -132,15 +110,6 @@ class LadderNodeVisual extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: wireColor,
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -160,8 +129,13 @@ class LadderNodeVisual extends StatelessWidget {
               // Tag Address Header directly above contact
               Positioned(
                 top: 4,
+                left: 0,
+                right: 0,
                 child: Text(
                   displayTag,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11.0,
                     fontWeight: FontWeight.bold,
@@ -181,15 +155,6 @@ class LadderNodeVisual extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: wireColor,
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -203,15 +168,6 @@ class LadderNodeVisual extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: wireColor,
                     borderRadius: BorderRadius.circular(0.5),
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -225,15 +181,6 @@ class LadderNodeVisual extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: wireColor,
                     borderRadius: BorderRadius.circular(0.5),
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -246,15 +193,6 @@ class LadderNodeVisual extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: wireColor,
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
               ),
@@ -299,8 +237,13 @@ class LadderNodeVisual extends StatelessWidget {
               // Tag Address Header directly above coil (matching base.png / rockwell.png)
               Positioned(
                 top: 4,
+                left: 0,
+                right: 0,
                 child: Text(
                   displayTag,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11.0,
                     fontWeight: FontWeight.bold,
@@ -318,18 +261,7 @@ class LadderNodeVisual extends StatelessWidget {
                 height: 2.0,
                 top: 31,
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: wireColor,
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
-                  ),
+                  color: wireColor,
                 ),
               ),
               // Parenthesis-style industrial coil (as seen in base.png `( )` and rockwell.png)
@@ -353,18 +285,7 @@ class LadderNodeVisual extends StatelessWidget {
                 height: 2.0,
                 top: 31,
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: wireColor,
-                    boxShadow: node.isEnergized
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                              blurRadius: 3.0,
-                              spreadRadius: 1.0,
-                            ),
-                          ]
-                        : null,
-                  ),
+                  color: wireColor,
                 ),
               ),
             ],
@@ -470,8 +391,13 @@ class LadderNodeVisual extends StatelessWidget {
               // Tag Address Header above block
               Positioned(
                 top: 0,
+                left: 0,
+                right: 0,
                 child: Text(
                   displayTag,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.bold,
@@ -747,8 +673,13 @@ class LadderNodeVisual extends StatelessWidget {
               // Tag Address Header above block
               Positioned(
                 top: 0,
+                left: 0,
+                right: 0,
                 child: Text(
                   headerTagText,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10.0,
                     fontWeight: FontWeight.bold,
@@ -876,8 +807,13 @@ class LadderNodeVisual extends StatelessWidget {
               // Tag Address Header above block with live %
               Positioned(
                 top: 0,
+                left: 0,
+                right: 0,
                 child: Text(
                   '$pvStr ($pvLive%)',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 10.0,
                     fontWeight: FontWeight.bold,

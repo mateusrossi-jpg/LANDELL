@@ -66,7 +66,10 @@ class _AuditLogDialogState extends State<AuditLogDialog> {
         side: const BorderSide(color: AppTokens.line, width: 1.0),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 600),
+        constraints: BoxConstraints(
+          maxWidth: 680,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

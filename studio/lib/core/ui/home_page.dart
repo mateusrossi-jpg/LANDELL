@@ -314,12 +314,17 @@ class _HomePageState extends State<HomePage> {
               children: const [
                 Icon(Icons.lock, color: IndustrialTokens.progYellow, size: 20),
                 SizedBox(width: 8),
-                Text(
-                  'DESBLOQUEIO DE SEGURANÇA KIOSK',
-                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                Expanded(
+                  child: Text(
+                    'DESBLOQUEIO DE SEGURANÇA KIOSK',
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
+            actionsOverflowDirection: VerticalDirection.down,
+            actionsOverflowButtonSpacing: 8,
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

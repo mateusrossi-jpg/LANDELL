@@ -495,6 +495,8 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(color: AppTokens.line, width: 1.0),
           ),
+          actionsOverflowDirection: VerticalDirection.down,
+          actionsOverflowButtonSpacing: 8,
           title: Text(
             isEditing ? 'EDITAR TAG IEC' : 'ASSOCIAR NOVA TAG',
             style: TextStyle(color: AppTokens.textPrimary, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.1),

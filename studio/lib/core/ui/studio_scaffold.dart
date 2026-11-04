@@ -356,52 +356,59 @@ class _StudioScaffoldState extends State<StudioScaffold> {
               ),
             ],
           ),
-          content: SizedBox(
-            width: 480,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Selecione o controlador de destino para compilação e download do bytecode determinístico:',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
-                ),
-                const SizedBox(height: 12),
-                
-                // Opção 1: Toda a Célula
-                _buildDeployTargetOption(
-                  id: 'ALL',
-                  title: 'Toda a Célula (Particionado por Nó)',
-                  subtitle: 'Compila e envia automaticamente os Rungs para seus respectivos controladores.',
-                  badge: '${_project.networks.length} Rung(s)',
-                  selected: selectedTarget == 'ALL',
-                  onTap: () => setDialogState(() => selectedTarget = 'ALL'),
-                ),
-                const SizedBox(height: 6),
-
-                // Opção 2: Gateway Principal
-                _buildDeployTargetOption(
-                  id: 'GATEWAY',
-                  title: 'Gateway Principal (Híbrido)',
-                  subtitle: 'IP: $gatewayIp · Execução local e coordenação.',
-                  badge: '${_project.networks.where((n) => n.targetControllerId == 'GATEWAY' || n.targetControllerId == 'GLOBAL' || n.targetControllerId == 'ALL').length} Rung(s)',
-                  selected: selectedTarget == 'GATEWAY',
-                  onTap: () => setDialogState(() => selectedTarget = 'GATEWAY'),
-                ),
-
-                // Opção 3+: Nós de Campo
-                for (final node in fieldNodes) ...[
-                  const SizedBox(height: 6),
-                  _buildDeployTargetOption(
-                    id: node.id,
-                    title: 'Nó ${node.controllerIndex} (${node.id})',
-                    subtitle: 'IP: ${node.ip.isNotEmpty ? node.ip : "Rádio ESP-NOW L2"} · Controlador Remoto',
-                    badge: '${_project.networks.where((r) => r.targetControllerId == node.id || r.targetControllerId == 'GLOBAL').length} Rung(s)',
-                    selected: selectedTarget == node.id,
-                    onTap: () => setDialogState(() => selectedTarget = node.id),
+          actionsOverflowDirection: VerticalDirection.down,
+          actionsOverflowButtonSpacing: 8,
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 480,
+              maxHeight: MediaQuery.of(context).size.height * 0.80,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Selecione o controlador de destino para compilação e download do bytecode determinístico:',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
                   ),
+                  const SizedBox(height: 12),
+                  
+                  // Opção 1: Toda a Célula
+                  _buildDeployTargetOption(
+                    id: 'ALL',
+                    title: 'Toda a Célula (Particionado por Nó)',
+                    subtitle: 'Compila e envia automaticamente os Rungs para seus respectivos controladores.',
+                    badge: '${_project.networks.length} Rung(s)',
+                    selected: selectedTarget == 'ALL',
+                    onTap: () => setDialogState(() => selectedTarget = 'ALL'),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Opção 2: Gateway Principal
+                  _buildDeployTargetOption(
+                    id: 'GATEWAY',
+                    title: 'Gateway Principal (Híbrido)',
+                    subtitle: 'IP: $gatewayIp · Execução local e coordenação.',
+                    badge: '${_project.networks.where((n) => n.targetControllerId == 'GATEWAY' || n.targetControllerId == 'GLOBAL' || n.targetControllerId == 'ALL').length} Rung(s)',
+                    selected: selectedTarget == 'GATEWAY',
+                    onTap: () => setDialogState(() => selectedTarget = 'GATEWAY'),
+                  ),
+
+                  // Opção 3+: Nós de Campo
+                  for (final node in fieldNodes) ...[
+                    const SizedBox(height: 6),
+                    _buildDeployTargetOption(
+                      id: node.id,
+                      title: 'Nó ${node.controllerIndex} (${node.id})',
+                      subtitle: 'IP: ${node.ip.isNotEmpty ? node.ip : "Rádio ESP-NOW L2"} · Controlador Remoto',
+                      badge: '${_project.networks.where((r) => r.targetControllerId == node.id || r.targetControllerId == 'GLOBAL').length} Rung(s)',
+                      selected: selectedTarget == node.id,
+                      onTap: () => setDialogState(() => selectedTarget = node.id),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           actions: [

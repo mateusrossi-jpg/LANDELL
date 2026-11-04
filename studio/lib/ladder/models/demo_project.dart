@@ -767,7 +767,7 @@ class DemoProject {
 
     return LadderProject(
       id: 'proj_bancada_tcc_v5_pid_industrial',
-      name: 'Bancada Didática ENDAP (Fonte ATX + Sensor Capacitivo AI0.0 + Botoeiras + 4 Relés)',
+      name: 'Bancada Didática LANDELL (Fonte ATX + Sensor Capacitivo AI0.0 + Botoeiras + 4 Relés)',
       tags: tags,
       networks: [
         network1,
@@ -777,7 +777,7 @@ class DemoProject {
         network5,
       ],
       metadata: ProjectMetadata(
-        author: 'ENDAP Industrial TCC',
+        author: 'LANDELL Industrial TCC',
         version: '1.0.0',
         targetPlatform: 'EndapRuntime',
       ),
@@ -1008,7 +1008,7 @@ class DemoProject {
 
     return LadderProject(
       id: 'proj_demo_industrial_full',
-      name: 'Validação Geral ENDAP PLC - Hardware & Lógica Completa',
+      name: 'Validação Geral LANDELL PLC - Hardware & Lógica Completa',
       tags: tags,
       networks: [
         network1,   // 1. I0.0 -> Q0.0
@@ -1022,7 +1022,7 @@ class DemoProject {
         network9,   // 9. M0.1 -> CTU C0 -> M0.2
       ],
       metadata: ProjectMetadata(
-        author: 'Endap Studio TCC',
+        author: 'LANDELL Studio TCC',
         version: '1.0.0',
         targetPlatform: 'EndapRuntime',
       ),

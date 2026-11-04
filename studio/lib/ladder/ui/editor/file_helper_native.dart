@@ -38,18 +38,18 @@ Future<String?> exportProject(LadderProject project, {int scanPeriodMs = 100}) a
 
     if (kIsWeb) {
       await FilePicker.saveFile(
-        dialogTitle: 'Exportar Projeto ENDAP',
+        dialogTitle: 'Exportar Projeto LANDELL',
         fileName: fileName,
         bytes: bytes,
         type: FileType.custom,
-        allowedExtensions: ['json', 'endap'],
+        allowedExtensions: ['json', 'landell', 'endap'],
       );
     } else {
       final result = await FilePicker.saveFile(
-        dialogTitle: 'Exportar Projeto ENDAP',
+        dialogTitle: 'Exportar Projeto LANDELL',
         fileName: fileName,
         type: FileType.custom,
-        allowedExtensions: ['json', 'endap'],
+        allowedExtensions: ['json', 'landell', 'endap'],
         bytes: bytes,
       );
       if (result != null) {
@@ -68,9 +68,9 @@ Future<String?> exportProject(LadderProject project, {int scanPeriodMs = 100}) a
 Future<LadderProject?> importProject() async {
   try {
     final result = await FilePicker.pickFiles(
-      dialogTitle: 'Abrir Projeto ENDAP',
+      dialogTitle: 'Abrir Projeto LANDELL',
       type: FileType.custom,
-      allowedExtensions: ['endap', 'json'],
+      allowedExtensions: ['landell', 'endap', 'json'],
       withData: true,
     );
     if (result != null && result.files.isNotEmpty) {

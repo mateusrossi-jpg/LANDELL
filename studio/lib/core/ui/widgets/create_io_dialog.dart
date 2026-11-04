@@ -256,30 +256,28 @@ class _CreateIoDialogState extends State<CreateIoDialog> {
             children: [
               // Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTokens.panel2,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
-                        ),
-                        child: const Icon(Icons.add_circle_outline, color: AppTokens.focus, size: 18),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTokens.panel2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
+                    ),
+                    child: const Icon(Icons.add_circle_outline, color: AppTokens.focus, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'NOVO PONTO DE I/O',
+                      style: TextStyle(
+                        color: AppTokens.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
                       ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'NOVO PONTO DE I/O',
-                        style: TextStyle(
-                          color: AppTokens.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: AppTokens.textDim, size: 18),

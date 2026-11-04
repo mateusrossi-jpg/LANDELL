@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 
 import '../../../ladder_autosave.dart';
@@ -10,6 +11,7 @@ import '../../models/node_config.dart';
 import '../../models/tag.dart';
 import '../../models/tag_value.dart';
 import '../../models/enums.dart';
+import '../../models/plc_tag_contract.dart';
 import '../../validation/graph_validator.dart';
 import '../../validation/executable_graph.dart';
 import 'file_helper.dart';
@@ -63,7 +65,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   bool _isDraggingNode = false;
   late final LadderRuntime _runtime;
 
-  EditorMode _mode = EditorMode.simulateLocal;
+  EditorMode _mode = EditorMode.editor;
   final Map<String, bool> _simulationInputs = {};
   final Map<String, String?> _networkValidationErrors = {};
 
@@ -105,6 +107,16 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   void _syncOutputs() {
+    for (final tag in _project.tags.values) {
+      if (_isOutputTag(tag.id) || _isOutputTag(tag.address ?? '')) {
+        final val = _runtime.tagStore.getBool(tag.id) ||
+            (tag.address != null && _runtime.tagStore.getBool(tag.address!));
+        _simulationInputs[tag.id] = val;
+        if (tag.address != null && tag.address!.isNotEmpty) {
+          _simulationInputs[tag.address!] = val;
+        }
+      }
+    }
     for (final k in _simulationInputs.keys.toList()) {
       if (_isOutputTag(k)) {
         _simulationInputs[k] = _runtime.tagStore.getBool(k);
@@ -137,8 +149,11 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   void initState() {
     super.initState();
     _runtime = widget.runtime ?? LadderRuntime();
-    if (widget.embedded || widget.networkManager != null) {
+    final bool isHwActuallyOnline = widget.networkManager?.isHardwareOnline == true;
+    if (widget.embedded || (widget.networkManager != null && isHwActuallyOnline)) {
       _mode = EditorMode.simulateHardware;
+    } else {
+      _mode = EditorMode.simulateLocal;
     }
     TelemetrySyncService.instance.injectEnabled = _mode == EditorMode.simulateHardware;
     final initialIp = _resolveGatewayIpSync();
@@ -255,6 +270,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     final validator = GraphValidator();
     final validNetworks = <LadderNetwork>[];
     for (final network in _project.networks) {
+      network.rebuildConnections();
       final result = validator.validate(LadderProject(
         id: 'temp',
         name: 'temp',
@@ -309,20 +325,36 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   void _applyMode(EditorMode mode) {
     if (mode == _mode) return;
     setState(() => _mode = mode);
-    TelemetrySyncService.instance.injectEnabled = mode == EditorMode.simulateHardware;
 
     if (mode == EditorMode.editor) {
+      // 1. MODO EDIÇÃO: APENAS EDIÇÃO GRÁFICA
+      // Desliga simulação local e telemetria de hardware
       _simulationTimer?.cancel();
       _simulationTimer = null;
       _releaseAllSimulationForces();
       _clearNodeEnergization();
       TelemetrySyncService.instance.stop();
+      TelemetrySyncService.instance.injectEnabled = false;
       return;
     }
 
     _updateRuntimeProject();
 
-    if (mode == EditorMode.simulateHardware) {
+    if (mode == EditorMode.simulateLocal) {
+      // 2. MODO SIMULAÇÃO: APENAS SIMULAÇÃO EM SOFTWARE
+      // Zero comunicação de rede com ESP32. Executa motor determinístico local no app.
+      TelemetrySyncService.instance.stop();
+      TelemetrySyncService.instance.injectEnabled = false;
+      if (_simulationTimer == null && widget.isActive) {
+        _startTimedSimulation();
+      }
+    } else if (mode == EditorMode.simulateHardware) {
+      // 3. MODO HARDWARE: APENAS EXECUÇÃO NO ESP32 REAL
+      // Cancela timer de simulação local para NÃO sobrepor a execução do CLP real!
+      _simulationTimer?.cancel();
+      _simulationTimer = null;
+      TelemetrySyncService.instance.injectEnabled = true;
+
       final ip = _resolveGatewayIpSync();
       TelemetrySyncService.instance.init(
         project: _project,
@@ -332,11 +364,6 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       if (TelemetrySyncService.instance.isPolling == false) {
         TelemetrySyncService.instance.start();
       }
-    } else {
-      TelemetrySyncService.instance.stop();
-    }
-    if (_simulationTimer == null && widget.isActive) {
-      _startTimedSimulation();
     }
   }
 
@@ -399,11 +426,19 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: AppTokens.line),
         ),
+        actionsOverflowDirection: VerticalDirection.down,
+        actionsOverflowButtonSpacing: 8,
         title: Row(
           children: const [
             Icon(Icons.warning_amber_rounded, color: Color(0xFFF87171), size: 20),
             SizedBox(width: 8),
-            Text('Limpar Lógica do CLP?', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+            Expanded(
+              child: Text(
+                'Limpar Lógica do CLP?',
+                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -485,15 +520,9 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         }
         break;
       case EditorMode.simulateHardware:
-        // No modo hardware real, as tags I/Q/M/AI são mantidas pela telemetria do MCU via TelemetrySyncService.
-        // Executa varredura de ciclo determinístico para propagar fluxo de potência e calcular temporizadores (TON/TOF) em tempo real
-        _runtime.singleScan(_scanPeriodMs);
-        _syncOutputs();
-        _syncNodeEnergization();
-        if (mounted) {
-          setState(() {});
-        }
-        break;
+        // No modo hardware real, a energização visual é atualizada pela telemetria real do ESP32 via _onTelemetryUpdated.
+        // O app NÃO executa simulação local em software por cima do hardware.
+        return;
     }
   }
 
@@ -571,7 +600,19 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   void _toggleSimulationTag(String tagId) {
-    if (_mode == EditorMode.editor) return;
+    if (_mode == EditorMode.editor) {
+      // Modo edição pura: toques em nós não alteram simulação nem hardware
+      return;
+    }
+
+    if (_mode == EditorMode.simulateHardware) {
+      // Modo hardware puro: envia comando de comutação/forçamento ao ESP32 real
+      final current = _runtime.tagStore.getBool(tagId);
+      final nextVal = !current;
+      _dispatchHardwareActuation(tagId, nextVal);
+      return;
+    }
+
     final isOutput = _isOutputTag(tagId);
     if (_mode == EditorMode.simulateLocal && isOutput) {
       return; // Em simulação puramente local, saídas normais são controladas pelo scan
@@ -579,14 +620,50 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
     final isPushbutton = tagId.contains('BTN') || tagId.contains('START') || tagId.contains('PULSE') || tagId.contains('MOMENTARY');
 
+    // Mapeamento e resolução de todos os aliases da tag (ID, Nome, Endereço IEC, variações)
+    final tagObj = _project.tags[tagId] ??
+        _project.tags.values.firstWhereOrNull((t) =>
+            t.id.toUpperCase() == tagId.toUpperCase() ||
+            t.address?.toUpperCase() == tagId.toUpperCase() ||
+            (t.address != null && PlcTagContract.normalizeAddress(t.address!) == PlcTagContract.normalizeAddress(tagId)));
+
+    final keysToUpdate = <String>{tagId, tagId.toUpperCase()};
+    if (tagObj != null) {
+      keysToUpdate.add(tagObj.id);
+      keysToUpdate.add(tagObj.id.toUpperCase());
+      if (tagObj.name.isNotEmpty) keysToUpdate.add(tagObj.name);
+      if (tagObj.address != null && tagObj.address!.isNotEmpty) {
+        keysToUpdate.add(tagObj.address!);
+        keysToUpdate.add(tagObj.address!.toUpperCase());
+        final norm = PlcTagContract.normalizeAddress(tagObj.address!);
+        if (norm != null) keysToUpdate.add(norm);
+      }
+    }
+    final normDirect = PlcTagContract.normalizeAddress(tagId);
+    if (normDirect != null) {
+      keysToUpdate.add(normDirect);
+      if (normDirect.startsWith('%IX')) {
+        keysToUpdate.add(normDirect.replaceFirst('%IX', 'I'));
+        keysToUpdate.add(normDirect.replaceFirst('%IX', ''));
+      } else if (normDirect.startsWith('I')) {
+        keysToUpdate.add('%IX${normDirect.substring(1)}');
+      }
+    }
+
+    void setAllKeys(bool value) {
+      for (final k in keysToUpdate) {
+        _simulationInputs[k] = value;
+        _runtime.tagStore.setBool(k, value);
+      }
+    }
+
     if (_mode == EditorMode.simulateLocal && _simulationPulseMode && isPushbutton) {
       // Se a entrada já estiver ligada, um clique desliga imediatamente
       final current = _simulationInputs[tagId] ?? _runtime.tagStore.getBool(tagId);
       if (current) {
         setState(() {
-          _simulationInputs[tagId] = false;
-          _runtime.tagStore.setBool(tagId, false);
-          _runtime.singleScan(0);
+          setAllKeys(false);
+          _runtime.singleScan(_scanPeriodMs);
           _syncOutputs();
           _syncNodeEnergization();
         });
@@ -594,11 +671,9 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       }
 
       // MODO BOTÃO DE PULSO (MOMENTARY PUSHBUTTON):
-      // Injeta nível alto, executa varredura e agenda abertura automática da entrada (400ms)
       setState(() {
-        _simulationInputs[tagId] = true;
-        _runtime.tagStore.setBool(tagId, true);
-        _runtime.singleScan(0);
+        setAllKeys(true);
+        _runtime.singleScan(_scanPeriodMs);
         _syncOutputs();
         _syncNodeEnergization();
       });
@@ -606,9 +681,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       Timer(const Duration(milliseconds: 400), () {
         if (!mounted || _mode != EditorMode.simulateLocal) return;
         setState(() {
-          _simulationInputs[tagId] = false;
-          _runtime.tagStore.setBool(tagId, false);
-          _runtime.singleScan(0);
+          setAllKeys(false);
+          _runtime.singleScan(_scanPeriodMs);
           _syncOutputs();
           _syncNodeEnergization();
         });
@@ -616,28 +690,15 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       return;
     }
 
-    // MODO CHAVE RETENTIVA (TOGGLE SWITCH) ou ATUAÇÃO HARDWARE:
-    final current = (_mode == EditorMode.simulateHardware)
-        ? _runtime.tagStore.getBool(tagId)
-        : (_simulationInputs[tagId] ?? _runtime.tagStore.getBool(tagId));
+    // MODO CHAVE RETENTIVA (TOGGLE SWITCH) NA SIMULAÇÃO LOCAL:
+    final current = _simulationInputs[tagId] ?? _runtime.tagStore.getBool(tagId);
     final nextVal = !current;
     setState(() {
-      _simulationInputs[tagId] = nextVal;
-      _runtime.tagStore.setBool(tagId, nextVal);
-      final tagObj = _project.tags[tagId];
-      if (tagObj?.address != null && tagObj!.address!.isNotEmpty) {
-        _runtime.tagStore.setBool(tagObj.address!, nextVal);
-      }
-      _runtime.singleScan(0);
-      if (_mode == EditorMode.simulateLocal) {
-        _syncOutputs();
-      }
+      setAllKeys(nextVal);
+      _runtime.singleScan(_scanPeriodMs);
+      _syncOutputs();
       _syncNodeEnergization();
     });
-
-    if (_mode == EditorMode.simulateHardware) {
-      _dispatchHardwareActuation(tagId, nextVal);
-    }
   }
 
   Future<void> _dispatchHardwareActuation(String tagId, bool value) async {
@@ -1048,36 +1109,27 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                       ),
                       const SizedBox(height: 16),
                       // Seletor Industrial de Tag (Operando A / Tag Principal)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: tagController,
-                              style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
-                              decoration: InputDecoration(
-                                labelText: (isCompare || isMath)
-                                    ? 'Operando A (Entrada Analógica — ex: AI0.0 ou AI0.1)'
-                                    : (node.type == NodeType.pid
-                                        ? '1. Entrada Analógica do Sensor — PV (Ex: AI0.0 ou AI0.1)'
-                                        : 'Tag IEC / Endereço (ex: I0.0, Q0.0)'),
-                                labelStyle: const TextStyle(color: Color(0xFF8C98A8), fontSize: 12),
-                                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
-                                focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.table_chart_outlined, size: 16),
-                            label: const Text('Selecionar Tag'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E293B),
-                              foregroundColor: const Color(0xFF38BDF8),
-                              side: const BorderSide(color: Color(0xFF334155)),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
+                      TextField(
+                        controller: tagController,
+                        style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
+                        decoration: InputDecoration(
+                          labelText: (isCompare || isMath)
+                              ? 'Operando A'
+                              : (node.type == NodeType.pid ? 'Sensor (PV)' : 'Tag / Endereço'),
+                          hintText: (isCompare || isMath)
+                              ? 'Ex: AI0.0 ou AI0.1'
+                              : (node.type == NodeType.pid ? 'Ex: AI0.0' : 'Ex: I0.0, Q0.0, M0.0'),
+                          helperText: (isCompare || isMath)
+                              ? 'Entrada analógica do sensor (0-100%)'
+                              : (node.type == NodeType.pid ? 'Variável de processo medida' : 'Endereço IEC ou nome da tag'),
+                          helperMaxLines: 2,
+                          labelStyle: const TextStyle(color: Color(0xFF8C98A8), fontSize: 12),
+                          helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 10.5),
+                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
+                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.table_chart_outlined, size: 20, color: Color(0xFF38BDF8)),
+                            tooltip: 'Selecionar Tag do Controlador',
                             onPressed: () async {
                               final selected = await IndustrialTagBrowserDialog.show(
                                 context,
@@ -1094,7 +1146,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                               }
                             },
                           ),
-                        ],
+                        ),
                       ),
                       if (node.type == NodeType.timerTON ||
                           node.type == NodeType.timerTOF ||
@@ -1118,59 +1170,54 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                       if (isCompare || isMath) ...[
                         const SizedBox(height: 16),
                         // Operando B com Seletor Industrial de Tag e indicador de %
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: tagBController.text.isNotEmpty ? tagBController : presetController,
-                                style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
-                                decoration: InputDecoration(
-                                  labelText: tagBController.text.isNotEmpty
-                                      ? 'Operando B (Tag vinculada)'
-                                      : (isCompare
-                                          ? 'Operando B (Valor em % — ex: 40 para 40%)'
-                                          : 'Operando B (Constante numérica ou Tag)'),
-                                  suffixText: (isCompare && tagBController.text.isEmpty) ? '%' : null,
-                                  suffixStyle: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14),
-                                  labelStyle: const TextStyle(color: Color(0xFF8C98A8), fontSize: 12),
-                                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
-                                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
+                        TextField(
+                          controller: tagBController.text.isNotEmpty ? tagBController : presetController,
+                          style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
+                          decoration: InputDecoration(
+                            labelText: tagBController.text.isNotEmpty
+                                ? 'Operando B (Tag vinculada)'
+                                : (isCompare ? 'Operando B (Valor ou %)' : 'Operando B (Constante ou Tag)'),
+                            hintText: isCompare ? 'Ex: 40 (para 40%) ou AI0.1' : 'Ex: 10 ou tag',
+                            helperText: isCompare ? 'Ponto de ajuste de comparação' : null,
+                            helperMaxLines: 2,
+                            labelStyle: const TextStyle(color: Color(0xFF8C98A8), fontSize: 12),
+                            helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 10.5),
+                            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
+                            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCompare && tagBController.text.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 4.0),
+                                    child: Text('%', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14)),
+                                  ),
+                                IconButton(
+                                  icon: const Icon(Icons.table_chart_outlined, size: 20, color: Color(0xFF38BDF8)),
+                                  tooltip: 'Selecionar Tag para Operando B',
+                                  onPressed: () async {
+                                    final selected = await IndustrialTagBrowserDialog.show(
+                                      context,
+                                      tags: _project.tags,
+                                      initialSelectedTagId: tagBController.text.isNotEmpty ? tagBController.text : null,
+                                      title: 'Selecione Tag para Operando B',
+                                    );
+                                    if (selected != null) {
+                                      setModalState(() {
+                                        tagBController.text = selected;
+                                        presetController.text = '';
+                                      });
+                                    }
+                                  },
                                 ),
-                                onChanged: (val) {
-                                  if (tagBController.text.isEmpty) {
-                                    presetController.text = val;
-                                  }
-                                },
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.table_chart_outlined, size: 16),
-                              label: const Text('Tag Operando B'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E293B),
-                                foregroundColor: const Color(0xFF38BDF8),
-                                side: const BorderSide(color: Color(0xFF334155)),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                              onPressed: () async {
-                                final selected = await IndustrialTagBrowserDialog.show(
-                                  context,
-                                  tags: _project.tags,
-                                  initialSelectedTagId: tagBController.text.isNotEmpty ? tagBController.text : null,
-                                  title: 'Selecione Tag para Operando B',
-                                );
-                                if (selected != null) {
-                                  setModalState(() {
-                                    tagBController.text = selected;
-                                    presetController.text = '';
-                                  });
-                                }
-                              },
-                            ),
-                          ],
+                          ),
+                          onChanged: (val) {
+                            if (tagBController.text.isEmpty) {
+                              presetController.text = val;
+                            }
+                          },
                         ),
                       ],
                       if (isMath) ...[
@@ -1179,8 +1226,11 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                           controller: mathDestController,
                           style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
                           decoration: InputDecoration(
-                            labelText: 'Tag de Destino do Resultado (OUT — ex: M0.6)',
+                            labelText: 'Tag de Destino (OUT)',
+                            hintText: 'Ex: M0.6 ou AO0.0',
+                            helperText: 'Variável de memória que recebe o resultado',
                             labelStyle: const TextStyle(color: Color(0xFF8C98A8), fontSize: 12),
+                            helperStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 10.5),
                             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTokens.line)),
                             focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF4FD1C5))),
                           ),
@@ -1405,7 +1455,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'ENDAP LADDER IEC',
+                                  'LANDELL LADDER IEC',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -1416,7 +1466,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                                   ),
                                 ),
                                 Text(
-                                  '${_project.networks.length} Rungs · ${_project.name}',
+                                  '${_project.networks.length} Rungs · ${_project.name} · ENDAP Core',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -1834,8 +1884,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         });
       },
       onSimulationInputChanged: (tagId, val) {
-        if (_mode == EditorMode.simulateHardware) return;
-        if (_isOutputTag(tagId)) return;
+        if (_mode == EditorMode.simulateLocal && _isOutputTag(tagId)) return;
         _toggleSimulationTag(tagId);
       },
     );
@@ -2065,7 +2114,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
             children: const [
               Icon(Icons.block, color: Color(0xFFEF4444), size: 22),
               SizedBox(width: 10),
-              Text('Intertravamento Técnico de Engenharia', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Intertravamento Técnico de Engenharia',
+                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           content: const Text(
@@ -2159,7 +2214,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               children: const [
                 Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 22),
                 SizedBox(width: 10),
-                Text('Nenhum Nó de Campo Apto para Deploy', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(
+                    'Nenhum Nó de Campo Apto para Deploy',
+                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: const Text(
@@ -2562,9 +2623,19 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
           _selectedNodeIndex = node;
         });
       },
-      onNodeEditRequest: _showEditNodeBottomSheet,
-      onNodeOptionsRequest: _showNodeOptionsBottomSheet,
-      onComponentAddRequest: (rung, [insertIndex]) => _showComponentBottomSheet(rung, insertIndex),
+      onNodeEditRequest: _mode == EditorMode.editor
+          ? _showEditNodeBottomSheet
+          : (rung, node) {
+              final n = _project.networks[rung].nodes[node];
+              final tagId = n.config.tagId;
+              if (tagId != null && tagId.isNotEmpty) {
+                _toggleSimulationTag(tagId);
+              }
+            },
+      onNodeOptionsRequest: _mode == EditorMode.editor ? _showNodeOptionsBottomSheet : (r, n) {},
+      onComponentAddRequest: _mode == EditorMode.editor
+          ? (rung, [insertIndex]) => _showComponentBottomSheet(rung, insertIndex)
+          : (r, [i]) {},
     );
   }
 
@@ -2604,47 +2675,102 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         ),
       );
     }
-    return Stack(
+
+    final isSimOrHw = _mode != EditorMode.editor;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        LadderToolbox(
-          isDraggingNode: _isDraggingNode,
-          onNodeTapped: (nodeType) {
-            if (_project.networks.isNotEmpty) {
-              setState(() {
-                final newNode = _createConfiguredNode(nodeType);
-                _project.networks.first.addNode(newNode);
-                _project.networks.first.rebuildConnections();
-                _saveProject();
-              });
-            }
-          },
-          onNodeDeleted: (srcRung, srcNode) {
-            setState(() {
-              _project.networks[srcRung].removeNodeAt(srcNode);
-              _saveProject();
-              _isDraggingNode = false;
-            });
-          },
-        ),
-        Positioned(
-          right: 8,
-          top: 6,
-          child: Tooltip(
-            message: 'Recolher paleta para ampliar visualização do Ladder',
-            child: InkWell(
-              onTap: () => setState(() => _showToolbox = false),
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF131722),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFF334155), width: 0.8),
+        if (isSimOrHw)
+          Container(
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            color: _mode == EditorMode.simulateHardware ? const Color(0xFF064E3B) : const Color(0xFF1E293B),
+            child: Row(
+              children: [
+                Icon(
+                  _mode == EditorMode.simulateHardware ? Icons.sensors : Icons.play_circle_filled,
+                  size: 14,
+                  color: _mode == EditorMode.simulateHardware ? const Color(0xFF34D399) : const Color(0xFF38BDF8),
                 ),
-                child: const Icon(Icons.keyboard_arrow_up, size: 14, color: Color(0xFF94A3B8)),
-              ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _mode == EditorMode.simulateHardware
+                        ? 'EXECUÇÃO REAL ATIVA (HARDWARE): Edição bloqueada'
+                        : 'SIMULAÇÃO ATIVA: Edição bloqueada (Foco em simulação e monitoramento)',
+                    style: TextStyle(
+                      color: _mode == EditorMode.simulateHardware ? const Color(0xFF6EE7B7) : const Color(0xFFBAE6FD),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFF1F5F9),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => _applyMode(EditorMode.editor),
+                  child: const Text('Voltar para Edição', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                ),
+              ],
             ),
           ),
+        Stack(
+          children: [
+            IgnorePointer(
+              ignoring: isSimOrHw,
+              child: Opacity(
+                opacity: isSimOrHw ? 0.65 : 1.0,
+                child: LadderToolbox(
+                  isDraggingNode: _isDraggingNode,
+                  onNodeTapped: (nodeType) {
+                    if (isSimOrHw) return;
+                    if (_project.networks.isNotEmpty) {
+                      setState(() {
+                        final newNode = _createConfiguredNode(nodeType);
+                        _project.networks.first.addNode(newNode);
+                        _project.networks.first.rebuildConnections();
+                        _saveProject();
+                      });
+                    }
+                  },
+                  onNodeDeleted: (srcRung, srcNode) {
+                    if (isSimOrHw) return;
+                    setState(() {
+                      _project.networks[srcRung].removeNodeAt(srcNode);
+                      _saveProject();
+                      _isDraggingNode = false;
+                    });
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              right: 8,
+              top: 6,
+              child: Tooltip(
+                message: 'Recolher paleta para ampliar visualização do Ladder',
+                child: InkWell(
+                  onTap: () => setState(() => _showToolbox = false),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF131722),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF334155), width: 0.8),
+                    ),
+                    child: const Icon(Icons.keyboard_arrow_up, size: 14, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

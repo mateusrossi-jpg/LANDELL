@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../network/authenticated_http_client.dart';
+import '../network/network_discovery_helper.dart';
 import 'studio_event_bus.dart';
 import '../../ladder/ui/editor/telemetry_sync_service.dart';
 import '../../ladder/ui/editor/firmware_sync_service.dart';
@@ -101,7 +102,7 @@ class NetworkManager extends ChangeNotifier {
   static const String _prefGatewayIpKey = 'firmware_gateway_ip';
   static const String _defaultGatewayIp = '192.168.4.1';
 
-  static const String mdnsHost = 'endap.local';
+  static const String mdnsHost = 'landell.local';
 
   ConnectionState _connectionState = ConnectionState.simulationLocal;
   ConnectionState get connectionState => _connectionState;
@@ -249,13 +250,14 @@ class NetworkManager extends ChangeNotifier {
   @visibleForTesting
   Future<String?> discoverControllerAddress() => _discoverControllerAddress();
 
-  /// Descobre TODOS os controladores ENDAP acessíveis na rede (mDNS local,
+  /// Descobre TODOS os controladores LANDELL/ENDAP acessíveis na rede (mDNS local,
   /// IP configurado e STA IPs conhecidos), preenchendo [discoveredControllers].
   Future<List<ControllerInfo>> discoverControllers() async {
     final found = <ControllerInfo>[];
     final candidates = <String>{
       if (gatewayIp.isNotEmpty) gatewayIp,
       '192.168.4.1',
+      'landell.local',
       mdnsHost,
       if (kIsWeb && Uri.base.authority.isNotEmpty) Uri.base.authority,
       if (_lastStaIp.isNotEmpty && _lastStaIp != gatewayIp) _lastStaIp,
@@ -263,7 +265,7 @@ class NetworkManager extends ChangeNotifier {
       '192.168.0.27',
     };
 
-    // IPs peers conhecidos via registro da rede (endap.local sabe a STA IP)
+    // IPs peers conhecidos via registro da rede (landell.local sabe a STA IP)
     for (final peerIp in _knownPeerIpsFromNodes()) {
       if (peerIp.isNotEmpty) candidates.add(peerIp);
     }
@@ -275,11 +277,11 @@ class NetworkManager extends ChangeNotifier {
       }
     }
 
-    // Deduplica por Node ID normalizado (sem prefixo 'ENDAP-').
+    // Deduplica por Node ID normalizado (sem prefixo 'ENDAP-' / 'LANDELL-').
     // Mantém preferencialmente a instância do gateway principal (ip == gatewayIp).
     final uniqueById = <String, ControllerInfo>{};
     for (final info in found) {
-      final key = info.id.replaceAll('ENDAP-', '').trim().toUpperCase();
+      final key = info.id.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '').trim().toUpperCase();
       if (!uniqueById.containsKey(key)) {
         uniqueById[key] = info;
       } else if (info.ip == gatewayIp) {
@@ -296,6 +298,54 @@ class NetworkManager extends ChangeNotifier {
     discoveredControllers = list;
     notifyListeners();
     return list;
+  }
+
+  /// Testa e consulta diretamente um IP de controlador específico
+  Future<ControllerInfo?> probeIp(String ip) async {
+    return await _probeControllerInfo(ip.trim());
+  }
+
+  /// Realiza uma varredura dinâmica na sub-rede Wi-Fi local do dispositivo
+  /// para descobrir controladores LANDELL mesmo quando o IP não for conhecido previamente.
+  Future<List<ControllerInfo>> scanLocalSubnet({void Function(double progress, String currentIp)? onProgress}) async {
+    final discovered = <ControllerInfo>[];
+    final prefixes = await getLocalSubnetPrefixes();
+    if (prefixes.isEmpty) {
+      prefixes.addAll(['192.168.0.', '192.168.1.', '192.168.15.', '10.0.0.']);
+    }
+
+    final allIps = <String>[];
+    for (final prefix in prefixes) {
+      for (int i = 1; i <= 254; i++) {
+        allIps.add('$prefix$i');
+      }
+    }
+
+    const batchSize = 25;
+    for (int i = 0; i < allIps.length; i += batchSize) {
+      final end = (i + batchSize < allIps.length) ? i + batchSize : allIps.length;
+      final batch = allIps.sublist(i, end);
+      onProgress?.call(i / allIps.length, batch.first);
+
+      final futures = batch.map((ip) => _probeControllerInfo(ip));
+      final results = await Future.wait(futures);
+      for (final res in results) {
+        if (res != null && res.isOnline) {
+          discovered.add(res);
+        }
+      }
+    }
+    onProgress?.call(1.0, '');
+
+    if (discovered.isNotEmpty) {
+      for (final ctrl in discovered) {
+        if (!discoveredControllers.any((c) => c.ip == ctrl.ip || c.id == ctrl.id)) {
+          discoveredControllers.add(ctrl);
+        }
+      }
+      notifyListeners();
+    }
+    return discovered;
   }
 
   List<String> _knownPeerIpsFromNodes() {
@@ -320,7 +370,7 @@ class NetworkManager extends ChangeNotifier {
       if (rawNodeId.isEmpty) return null;
 
       var obStateRaw = 'PENDING';
-      var nodeName = 'ENDAP-Controller';
+      var nodeName = 'LANDELL-Controller';
       var profile = 1;
       try {
         final obUri = Uri.parse(buildUrl(address, '/api/onboarding/status'));
@@ -346,8 +396,9 @@ class NetworkManager extends ChangeNotifier {
           break;
       }
 
+      final cleanRaw = _cleanNodeId(rawNodeId);
       return ControllerInfo(
-        id: 'ENDAP-$rawNodeId',
+        id: 'ENDAP-$cleanRaw',
         ip: address,
         isOnline: true,
         onboardingState: obState,
@@ -367,7 +418,9 @@ class NetworkManager extends ChangeNotifier {
       '192.168.4.1',
       '192.168.0.229',
       '192.168.0.27',
+      'landell.local',
       mdnsHost,
+      'endap.local',
       gatewayIp,
       if (_lastStaIp.isNotEmpty) _lastStaIp,
     };
@@ -575,7 +628,7 @@ class NetworkManager extends ChangeNotifier {
 
       ControllerOnboardingState obState = ControllerOnboardingState.unknown;
       String obStateRaw = 'UNKNOWN';
-      String nodeName = 'ENDAP-Controller';
+      String nodeName = 'LANDELL-Controller';
       int profile = 1;
 
       final obUri = Uri.parse(buildUrl(gatewayIp, '/api/onboarding/status'));
@@ -612,8 +665,9 @@ class NetworkManager extends ChangeNotifier {
         debugPrint('[NetworkManager] Exceção ao consultar $obUri: $e');
       }
 
+      final cleanRawId = _cleanNodeId(rawNodeId);
       controller = ControllerInfo(
-        id: rawNodeId.isNotEmpty ? 'ENDAP-$rawNodeId' : 'ID NÃO INFORMADO',
+        id: cleanRawId.isNotEmpty ? 'ENDAP-$cleanRawId' : 'ID NÃO INFORMADO',
         ip: gatewayIp,
         isOnline: _connectionState == ConnectionState.hardwareOnline,
         onboardingState: obState,
@@ -647,7 +701,7 @@ class NetworkManager extends ChangeNotifier {
   }
 
   String _cleanNodeId(String raw) =>
-      raw.replaceAll('ENDAP-', '').replaceAll('endap-', '').trim().toUpperCase();
+      raw.replaceAll('LANDELL-', '').replaceAll('landell-', '').replaceAll('ENDAP-', '').replaceAll('endap-', '').trim().toUpperCase();
 
   Future<void> _scanFieldNodes() async {
     final listedIds = <String>{};
@@ -779,8 +833,8 @@ class NetworkManager extends ChangeNotifier {
 
     try {
       final url = Uri.parse(buildUrl(gatewayIp, '/api/onboarding/claim'));
-      final nodeName = name ?? (controller.nodeName.isNotEmpty ? controller.nodeName : 'ENDAP-Controlador');
-      final rawId = controller.id.replaceAll('ENDAP-', '');
+      final nodeName = name ?? (controller.nodeName.isNotEmpty ? controller.nodeName : 'LANDELL-Controlador');
+      final rawId = controller.id.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
 
       final body = 'target_node_id=$rawId&profile=$profile&gateway_id=$rawId&node_name=${Uri.encodeComponent(nodeName)}';
 
@@ -808,10 +862,10 @@ class NetworkManager extends ChangeNotifier {
 
   Future<bool> adoptNode(String nodeId, String role) async {
     try {
-      final realId = nodeId.replaceAll('ENDAP-', '');
-      final gwId = controller.id.replaceAll('ENDAP-', '');
+      final realId = nodeId.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
+      final gwId = controller.id.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
       final profile = _roleToProfile(role);
-      final safeName = role.isEmpty ? 'ENDAP-Controlador' : role.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final safeName = role.isEmpty ? 'LANDELL-Controlador' : role.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
 
       final url = Uri.parse(buildUrl(gatewayIp, '/api/onboarding/claim'));
       final body = 'target_node_id=$realId&profile=$profile&gateway_id=$gwId&node_name=${Uri.encodeComponent(safeName)}';
@@ -838,7 +892,7 @@ class NetworkManager extends ChangeNotifier {
 
   Future<bool> setNodeTransport(String nodeId, String transport) async {
     try {
-      final realId = nodeId.replaceAll('ENDAP-', '');
+      final realId = nodeId.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
       final isEspNow = transport.toLowerCase().contains('now') || transport.toLowerCase().contains('esp');
       final wifiMode = isEspNow ? 'now' : 'infra';
       final primary = isEspNow ? 'wifi-now' : 'wifi-udp';
@@ -872,12 +926,12 @@ class NetworkManager extends ChangeNotifier {
 
   Future<bool> revokeNode(String nodeId) async {
     try {
-      final realId = nodeId.replaceAll('ENDAP-', '');
+      final realId = nodeId.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
       final url = Uri.parse(buildUrl(gatewayIp, '/api/nodes/revoke?id=$realId'));
       final response = await _client.get(url).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200 || response.body.contains('REVOKED')) {
-        nodes.removeWhere((n) => n.id == nodeId || n.id == realId || n.id == 'ENDAP-$realId');
+        nodes.removeWhere((n) => n.id == nodeId || n.id == realId || n.id == 'LANDELL-$realId' || n.id == 'ENDAP-$realId');
         await scanNetwork();
         return true;
       } else {

@@ -39,16 +39,14 @@ esp_err_t endap_mdns_init(void)
     char hostname[ENDAP_MDNS_HOSTNAME_MAX];
     char instance_name[48];
 
-    if (is_gateway)
-    {
-        snprintf(hostname, sizeof(hostname), "endap");
-        snprintf(instance_name, sizeof(instance_name), "ENDAP Gateway");
-    }
-    else
-    {
-        snprintf(hostname, sizeof(hostname), "endap-field-%08lX", (unsigned long)my_id);
-        snprintf(instance_name, sizeof(instance_name), "ENDAP Field Node %lu", (unsigned long)my_id);
-    }
+    /*
+     * Hostname mDNS padrão: "landell" -> "landell.local"
+     * Garante que qualquer controlador LANDELL responda diretamente a landell.local
+     * sem depender do perfil previamente gravado na NVS ou do Node ID aleatório.
+     */
+    snprintf(hostname, sizeof(hostname), "landell");
+    snprintf(instance_name, sizeof(instance_name),
+             is_gateway ? "LANDELL Gateway" : "LANDELL Controller");
 
     err = mdns_hostname_set(hostname);
     if (err != ESP_OK)
@@ -64,7 +62,7 @@ esp_err_t endap_mdns_init(void)
         return err;
     }
 
-    err = mdns_service_add("ENDAP Dashboard", "_http", "_tcp", 80, NULL, 0);
+    err = mdns_service_add("LANDELL Dashboard", "_http", "_tcp", 80, NULL, 0);
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Falha ao adicionar serviço mDNS: %s", esp_err_to_name(err));

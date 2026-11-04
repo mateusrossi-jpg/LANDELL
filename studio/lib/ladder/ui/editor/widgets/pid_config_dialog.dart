@@ -184,8 +184,8 @@ class _PidConfigDialogState extends State<PidConfigDialog> {
   }
 
   Widget _tagField(String label, TextEditingController c, {String? help, bool analogOnly = false}) {
-    return SizedBox(
-      width: 300,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 160, maxWidth: 300),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -281,16 +281,25 @@ class _PidConfigDialogState extends State<PidConfigDialog> {
       insetPadding: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 760),
+        constraints: BoxConstraints(
+          maxWidth: 680,
+          maxHeight: MediaQuery.of(context).size.height * 0.90,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Row(children: [
+              Row(children: const [
                 Icon(Icons.tune, color: Color(0xFF4FD1C5)),
                 SizedBox(width: 8),
-                Text('Controlador PID Industrial', style: TextStyle(color: Color(0xFFE7EBF0), fontSize: 17, fontWeight: FontWeight.w700)),
+                Expanded(
+                  child: Text(
+                    'Controlador PID Industrial',
+                    style: TextStyle(color: Color(0xFFE7EBF0), fontSize: 17, fontWeight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ]),
               const SizedBox(height: 4),
               const Text(

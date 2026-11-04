@@ -135,8 +135,13 @@ class _HmiScreenDialogState extends State<HmiScreenDialog> {
           ),
         ],
       ),
-      content: SizedBox(
-        width: 520,
+      actionsOverflowDirection: VerticalDirection.down,
+      actionsOverflowButtonSpacing: 8,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

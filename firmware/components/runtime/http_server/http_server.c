@@ -838,6 +838,76 @@ static esp_err_t no_content_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static const char *landell_landing_html =
+"<!DOCTYPE html>"
+"<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+"<title>LANDELL Automation Controller</title>"
+"<style>"
+"body{margin:0;padding:20px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;background:#0d1117;color:#c9d1d9;display:flex;justify-content:center;align-items:center;min-height:90vh}"
+".card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;max-width:440px;width:100%;box-shadow:0 8px 24px rgba(0,0,0,0.5)}"
+"h1{color:#58a6ff;margin:0 0 4px 0;font-size:22px;display:flex;align-items:center;justify-content:space-between}"
+".badge{background:#238636;color:#fff;font-size:11px;padding:3px 8px;border-radius:12px;font-weight:bold}"
+".desc{color:#8b949e;font-size:13px;margin:0 0 16px 0}"
+".info{background:#21262d;border-radius:8px;padding:12px;margin:16px 0;font-size:13px}"
+".row{display:flex;justify-content:space-between;padding:4px 0}"
+".lbl{color:#8b949e}"
+".val{color:#f0f6fc;font-weight:600;font-family:monospace}"
+"input{width:100%;padding:10px;margin:6px 0 14px 0;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#fff;box-sizing:border-box;font-size:14px}"
+"button{width:100%;padding:12px;background:#238636;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:14px;transition:0.2s}"
+"button:hover{background:#2ea043}"
+"#msg{margin-top:12px;padding:10px;border-radius:6px;display:none;font-size:13px;text-align:center}"
+".footer{margin-top:20px;text-align:center;font-size:11px;color:#8b949e}"
+"</style></head><body>"
+"<div class='card'>"
+"<h1>LANDELL <span class='badge'>ONLINE</span></h1>"
+"<div class='desc'>Controlador L\xC3\xB3gico Program\xC3\xA1vel Industrial</div>"
+"<div class='info'>"
+"<div class='row'><span class='lbl'>Determinismo:</span><span class='val'>1 ms (Loop Ativo)</span></div>"
+"<div class='row'><span class='lbl'>Rede / Link:</span><span class='val' id='net'>...</span></div>"
+"<div class='row'><span class='lbl'>IP do Controlador:</span><span class='val' id='ip'>...</span></div>"
+"</div>"
+"<h3 style='color:#f0f6fc;font-size:15px;margin:16px 0 8px 0'>Configura\xC3\xA7\xC3\xA3o R\xC3\xA1pida de Wi-Fi</h3>"
+"<label style='font-size:12px;color:#8b949e'>Nome da Rede (SSID):</label>"
+"<input type='text' id='ssid' placeholder='Digite o nome da rede Wi-Fi'>"
+"<label style='font-size:12px;color:#8b949e'>Senha:</label>"
+"<input type='password' id='pass' placeholder='Digite a senha do Wi-Fi'>"
+"<button onclick='saveWifi()'>Conectar e Salvar</button>"
+"<div id='msg'></div>"
+"<div class='footer'>LANDELL Automation &middot; Edge-Native Core</div>"
+"</div>"
+"<script>"
+"fetch('/api/public/status').then(r=>r.json()).then(d=>{"
+"document.getElementById('net').innerText=d.transport_name||'Wi-Fi';"
+"document.getElementById('ip').innerText=d.net_wifi_sta_ip_text||window.location.hostname;"
+"}).catch(()=>{});"
+"function saveWifi(){"
+"var s=document.getElementById('ssid').value.trim();"
+"var p=document.getElementById('pass').value.trim();"
+"if(!s){alert('Informe o nome da rede Wi-Fi (SSID)');return;}"
+"var m=document.getElementById('msg');"
+"m.style.display='block';m.style.background='#1f6feb';m.style.color='#fff';m.innerText='Salvando credenciais no controlador...';"
+"fetch('/api/wifi?ssid='+encodeURIComponent(s)+'&pass='+encodeURIComponent(p))"
+".then(r=>{if(r.ok){m.style.background='#238636';m.innerText='Configura\xC3\xA7\xC3\xA3o salva com sucesso! O controlador est\xC3\xA1 conectando...';}else{m.style.background='#da3633';m.innerText='Erro ao salvar Wi-Fi.';}})"
+".catch(e=>{m.style.background='#da3633';m.innerText='Falha de comunica\xC3\xA7\xC3\xA3o: '+e;});"
+"}"
+"</script></body></html>";
+
+static esp_err_t landing_page_handler(httpd_req_t *req)
+{
+    http_set_common_security_headers(req);
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_sendstr(req, landell_landing_html);
+    return ESP_OK;
+}
+
+static esp_err_t captive_redirect_handler(httpd_req_t *req)
+{
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/");
+    httpd_resp_send(req, NULL, 0);
+    return ESP_OK;
+}
+
 static esp_err_t auth_status_handler(httpd_req_t *req)
 {
     auth_status_t status = {0};
@@ -5102,7 +5172,7 @@ static size_t build_public_profile_json(char *buf, size_t buf_size)
                        ip_str,
                        nm_str,
                        gw_str,
-                       "endap.local"))
+                       "landell.local"))
         return 0;
 
     if (!append_text(buf, buf_size, &offset, "}"))
@@ -10080,6 +10150,22 @@ void http_server_start(void)
 
         httpd_register_uri_handler(server, &(httpd_uri_t){
             .uri = "/favicon.ico", .method = HTTP_GET, .handler = no_content_handler });
+
+        /* ROOT & CAPTIVE PORTAL SETUP */
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/", .method = HTTP_GET, .handler = landing_page_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/index.html", .method = HTTP_GET, .handler = landing_page_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/generate_204", .method = HTTP_GET, .handler = captive_redirect_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/gen_204", .method = HTTP_GET, .handler = captive_redirect_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/hotspot-detect.html", .method = HTTP_GET, .handler = captive_redirect_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/connecttest.txt", .method = HTTP_GET, .handler = captive_redirect_handler });
+        httpd_register_uri_handler(server, &(httpd_uri_t){
+            .uri = "/ncsi.txt", .method = HTTP_GET, .handler = captive_redirect_handler });
 
         /* Inicializar mDNS para anunciar o serviço HTTP independentemente da interface ativa (Ethernet ou Wi-Fi) */
         endap_mdns_init();

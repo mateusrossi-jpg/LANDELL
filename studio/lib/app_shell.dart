@@ -62,7 +62,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Endap Studio',
+      title: 'LANDELL Studio',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.dark,

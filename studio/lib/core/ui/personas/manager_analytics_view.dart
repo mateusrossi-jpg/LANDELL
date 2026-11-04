@@ -90,15 +90,23 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
           children: const [
             Icon(Icons.tune, color: IndustrialTokens.telemetryCyan, size: 20),
             SizedBox(width: 10),
-            Text(
-              'Parâmetros da Célula de Produção',
-              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                'Parâmetros da Célula de Produção',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
-        content: SingleChildScrollView(
-          child: SizedBox(
-            width: 400,
+        actionsOverflowDirection: VerticalDirection.down,
+        actionsOverflowButtonSpacing: 8,
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 400,
+            maxHeight: MediaQuery.of(context).size.height * 0.80,
+          ),
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +317,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
           ),
           const SizedBox(height: 8),
           _buildMetricCard(
-            title: 'CONTROLADOR ENDAP',
+            title: 'CONTROLADOR LANDELL',
             value: '$totalNodes Controlador(es)',
             meta: 'Modo Gateway Híbrido Local-First',
             icon: Icons.hub_outlined,
@@ -394,7 +402,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
                       accentColor: IndustrialTokens.runGreen,
                     )
                   : _buildMetricCard(
-                      title: 'CONTROLADOR ENDAP',
+                      title: 'CONTROLADOR LANDELL',
                       value: '$totalNodes Controlador(es)',
                       meta: 'Modo Gateway Híbrido Local-First',
                       icon: Icons.hub_outlined,
@@ -598,7 +606,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
               const SizedBox(width: 6),
               const Expanded(
                 child: Text(
-                  'SAÚDE OPERACIONAL DO CONTROLADOR (ENDAP)',
+                  'SAÚDE OPERACIONAL DO CONTROLADOR (LANDELL)',
                   style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
                   overflow: TextOverflow.ellipsis,
                 ),

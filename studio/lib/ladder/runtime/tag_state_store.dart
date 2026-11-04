@@ -20,7 +20,14 @@ class TagStateStore {
   }
 
   bool getBool(String tagId) {
-    return _states[tagId]?.boolValue ?? false;
+    if (_states.containsKey(tagId)) {
+      return _states[tagId]?.boolValue ?? false;
+    }
+    final upper = tagId.toUpperCase();
+    if (_states.containsKey(upper)) {
+      return _states[upper]?.boolValue ?? false;
+    }
+    return false;
   }
 
   void setBool(String tagId, bool value) {

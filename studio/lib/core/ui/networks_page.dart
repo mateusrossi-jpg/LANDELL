@@ -115,8 +115,8 @@ class _NetworksPageState extends State<NetworksPage> {
     } catch (e) {
       if (mounted) {
         final hint = targetIp != '192.168.4.1'
-            ? ' Verifique se seu computador está conectado à rede do CLP (ex: ENDAP_SETUP-xxxx, senha: 12345678) e tente o IP padrão 192.168.4.1.'
-            : ' Verifique se o seu computador permanece conectado ao Wi-Fi gerado pelo CLP.';
+            ? ' No celular/PC, conecte ao Wi-Fi LANDELL_SETUP-xxxx (senha 12345678). Se o Android avisar "Sem internet", confirme MANTER CONEXÃO, ou use o IP 192.168.4.1.'
+            : ' No celular/PC, confirme estar conectado ao Wi-Fi do CLP (LANDELL_SETUP-xxxx) e confirme manter a conexão mesmo sem internet.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFFD9503F),
@@ -942,6 +942,8 @@ class _NetworksPageState extends State<NetworksPage> {
                                 borderRadius: BorderRadius.circular(14),
                                 side: const BorderSide(color: AppTokens.line, width: 1.0),
                               ),
+                              actionsOverflowDirection: VerticalDirection.down,
+                              actionsOverflowButtonSpacing: 8,
                               title: const Text('Remover Dispositivo', style: TextStyle(color: AppTokens.text, fontSize: 15)),
                               content: Text(
                                 'Deseja realmente remover o dispositivo ${n.id} (${n.ip}) da topologia?',
@@ -1098,7 +1100,7 @@ class _NetworksPageState extends State<NetworksPage> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Passo 1: Se o CLP estiver em modo de configuração (SSID ENDAP_SETUP-xxxx, senha: 12345678), conecte o Wi-Fi do computador nesta rede e utilize o IP 192.168.4.1.',
+                          'Passo 1: Se o CLP estiver em modo de configuração (SSID LANDELL_SETUP-xxxx ou ENDAP_SETUP-xxxx, senha: 12345678), conecte o Wi-Fi do computador ou celular nesta rede e utilize o IP 192.168.4.1.',
                           style: TextStyle(color: AppTokens.textDim, fontSize: 11),
                         ),
                       ),
@@ -1158,7 +1160,34 @@ class _NetworksPageState extends State<NetworksPage> {
                       label: const Text('192.168.0.229 (Bancada STA)', style: TextStyle(fontSize: 10, color: AppTokens.text)),
                       onPressed: () => setState(() => _ipController.text = '192.168.0.229'),
                     ),
+                    ActionChip(
+                      backgroundColor: AppTokens.panel2,
+                      side: const BorderSide(color: AppTokens.line),
+                      label: const Text('landell.local (mDNS PC/Mac)', style: TextStyle(fontSize: 10, color: AppTokens.text)),
+                      onPressed: () => setState(() => _ipController.text = 'landell.local'),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0369A1).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.35)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.phone_android, size: 14, color: Color(0xFF38BDF8)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No Android: O sistema bloqueia nomes ".local" no navegador. Conecte no Wi-Fi LANDELL_SETUP-xxxx e use 192.168.4.1, ou acesse pelo IP do CLP na rede (ex: 192.168.0.229). No PC ou iPhone, landell.local funciona normalmente.',
+                          style: TextStyle(color: Color(0xFFBAE6FD), fontSize: 10.5),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ] else if (_provisionStep == 2) ...[
                 Row(

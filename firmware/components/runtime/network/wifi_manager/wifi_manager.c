@@ -30,8 +30,9 @@
 #define TAG "WIFI"
 
 #define WIFI_NAMESPACE "wifi"
-#define DEFAULT_AP_SSID_PREFIX "ENDAP_SETUP-"
-#define DEFAULT_AP_SSID_FALLBACK "ENDAP_SETUP"
+#define DEFAULT_AP_SSID_PREFIX "LANDELL_SETUP-"
+#define DEFAULT_AP_SSID_FALLBACK "LANDELL_SETUP"
+#define LEGACY_AP_SSID_PREFIX "ENDAP_SETUP-"
 #define DEFAULT_AP_PASS "12345678"
 #define WIFI_STA_MAX_RETRIES 5U
 #define WIFI_SSID_MAX_LEN 32U
@@ -167,10 +168,23 @@ static bool wifi_manager_parse_cluster_peer_id(const char *ssid, uint32_t *out_n
         return false;
 
     prefix_len = strlen(DEFAULT_AP_SSID_PREFIX);
-    if (strncmp(ssid, DEFAULT_AP_SSID_PREFIX, prefix_len) != 0)
-        return false;
+    if (strncmp(ssid, DEFAULT_AP_SSID_PREFIX, prefix_len) == 0)
+    {
+        suffix = ssid + prefix_len;
+    }
+    else
+    {
+        prefix_len = strlen(LEGACY_AP_SSID_PREFIX);
+        if (strncmp(ssid, LEGACY_AP_SSID_PREFIX, prefix_len) == 0)
+        {
+            suffix = ssid + prefix_len;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
-    suffix = ssid + prefix_len;
     if (strlen(suffix) != 8U)
         return false;
 

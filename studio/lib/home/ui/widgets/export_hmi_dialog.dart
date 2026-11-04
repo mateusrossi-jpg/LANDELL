@@ -89,7 +89,7 @@ class _ExportHmiDialogState extends State<ExportHmiDialog> {
       'project': {
         'id': widget.project.id,
         'name': widget.project.name,
-        'author': 'ENDAP Studio Industrial',
+        'author': 'LANDELL Studio Industrial',
       },
       'screens': screensToExport.map((s) => s.toJson()).toList(),
       if (_includeControllers) 'controllers': controllersList,
@@ -100,7 +100,7 @@ class _ExportHmiDialogState extends State<ExportHmiDialog> {
           'roles': ['OPERADOR', 'MANUTENÇÃO', 'GESTOR', 'INTEGRADOR'],
         },
       'telemetryContract': {
-        'protocol': 'ENDAP_REST_AND_WS',
+        'protocol': 'LANDELL_REST_AND_WS',
         'defaultPort': 80,
         'scanPeriodMs': 100,
         'syncIntervalMs': 200,
@@ -117,11 +117,11 @@ class _ExportHmiDialogState extends State<ExportHmiDialog> {
       final bytes = Uint8List.fromList(utf8.encode(jsonString));
 
       await FilePicker.saveFile(
-        dialogTitle: 'Exportar Pacote IHM ENDAP (.endap-hmi)',
+        dialogTitle: 'Exportar Pacote IHM LANDELL (.landell-hmi)',
         fileName: fileName,
         bytes: bytes,
         type: FileType.custom,
-        allowedExtensions: ['endap-hmi', 'json'],
+        allowedExtensions: ['landell-hmi', 'endap-hmi', 'json'],
       );
 
       StudioEventBus.instance.emit(
@@ -224,8 +224,13 @@ class _ExportHmiDialogState extends State<ExportHmiDialog> {
           ),
         ],
       ),
-      content: SizedBox(
-        width: 580,
+      actionsOverflowDirection: VerticalDirection.down,
+      actionsOverflowButtonSpacing: 8,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 580,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

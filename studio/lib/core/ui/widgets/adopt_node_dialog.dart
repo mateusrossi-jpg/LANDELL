@@ -63,7 +63,8 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
   @override
   void initState() {
     super.initState();
-    final defaultName = 'Nó Remoto ${widget.node.id.replaceAll('ENDAP-', '')}';
+    final cleanId = widget.node.id.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
+    final defaultName = 'Nó Remoto $cleanId';
     _nameController = TextEditingController(text: defaultName);
     final t = widget.node.transport.toLowerCase();
     if (t.contains('udp') || t.contains('infra')) {
@@ -111,8 +112,9 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
       _errorMessage = null;
     });
 
+    final cleanTargetId = widget.node.id.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
     final name = _nameController.text.trim().isEmpty
-        ? 'ENDAP-${widget.node.id}'
+        ? 'LANDELL-$cleanTargetId'
         : _nameController.text.trim();
 
     try {
@@ -131,7 +133,7 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
       if (gatewayIp.isNotEmpty) {
         final client = AuthenticatedHttpClient();
         final templatePayload = {
-          'target_node_id': widget.node.id.replaceAll('ENDAP-', ''),
+          'target_node_id': cleanTargetId,
           'template': _selectedTemplate.name,
           'node_name': name,
           'profile': _selectedProfile.name,
@@ -172,7 +174,10 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
         side: const BorderSide(color: IndustrialTokens.borderSubtle, width: 1.5),
       ),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
         padding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
           child: Column(
@@ -388,14 +393,16 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
               const SizedBox(height: 24),
 
               // Botões de Ação
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 10,
+                runSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: _isSubmitting ? null : () => Navigator.pop(context, false),
                     child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
                   ),
-                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: IndustrialTokens.telemetryCyan,

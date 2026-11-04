@@ -102,17 +102,27 @@ class _VariablesPanelState extends State<VariablesPanel> {
                 size: 20,
               ),
               const SizedBox(width: 8),
-              Text(
-                isEdit ? 'Editar variável (Tag)' : 'Criar nova variável (Tag)',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFFE7EBF0),
+              Expanded(
+                child: Text(
+                  isEdit ? 'Editar variável (Tag)' : 'Criar nova variável (Tag)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFE7EBF0),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          content: SingleChildScrollView(
+          actionsOverflowDirection: VerticalDirection.down,
+          actionsOverflowButtonSpacing: 8,
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 420,
+              maxHeight: MediaQuery.of(context).size.height * 0.80,
+            ),
+            child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +229,8 @@ class _VariablesPanelState extends State<VariablesPanel> {
               ],
             ),
           ),
-          actions: [
+        ),
+        actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancelar', style: TextStyle(color: Color(0xFF8C98A8))),
@@ -468,7 +479,7 @@ class _VariablesPanelState extends State<VariablesPanel> {
                                   children: [
                                     Expanded(
                                       child: InkWell(
-                                        onTap: isBoolTag && !widget.isHardwareMode
+                                        onTap: isBoolTag
                                             ? () => widget.onSimulationInputChanged(tag.id, !isValueTrue)
                                             : null,
                                         borderRadius: BorderRadius.circular(4),

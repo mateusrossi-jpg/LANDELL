@@ -165,7 +165,10 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 600),
+        constraints: BoxConstraints(
+          maxWidth: 680,
+          maxHeight: MediaQuery.of(context).size.height * 0.90,
+        ),
         child: Column(
           children: [
             // Header estilo Painel Industrial
@@ -393,13 +396,17 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                                   children: [
                                     Row(
                                       children: [
-                                        Text(
-                                          tag.name,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFFF1F5F9),
-                                            fontFamily: 'JetBrains Mono',
+                                        Flexible(
+                                          child: Text(
+                                            tag.name,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFFF1F5F9),
+                                              fontFamily: 'JetBrains Mono',
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         const SizedBox(width: 8),
@@ -485,8 +492,11 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(13)),
                 border: Border(top: BorderSide(color: Color(0xFF334155), width: 1.0)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 10,
+                runSpacing: 8,
                 children: [
                   Text(
                     _selectedTagId != null ? 'Tag selecionada: $_selectedTagId' : 'Nenhuma tag selecionada',
@@ -498,6 +508,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                     ),
                   ),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),

@@ -154,6 +154,7 @@ class _RungListState extends State<RungList> {
               itemCount: filtered.length + 1,
               itemBuilder: (context, listIndex) {
                 if (listIndex == filtered.length) {
+                  if (widget.isSimulationRunning) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     child: OutlinedButton.icon(
@@ -204,9 +205,10 @@ class _RungListState extends State<RungList> {
                 final controllerLabel =
                     _getControllerDisplayName(rung.targetControllerId, rung.targetControllerName);
 
-                return Container(
+                return RepaintBoundary(
                   key: ValueKey(rung.id),
-                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -220,7 +222,7 @@ class _RungListState extends State<RungList> {
                             Flexible(
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(4),
-                                onTap: () => _showEditCommentDialog(context, rung, originalIndex),
+                                onTap: widget.isSimulationRunning ? null : () => _showEditCommentDialog(context, rung, originalIndex),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                   child: Row(
@@ -266,7 +268,7 @@ class _RungListState extends State<RungList> {
                                       'Controlador executor: $controllerLabel (Clique para reatribuir ou clonar)',
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(4),
-                                    onTap: () => _showControllerConfigDialog(
+                                    onTap: widget.isSimulationRunning ? null : () => _showControllerConfigDialog(
                                         context, rung, originalIndex),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
@@ -366,25 +368,26 @@ class _RungListState extends State<RungList> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-
-                                // Delete Rung Button
-                                Tooltip(
-                                  message: 'Excluir Rung',
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(4),
-                                    onTap: () {
-                                      widget.project.networks.removeAt(originalIndex);
-                                      widget.onProjectChanged();
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 4, vertical: 2),
-                                      child: const Icon(Icons.close,
-                                          size: 14, color: Color(0xFF94A3B8)),
+                                if (!widget.isSimulationRunning) ...[
+                                  const SizedBox(width: 6),
+                                  // Delete Rung Button
+                                  Tooltip(
+                                    message: 'Excluir Rung',
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(4),
+                                      onTap: () {
+                                        widget.project.networks.removeAt(originalIndex);
+                                        widget.onProjectChanged();
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 2),
+                                        child: const Icon(Icons.close,
+                                            size: 14, color: Color(0xFF94A3B8)),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ],
@@ -476,8 +479,9 @@ class _RungListState extends State<RungList> {
                       ),
                     ],
                   ),
-                );
-              },
+                ),
+              );
+            },
             ),
     );
   }
@@ -746,9 +750,15 @@ class _RungControllerAssignmentDialogState
           ),
         ],
       ),
-      content: SizedBox(
-        width: 440,
-        child: Column(
+      actionsOverflowDirection: VerticalDirection.down,
+      actionsOverflowButtonSpacing: 8,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 440,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -905,7 +915,8 @@ class _RungControllerAssignmentDialogState
           ],
         ),
       ),
-      actions: [
+    ),
+    actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text('Cancelar', style: TextStyle(color: AppTokens.muted)),
