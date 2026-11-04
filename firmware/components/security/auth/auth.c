@@ -926,6 +926,11 @@ auth_login_result_t auth_login(const char *username,
 
     auth_init();
 
+    if (!auth_rate_limit_check(NULL))
+    {
+        auth_fill_status(out_status, false, -1, 0U);
+        return AUTH_LOGIN_RATE_LIMITED;
+    }
 
     if (!auth_username_normalize(username, normalized_username, sizeof(normalized_username), true) ||
         !password || password[0] == '\0')
