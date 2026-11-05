@@ -101,17 +101,20 @@ class LadderNetworkCanvas extends StatelessWidget {
                       }
                     }
                     if (data == NodeType.parallel) {
+                      final b0Tag = project.tags.containsKey('I0.0') ? 'I0.0' : null;
+                      final b1Candidate = rungCoilTag ?? 'Q0.0';
+                      final b1Tag = project.tags.containsKey(b1Candidate) ? b1Candidate : null;
                       newNode = LadderNode(
                         id: 'node_${ts}_par',
                         type: NodeType.parallel,
                         config: NodeConfig(),
                         branches: [
-                          [LadderNode(id: 'node_${ts}_b0', type: NodeType.contactNO, config: NodeConfig(tagId: 'I0.0'))],
-                          [LadderNode(id: 'node_${ts}_b1', type: NodeType.contactNO, config: NodeConfig(tagId: rungCoilTag ?? 'Q0.0'))],
+                          [LadderNode(id: 'node_${ts}_b0', type: NodeType.contactNO, config: NodeConfig(tagId: b0Tag))],
+                          [LadderNode(id: 'node_${ts}_b1', type: NodeType.contactNO, config: NodeConfig(tagId: b1Tag))],
                         ],
                       );
                     } else {
-                      final defaultTag = data == NodeType.contactNO
+                      final candidateTag = data == NodeType.contactNO
                           ? 'I0.0'
                           : data == NodeType.contactNC
                               ? 'I0.1'
@@ -122,6 +125,9 @@ class LadderNetworkCanvas extends StatelessWidget {
                                       : (isCompare || isMath)
                                           ? 'AI0.0'
                                           : null;
+                      final defaultTag = (candidateTag != null && project.tags.containsKey(candidateTag))
+                          ? candidateTag
+                          : null;
                       newNode = LadderNode(
                         id: 'node_$ts',
                         type: data,
@@ -134,8 +140,8 @@ class LadderNetworkCanvas extends StatelessWidget {
                                     : (isCounter
                                         ? TagValue.integer(5)
                                         : (isCompare ? TagValue.integer(50) : (isMath ? TagValue.integer(1) : null))),
-                                outputTagId: isMath ? 'M0.6' : null,
-                                resetTagId: isMath ? 'M0.6' : null,
+                                outputTagId: (isMath && project.tags.containsKey('M0.6')) ? 'M0.6' : null,
+                                resetTagId: (isMath && project.tags.containsKey('M0.6')) ? 'M0.6' : null,
                               ),
                       );
                     }
@@ -297,6 +303,7 @@ class LadderNetworkCanvas extends StatelessWidget {
                     node: node,
                     isSelected: isSelected,
                     runtime: runtime,
+                    tags: project.tags,
                   );
 
                   final interactiveContent = InkWell(

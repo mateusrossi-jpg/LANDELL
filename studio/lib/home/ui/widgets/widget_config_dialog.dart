@@ -4,6 +4,7 @@ import '../../models/home_widget_config.dart';
 import '../../../ladder/models/ladder_project.dart';
 import '../../../ladder/models/tag.dart';
 import '../../../ladder/models/enums.dart';
+import '../../../core/ui/widgets/create_io_dialog.dart';
 
 class WidgetConfigDialog extends StatefulWidget {
   final LadderProject project;
@@ -390,9 +391,42 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
-                          'VARIÁVEL / TAG DO CLP (IEC 61131-3)',
-                          style: TextStyle(color: AppTokens.textDim, fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'VARIÁVEL / TAG DO CLP (IEC 61131-3)',
+                                style: TextStyle(color: AppTokens.textDim, fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                              ),
+                            ),
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF10B981),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
+                              label: const Text(
+                                '+ CRIAR NOVA TAG AQUI',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: () async {
+                                final newTag = await CreateIoDialog.show(
+                                  context,
+                                  project: widget.project,
+                                  onTagCreated: (tag) {
+                                    setState(() {});
+                                  },
+                                );
+                                if (newTag != null && mounted) {
+                                  _onTagChanged(newTag.id);
+                                  setState(() => _isSelectingTag = false);
+                                }
+                              },
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 6),
                         if (!_isSelectingTag)

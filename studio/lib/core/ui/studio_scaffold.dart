@@ -243,7 +243,67 @@ class _StudioScaffoldState extends State<StudioScaffold> {
 
   void _handleProjectUpdated() {
     _syncRuntime();
+    saveCurrentLadder(_project);
     setState(() {});
+  }
+
+  Future<void> _confirmResetToRawProject() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF131722),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFF59E0B), width: 1.0),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.note_add_outlined, color: Color(0xFFF59E0B), size: 20),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Novo Projeto em Branco (Cru)',
+                style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Deseja criar um novo projeto totalmente limpo (0 Tags, 0 Rungs e 0 Widgets)?\n\nIsso limpará os dados atuais do aplicativo para que você construa do zero.',
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Zerar e Começar do Zero', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      final raw = await resetToRawProject();
+      if (!mounted) return;
+      setState(() {
+        _project = raw;
+      });
+      _syncRuntime();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF064E3B),
+          content: Text('✓ Projeto cru iniciado! Construa suas Tags, Rungs e Painel HMI.'),
+        ),
+      );
+    }
   }
 
   void _openDrawer() {
@@ -949,6 +1009,30 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Divider(color: Color(0xFF2A303D), height: 16),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E222B),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4), width: 1.0),
+                    ),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      leading: const Icon(Icons.note_add_outlined, color: Color(0xFFF59E0B), size: 20),
+                      title: const Text('Novo Projeto em Branco (Cru)', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 12.5, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Zerar tags, lógica e widgets para criar do zero', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _confirmResetToRawProject();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Material(

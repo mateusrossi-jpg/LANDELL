@@ -78,20 +78,49 @@ class HomeWidgetRenderer extends StatelessWidget {
   }
 
   Widget _buildNormalHeader() {
+    final isInteractive = config.templateType == WidgetTemplateType.actuator ||
+        config.templateType == WidgetTemplateType.digital ||
+        config.templateType == WidgetTemplateType.ioMatrix;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: Text(
-            config.title.toUpperCase(),
-            style: const TextStyle(
-              color: Color(0xFFF1F5F9),
-              fontSize: 11.0,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.6,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  config.title.toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFFF1F5F9),
+                    fontSize: 11.0,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: isInteractive
+                      ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                      : const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  isInteractive ? 'COMANDO' : 'LEITURA',
+                  style: TextStyle(
+                    color: isInteractive ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
+                    fontSize: 8.0,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         if (config.tagId != null && project.tags.containsKey(config.tagId)) ...[

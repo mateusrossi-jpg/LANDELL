@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_shell.dart';
 import 'core/auth/session_manager.dart';
+import 'ladder_autosave.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,5 +31,6 @@ void main() async {
     );
   };
   await SessionManager.instance.init();
-  runApp(const AppShell());
+  final savedProject = await loadCurrentLadder();
+  runApp(AppShell(initialProject: savedProject));
 }

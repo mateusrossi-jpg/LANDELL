@@ -96,9 +96,62 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
     super.dispose();
   }
 
+  void _showMobileOrganizerSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: IndustrialTokens.bgPanel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: IndustrialTokens.borderSubtle),
+      ),
+      builder: (_) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.68,
+          child: _buildControllerOrganizer(),
+        ),
+      ),
+    );
+  }
+
+  void _showMobileConsoleSheet() {
+    _runCheckAndCompile(silent: true);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: IndustrialTokens.bgPanel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: IndustrialTokens.borderSubtle),
+      ),
+      builder: (_) => SafeArea(
+        child: SizedBox(
+          height: 220,
+          child: _buildCompilationConsole(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 700;
+
+    if (isSmallScreen) {
+      return Container(
+        color: IndustrialTokens.bgCanvas,
+        child: LadderEditorPage(
+          initialProject: widget.project,
+          runtime: widget.runtime,
+          networkManager: widget.networkManager,
+          onOpenDrawer: widget.onOpenDrawer,
+          onProjectUpdated: widget.onProjectUpdated,
+          onOpenOrganizer: _showMobileOrganizerSheet,
+          onOpenConsole: _showMobileConsoleSheet,
+          isActive: widget.isActive,
+          embedded: true,
+        ),
+      );
+    }
 
     return Container(
       color: IndustrialTokens.bgCanvas,
@@ -173,6 +226,8 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                               networkManager: widget.networkManager,
                               onOpenDrawer: widget.onOpenDrawer,
                               onProjectUpdated: widget.onProjectUpdated,
+                              onOpenOrganizer: () => setState(() => _showProjectTree = !_showProjectTree),
+                              onOpenConsole: () => setState(() => _showConsole = !_showConsole),
                               isActive: widget.isActive && _tabController.index == 0,
                               embedded: true,
                             ),

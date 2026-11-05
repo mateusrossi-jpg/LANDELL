@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../ladder/models/ladder_project.dart';
-import '../../ladder/models/demo_project.dart';
 import '../../ladder/runtime/ladder_runtime.dart';
 import '../../ladder_autosave.dart';
 import '../services/studio_event_bus.dart';
@@ -79,9 +78,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _isKioskMode = widget.initialKioskMode;
-    _localProject =
-        widget.project ??
-        LadderProject(id: 'proj_default', name: 'Projeto Padrão');
+    _localProject = widget.project ?? LadderProject.raw();
     _initScreensAndWidgets();
     TelemetrySyncService.instance.addListener(_onTelemetryUpdated);
 
@@ -113,7 +110,7 @@ class _HomePageState extends State<HomePage> {
       _screens = [
         HmiScreen(
           id: 'screen_operacao_principal',
-          title: '01 - Operação Principal',
+          title: '01 - Painel Principal',
           iconName: 'precision_manufacturing',
           allowedRoles: ['OPERADOR', 'MANUTENÇÃO', 'GESTOR', 'INTEGRADOR'],
           widgets: List.from(_localProject.dashboardWidgets!),
@@ -121,15 +118,11 @@ class _HomePageState extends State<HomePage> {
         ),
       ];
       _localProject.hmiScreens = List.from(_screens);
-    } else if (DemoProject.createCleanTccProject().hmiScreens != null &&
-        DemoProject.createCleanTccProject().hmiScreens!.isNotEmpty) {
-      _screens = List.from(DemoProject.createCleanTccProject().hmiScreens!);
-      _localProject.hmiScreens = List.from(_screens);
     } else {
       _screens = [
         HmiScreen(
           id: 'screen_operacao_principal',
-          title: '01 - Operação Principal',
+          title: '01 - Painel Principal',
           iconName: 'precision_manufacturing',
           allowedRoles: ['OPERADOR', 'MANUTENÇÃO', 'GESTOR', 'INTEGRADOR'],
           widgets: [],
@@ -152,7 +145,9 @@ class _HomePageState extends State<HomePage> {
     if (widget.initialKioskMode != oldWidget.initialKioskMode) {
       _isKioskMode = widget.initialKioskMode;
     }
-    if (widget.project != null && widget.project?.id != oldWidget.project?.id) {
+    if (widget.project != null &&
+        (!identical(widget.project, oldWidget.project) ||
+            widget.project?.id != oldWidget.project?.id)) {
       _localProject = widget.project!;
       _initScreensAndWidgets();
     }
@@ -1143,56 +1138,244 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildEmptyState() {
+    final isConnected = widget.networkManager.isConnected;
+    final tagCount = _localProject.tags.length;
+    final rungCount = _localProject.networks.length;
+
     return Container(
-      padding: const EdgeInsets.all(32),
-      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: AppTokens.panel,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTokens.line, width: 1.0),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(
-            Icons.dashboard_customize_outlined,
-            color: AppTokens.muted,
-            size: 44,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'PAINEL HMI VAZIO',
-            style: TextStyle(
-              color: AppTokens.textPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Adicione widgets para monitorar e controlar variáveis de processo em tempo real.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTokens.muted, fontSize: 11),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTokens.focus,
-              foregroundColor: AppTokens.bg,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTokens.focus.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3)),
+                ),
+                child: const Icon(
+                  Icons.rocket_launch_outlined,
+                  color: AppTokens.focus,
+                  size: 22,
+                ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            ),
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text(
-              'ADICIONAR WIDGET',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
-            ),
-            onPressed: _openAddWidgetFlow,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'PROJETO CRU — CONSTRUA SEU SISTEMA',
+                      style: TextStyle(
+                        color: AppTokens.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Siga os 4 passos abaixo ou crie tags e widgets diretamente neste painel. Tudo é salvo automaticamente.',
+                      style: TextStyle(color: AppTokens.muted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildGuidedStepTile(
+            stepNumber: '1',
+            title: 'Conectar CLP ou Operar em Simulação',
+            subtitle: isConnected
+                ? 'CLP Online (${widget.networkManager.ip}:${widget.networkManager.port})'
+                : 'Modo Simulação Local ativo (toque para buscar ESP32 na Rede)',
+            badgeText: isConnected ? 'ONLINE' : 'SIMULAÇÃO',
+            badgeColor: isConnected ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
+            icon: Icons.lan_outlined,
+            onTap: () => widget.onNavigateTab?.call(3),
+          ),
+          const SizedBox(height: 8),
+          _buildGuidedStepTile(
+            stepNumber: '2',
+            title: 'Mapear Pinos & Cadastrar Tags (I/O)',
+            subtitle: tagCount > 0
+                ? '$tagCount Tag(s) configurada(s) no dicionário do projeto'
+                : 'Nenhuma tag criada. Cadastre entradas (I0.x), saídas (Q0.x) ou memórias (M0.x)',
+            badgeText: '$tagCount TAGS',
+            badgeColor: tagCount > 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+            icon: Icons.memory_outlined,
+            onTap: () => widget.onNavigateTab?.call(2),
+          ),
+          const SizedBox(height: 8),
+          _buildGuidedStepTile(
+            stepNumber: '3',
+            title: 'Construir Lógica de Controle (Ladder)',
+            subtitle: rungCount > 0
+                ? '$rungCount Rung(s) programado(s) no editor IEC 61131-3'
+                : 'Adicione degraus (rungs), contatos, bobinas, timers ou blocos PID',
+            badgeText: '$rungCount RUNGS',
+            badgeColor: rungCount > 0 ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+            icon: Icons.account_tree_outlined,
+            onTap: () => widget.onNavigateTab?.call(1),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTokens.focus,
+                  foregroundColor: AppTokens.bg,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: const Icon(Icons.add_box_outlined, size: 16),
+                label: const Text(
+                  '4. ADICIONAR WIDGET IHM',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                ),
+                onPressed: _openAddWidgetFlow,
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF10B981),
+                  side: const BorderSide(color: Color(0xFF10B981)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                icon: const Icon(Icons.bolt_rounded, size: 16),
+                label: const Text(
+                  '+ CRIAR TAG RÁPIDA (I/O)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                ),
+                onPressed: () async {
+                  final newTag = await CreateIoDialog.show(
+                    context,
+                    project: _localProject,
+                    onTagCreated: (tag) {
+                      setState(() {});
+                      widget.onProjectUpdated?.call();
+                    },
+                  );
+                  if (newTag != null && mounted) {
+                    await _saveWidgets();
+                  }
+                },
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGuidedStepTile({
+    required String stepNumber,
+    required String title,
+    required String subtitle,
+    required String badgeText,
+    required Color badgeColor,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: const Color(0xFF141822),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF252D3D)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E2536),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  stepNumber,
+                  style: const TextStyle(
+                    color: Color(0xFFE2E8F0),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(icon, color: const Color(0xFF94A3B8), size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Color(0xFFE2E8F0),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B), size: 18),
+            ],
+          ),
+        ),
       ),
     );
   }

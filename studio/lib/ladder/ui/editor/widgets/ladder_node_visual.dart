@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../models/ladder_node.dart';
+import '../../../models/tag.dart';
 import '../../../models/enums.dart';
 import '../../../runtime/ladder_runtime.dart';
 import '../../../runtime/node_runtime_state.dart';
@@ -12,12 +13,14 @@ class LadderNodeVisual extends StatelessWidget {
   final LadderNode node;
   final bool isSelected;
   final LadderRuntime runtime;
+  final Map<String, Tag>? tags;
 
   const LadderNodeVisual({
     super.key,
     required this.node,
     required this.isSelected,
     required this.runtime,
+    this.tags,
   });
 
   @override
@@ -31,7 +34,50 @@ class LadderNodeVisual extends StatelessWidget {
 
     final tagText = node.config.tagId ?? '';
     final hasTag = tagText.isNotEmpty;
-    final displayTag = hasTag ? tagText : '<???>';
+    final tagObj = hasTag ? tags?[tagText] : null;
+    final displayTag = hasTag ? (tagObj?.name ?? tagText) : '[Vincular]';
+    final subAddress = (hasTag && tagObj?.address != null && tagObj!.address != displayTag)
+        ? tagObj.address!
+        : null;
+
+    Widget buildBottomStatusLabel({required bool isActive, bool isLatchedSet = false}) {
+      final parts = <String>[];
+      if (subAddress != null && subAddress.isNotEmpty) {
+        parts.add(subAddress);
+      }
+      if (node.isForced) {
+        parts.add('FORCE');
+      } else if (isLatchedSet) {
+        parts.add('SET');
+      } else if (isActive) {
+        parts.add('ON');
+      }
+      if (parts.isEmpty) return const SizedBox.shrink();
+
+      final Color pillColor = node.isForced
+          ? const Color(0xFFF59E0B)
+          : (isLatchedSet
+              ? const Color(0xFF38BDF8)
+              : (isActive ? const Color(0xFF10B981) : const Color(0xFF94A3B8)));
+
+      return Positioned(
+        bottom: 2,
+        left: 2,
+        right: 2,
+        child: Text(
+          parts.join(' • '),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 8.5,
+            fontWeight: FontWeight.w700,
+            color: pillColor,
+            fontFamily: 'monospace',
+          ),
+        ),
+      );
+    }
 
     Widget symbolWidget;
     switch (node.type) {
@@ -54,15 +100,18 @@ class LadderNodeVisual extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.0,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: isSelected
                         ? const Color(0xFF38BDF8)
-                        : (node.isEnergized ? const Color(0xFF10B981) : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8))),
+                        : (node.isEnergized
+                            ? const Color(0xFF10B981)
+                            : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFFF59E0B))),
                     fontFamily: 'monospace',
                   ),
                 ),
               ),
+              buildBottomStatusLabel(isActive: node.isEnergized),
               // Left horizontal wire lead
               Positioned(
                 left: 0,
@@ -137,15 +186,18 @@ class LadderNodeVisual extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.0,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: isSelected
                         ? const Color(0xFF38BDF8)
-                        : (node.isEnergized ? const Color(0xFF10B981) : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8))),
+                        : (node.isEnergized
+                            ? const Color(0xFF10B981)
+                            : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFFF59E0B))),
                     fontFamily: 'monospace',
                   ),
                 ),
               ),
+              buildBottomStatusLabel(isActive: node.isEnergized),
               // Left horizontal wire lead
               Positioned(
                 left: 0,
@@ -224,6 +276,7 @@ class LadderNodeVisual extends StatelessWidget {
         } else {
           isCoilActive = node.isEnergized || tagStoredValue;
         }
+        final bool isLatchedSet = node.type == NodeType.coilSet && !node.isEnergized && tagStoredValue;
 
         final coilWireColor = isCoilActive ? const Color(0xFF10B981) : wireColor;
 
@@ -245,15 +298,18 @@ class LadderNodeVisual extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.0,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: isSelected
                         ? const Color(0xFF38BDF8)
-                        : (isCoilActive ? const Color(0xFF10B981) : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8))),
+                        : (isCoilActive
+                            ? const Color(0xFF10B981)
+                            : (hasTag ? const Color(0xFFF1F5F9) : const Color(0xFFF59E0B))),
                     fontFamily: 'monospace',
                   ),
                 ),
               ),
+              buildBottomStatusLabel(isActive: isCoilActive, isLatchedSet: isLatchedSet),
               // Left horizontal wire lead
               Positioned(
                 left: 0,

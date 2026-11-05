@@ -4,12 +4,12 @@ import 'core/auth/session_manager.dart';
 import 'core/ui/login_page.dart';
 import 'core/ui/studio_scaffold.dart';
 import 'ladder/models/ladder_project.dart';
-import 'ladder/models/demo_project.dart';
 import 'core/services/network_manager.dart' hide ConnectionState;
 import 'ladder_autosave.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  final LadderProject? initialProject;
+  const AppShell({super.key, this.initialProject});
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -18,33 +18,31 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   // Single shared NetworkManager instance for the app
   late final NetworkManager _networkManager;
-  LadderProject _project = DemoProject.createCleanTccProject();
+  late LadderProject _project;
 
   @override
   void initState() {
     super.initState();
     _networkManager = NetworkManager(autoStartPeriodicCheck: true);
-    _restoreProject();
+    _project = widget.initialProject ?? LadderProject.raw();
+    if (widget.initialProject == null) {
+      _restoreProject();
+    }
   }
 
   void _restoreProject() {
-    if (SessionManager.instance.isLoggedIn) {
-      loadCurrentLadder()
-          .timeout(const Duration(milliseconds: 500), onTimeout: () => null)
-          .then((loaded) {
-        if (mounted && loaded != null) {
-          // Se for versão anterior da bancada ou demo legado, carrega a lógica limpa com PID em AI0.0
-          final isCleanCurrent = loaded.id == 'proj_bancada_tcc_v5_pid_industrial';
-          final finalProj = isCleanCurrent ? loaded : DemoProject.createCleanTccProject();
-          if (!isCleanCurrent) {
-            saveCurrentLadder(finalProj);
-          }
-          setState(() {
-            _project = finalProj;
-          });
-        }
-      }).catchError((_) {});
-    }
+    loadCurrentLadder()
+        .timeout(const Duration(seconds: 2), onTimeout: () => null)
+        .then((loaded) {
+      if (!mounted) return;
+      if (loaded != null) {
+        setState(() {
+          _project = loaded;
+        });
+      } else {
+        saveCurrentLadder(_project);
+      }
+    }).catchError((_) {});
   }
 
   @override
@@ -54,9 +52,8 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _handleLoginSuccess() {
-    setState(() {
-      _restoreProject();
-    });
+    _restoreProject();
+    setState(() {});
   }
 
   @override

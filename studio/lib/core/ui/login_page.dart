@@ -73,6 +73,17 @@ class _LoginPageState extends State<LoginPage> {
     await _navigateToHome();
   }
 
+  Future<void> _handleQuickPersonaLogin(String username, String role) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _usernameController.text = username;
+    });
+    await SessionManager.instance.login(username, '', role: role);
+    if (!mounted) return;
+    await _navigateToHome();
+  }
+
   Future<void> _navigateToHome() async {
     if (widget.onLoginSuccess != null) {
       if (mounted) {
@@ -86,11 +97,15 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     final project = savedProject ??
-        LadderProject(
+        LadderProject.raw(
           id: 'proj_${DateTime.now().millisecondsSinceEpoch}',
-          name: 'Projeto Padrão',
+          name: 'Meu Projeto',
         );
+    if (savedProject == null) {
+      await saveCurrentLadder(project);
+    }
 
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -98,6 +113,61 @@ class _LoginPageState extends State<LoginPage> {
           initialIndex: 0,
           initialProject: project,
           networkManager: widget.networkManager,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPersonaQuickPill({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: _isLoading ? null : onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTokens.panel2,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.45), width: 1.0),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppTokens.muted,
+                        fontSize: 9.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -140,6 +210,77 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 32),
+
+                  // Acesso Rápido Orientado por Perfil (1 Toque)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTokens.panel,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTokens.line, width: 1.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.bolt, size: 15, color: AppTokens.focus),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ACESSO RÁPIDO POR PERFIL (1 TOQUE)',
+                              style: TextStyle(
+                                color: AppTokens.focus,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _buildPersonaQuickPill(
+                              icon: Icons.engineering_outlined,
+                              label: 'Engenheiro',
+                              subtitle: 'Acesso Total + Ladder',
+                              color: const Color(0xFF38BDF8),
+                              onTap: () => _handleQuickPersonaLogin('ENGENHEIRO', 'INTEGRADOR'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPersonaQuickPill(
+                              icon: Icons.build_circle_outlined,
+                              label: 'Manutenção',
+                              subtitle: 'Diagnóstico & Force',
+                              color: const Color(0xFFF59E0B),
+                              onTap: () => _handleQuickPersonaLogin('MANUTENCAO', 'MANUTENÇÃO'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _buildPersonaQuickPill(
+                              icon: Icons.dashboard_outlined,
+                              label: 'Operador IHM',
+                              subtitle: 'Painel & Comando',
+                              color: const Color(0xFF10B981),
+                              onTap: () => _handleQuickPersonaLogin('OPERADOR', 'OPERADOR INDUSTRIAL'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPersonaQuickPill(
+                              icon: Icons.analytics_outlined,
+                              label: 'Gestor OEE',
+                              subtitle: 'Métricas & Auditoria',
+                              color: const Color(0xFFA855F7),
+                              onTap: () => _handleQuickPersonaLogin('GESTOR', 'GESTOR'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   // Login Form Card
                   Container(

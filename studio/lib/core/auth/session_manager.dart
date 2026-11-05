@@ -10,8 +10,8 @@ class SessionManager {
   static const String _kSessionRoleKey = 'endap_session_role';
 
   bool _isLoggedIn = true;
-  String? _currentUser = 'OPERADOR';
-  String? _currentRole = 'OPERADOR INDUSTRIAL';
+  String? _currentUser = 'ENGENHEIRO';
+  String? _currentRole = 'INTEGRADOR';
   String? _sessionToken;
 
   bool get isLoggedIn => _isLoggedIn;
@@ -27,6 +27,7 @@ class SessionManager {
       _currentRole == 'INTEGRADOR' ||
       _currentRole == 'ACESSO TÉCNICO AUTORIZADO' ||
       _currentUser == 'ADMIN' ||
+      _currentUser == 'ENGENHEIRO' ||
       _currentUser == 'TECNICO_CAMPO';
 
   bool get isMaintenance =>
@@ -42,11 +43,11 @@ class SessionManager {
 
   Future<void> init() async {
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 1));
-      // Por padrão em campo, inicia logado direto; se o usuário fizer logout explícito, vai para LoginPage
+      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+      // Por padrão inicia logado como Integrador para permitir construção completa do projeto
       _isLoggedIn = prefs.getBool(_kSessionActiveKey) ?? true;
-      _currentUser = prefs.getString(_kSessionUserKey) ?? 'OPERADOR';
-      _currentRole = prefs.getString(_kSessionRoleKey) ?? 'OPERADOR INDUSTRIAL';
+      _currentUser = prefs.getString(_kSessionUserKey) ?? 'ENGENHEIRO';
+      _currentRole = prefs.getString(_kSessionRoleKey) ?? 'INTEGRADOR';
       if (_isLoggedIn && _currentUser != null) {
         StudioEventBus.instance.emit(
           type: 'AUTH',
@@ -60,7 +61,7 @@ class SessionManager {
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<bool> login(String username, String password, {String? role}) async {
     final cleanUser = username.trim();
     if (cleanUser.isEmpty) {
       return false;
@@ -68,10 +69,23 @@ class SessionManager {
 
     _isLoggedIn = true;
     _currentUser = cleanUser;
-    _currentRole = 'OPERADOR INDUSTRIAL';
+    if (role != null && role.isNotEmpty) {
+      _currentRole = role;
+    } else {
+      final upper = cleanUser.toUpperCase();
+      if (upper.contains('ADMIN') || upper.contains('ENG') || upper.contains('INT') || upper.contains('TEC')) {
+        _currentRole = 'INTEGRADOR';
+      } else if (upper.contains('MANUT')) {
+        _currentRole = 'MANUTENÇÃO';
+      } else if (upper.contains('GEST')) {
+        _currentRole = 'GESTOR';
+      } else {
+        _currentRole = 'INTEGRADOR';
+      }
+    }
 
     try {
-      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 1));
+      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
       await prefs.setBool(_kSessionActiveKey, true);
       await prefs.setString(_kSessionUserKey, cleanUser);
       await prefs.setString(_kSessionRoleKey, _currentRole!);

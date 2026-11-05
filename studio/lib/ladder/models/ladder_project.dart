@@ -36,6 +36,30 @@ class LadderProject {
           networks: [],
         );
 
+  /// Projeto 100% cru (sem tags, rungs ou widgets mockados) para construção do zero pelo usuário.
+  LadderProject.raw({String? id, String? name})
+      : id = id ?? 'proj_user_workspace_v1',
+        name = name ?? 'Meu Projeto',
+        tags = <String, Tag>{},
+        networks = <LadderNetwork>[],
+        metadata = ProjectMetadata(
+          author: 'Usuário',
+          version: '1.0.0',
+          targetPlatform: 'EndapRuntime',
+        ),
+        dashboardWidgets = <HomeWidgetConfig>[],
+        hmiScreens = <HmiScreen>[
+          HmiScreen(
+            id: 'screen_principal',
+            title: '01 - Painel Principal',
+            iconName: 'dashboard',
+            allowedRoles: const ['OPERADOR', 'MANUTENÇÃO', 'GESTOR', 'INTEGRADOR'],
+            description: 'Painel de supervisão e controle construído pelo usuário.',
+            widgets: <HomeWidgetConfig>[],
+            isKioskEnabled: true,
+          ),
+        ];
+
   LadderProject clone() {
     return LadderProject(
       id: id,
@@ -66,17 +90,7 @@ class LadderProject {
         tags: () {
           final parsed = (json['tags'] as Map?)?.map(
                 (k, v) => MapEntry(k.toString(), Tag.fromJson(Map<String, dynamic>.from(v as Map))),
-              ) ?? {};
-          final defaults = DemoProject.createDefaultTags();
-          for (final entry in defaults.entries) {
-            parsed.putIfAbsent(entry.key, () => entry.value);
-          }
-          // Garante que AI0.0 e AI0.1 usem 0-100% diretamente
-          for (final aiKey in ['AI0.0', 'AI0.1']) {
-            if (defaults.containsKey(aiKey)) {
-              parsed[aiKey] = defaults[aiKey]!;
-            }
-          }
+              ) ?? <String, Tag>{};
           return parsed;
         }(),
         networks: (json['networks'] as List<dynamic>?)

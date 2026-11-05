@@ -40,6 +40,8 @@ class LadderEditorPage extends StatefulWidget {
   final NetworkManager? networkManager;
   final bool embedded;
   final VoidCallback? onProjectUpdated;
+  final VoidCallback? onOpenOrganizer;
+  final VoidCallback? onOpenConsole;
 
   const LadderEditorPage({
     super.key,
@@ -50,6 +52,8 @@ class LadderEditorPage extends StatefulWidget {
     this.networkManager,
     this.embedded = false,
     this.onProjectUpdated,
+    this.onOpenOrganizer,
+    this.onOpenConsole,
   });
 
   @override
@@ -206,7 +210,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         _startTimedSimulation();
       }
     } else {
-      _project = LadderProject.blank();
+      _project = LadderProject.raw();
       _loadProject();
     }
   }
@@ -255,7 +259,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
   Future<void> _loadProject() async {
     final loaded = await loadCurrentLadder();
-    final proj = loaded ?? LadderProject.blank();
+    final proj = loaded ?? LadderProject.raw();
     if (mounted) {
       setState(() {
         _replaceProjectInPlace(proj);
@@ -2026,7 +2030,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
             ),
           ),
 
-          // SECONDARY TOOLBAR ACTION BAR
+          // SECONDARY TOOLBAR ACTION BAR (Ergonomia Mobile-First: Ações Primárias + Menu Categorizado)
           Container(
             width: double.infinity,
             height: isMobile ? 44 : 48,
@@ -2042,228 +2046,144 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 constraints: BoxConstraints(minWidth: isMobile ? (width - 16).clamp(0, double.infinity) : (width - 32).clamp(0, double.infinity)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
                   children: [
-                    _buildActionButton(
-                      icon: Icons.add,
-                      label: 'Rung',
-                      hideLabel: isMobile,
-                      onPressed: () {
-                        setState(() {
-                          final isExclusive = widget.networkManager?.isExclusiveGateway ?? false;
-                          String defaultController = 'GATEWAY';
-                          if (isExclusive) {
-                            final firstField = widget.networkManager?.nodes.firstWhere(
-                              (n) => n.controllerIndex > 0,
-                              orElse: () => widget.networkManager!.nodes.first,
-                            );
-                            defaultController = (firstField != null && firstField.controllerIndex > 0)
-                                ? firstField.id
-                                : 'node_01';
-                          }
-                          if (_selectedControllerFilter != 'ALL' && _selectedControllerFilter != 'GLOBAL') {
-                            if (_selectedControllerFilter == 'GATEWAY' && isExclusive) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  backgroundColor: Color(0xFFD97706),
-                                  content: Text('Intertravamento: Gateway Dedicado não executa Ladder local. Rung direcionado ao Nó de Campo.'),
-                                ),
-                              );
-                            } else {
-                              defaultController = _selectedControllerFilter;
-                            }
-                          }
-                          _project.networks.add(LadderNetwork(
-                            id: 'net_${DateTime.now().microsecondsSinceEpoch}',
-                            targetControllerId: defaultController,
-                          ));
-                          _saveProject();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    _buildActionButton(icon: Icons.undo, label: 'Desfazer', hideLabel: isMobile, onPressed: () {}),
-                    const SizedBox(width: 4),
-                    _buildActionButton(icon: Icons.redo, label: 'Refazer', hideLabel: isMobile, onPressed: () {}),
-                    const SizedBox(width: 4),
-                    _buildActionButton(icon: Icons.check, label: 'Validar', hideLabel: isCompact, onPressed: () => _runPassiveValidation()),
-                    const SizedBox(width: 4),
-                    _buildActionButton(
-                      icon: Icons.folder_open,
-                      label: 'Abrir',
-                      hideLabel: isCompact,
-                      onPressed: () async {
-                        final imported = await importProject();
-                        if (imported != null) {
-                          setState(() {
-                            _replaceProjectInPlace(imported);
-                            _simulationInputs.clear();
-                            for (var tag in _project.tags.values) {
-                              if (tag.type == TagType.bool) {
-                                _simulationInputs[tag.id] = tag.initialValue?.boolValue ?? false;
-                              }
-                            }
-                            _saveProject();
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    _buildActionButton(
-                      icon: Icons.download,
-                      label: 'Exportar',
-                      hideLabel: isCompact,
-                      onPressed: () async => await exportProject(_project),
-                    ),
-                    const SizedBox(width: 4),
-                    _buildActionButton(
-                      icon: Icons.refresh_outlined,
-                      label: 'Bancada TCC',
-                      hideLabel: false,
-                      onPressed: () async {
-                        final clean = DemoProject.createCleanTccProject();
-                        await saveCurrentLadder(clean);
-                        setState(() {
-                          _replaceProjectInPlace(clean);
-                          _simulationInputs.clear();
-                          for (var tag in _project.tags.values) {
-                            if (tag.type == TagType.bool) {
-                              _simulationInputs[tag.id] = tag.initialValue?.boolValue ?? false;
-                            }
-                          }
-                          _selectedRungIndex = null;
-                          _selectedNodeIndex = null;
-                          _updateRuntimeProject();
-                          _runPassiveValidation();
-                          widget.onProjectUpdated?.call();
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            backgroundColor: Color(0xFF3FBF5A),
-                            content: Text('Projeto limpo da Bancada TCC carregado!', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    _buildActionButton(
-                      icon: _showToolbox ? Icons.view_compact_alt : Icons.view_compact_alt_outlined,
-                      label: _showToolbox ? 'Ocultar Paleta' : 'Paleta Componentes',
-                      hideLabel: isCompact,
-                      onPressed: () => setState(() => _showToolbox = !_showToolbox),
-                    ),
-                    const SizedBox(width: 4),
-                    _buildActionButton(
-                      icon: (_showSearchBar || _selectedControllerFilter != 'ALL' || _filterOnlyDisabled)
-                          ? Icons.filter_alt
-                          : Icons.search,
-                      label: 'Filtrar',
-                      hideLabel: isCompact,
-                      onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    if (widget.embedded) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E2638),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: const Color(0xFF2A364F), width: 1.0),
-                        ),
-                        child: Text(
-                          '${_project.networks.length} Rungs',
-                          style: const TextStyle(
-                            color: Color(0xFF4FD1C5),
-                            fontSize: 10,
-                            fontFamily: 'JetBrains Mono',
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildModeSelector(isMobile: isMobile, allowExpand: false),
-                      if (_mode != EditorMode.editor) ...[
-                        const SizedBox(width: 6),
-                        IconButton(
-                          onPressed: () => setState(() => _simulationPulseMode = !_simulationPulseMode),
-                          icon: Icon(_simulationPulseMode ? Icons.touch_app : Icons.toggle_on, size: 16, color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430)),
-                          tooltip: _simulationPulseMode ? 'Modo Pulso (400ms)' : 'Modo Retentivo',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        ),
-                        IconButton(
-                          onPressed: _resetSimulation,
-                          icon: const Icon(Icons.restart_alt, size: 16, color: Color(0xFFF87171)),
-                          tooltip: 'Resetar Simulação',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        ),
-                      ],
-                      const SizedBox(width: 10),
-                      Container(width: 1, height: 18, color: const Color(0xFF262C36)),
-                      const SizedBox(width: 10),
-                    ],
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFE7EBF0),
-                        side: BorderSide(color: AppTokens.line, width: 1),
-                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: isMobile ? 8 : 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      ),
-                      icon: Icon(Icons.cloud_download_outlined, size: isMobile ? 16 : 18),
-                      label: isMobile
-                          ? const SizedBox.shrink()
-                          : const Text(
-                              'Baixar ESP32',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                      onPressed: () => _fetchFromEsp32(),
-                    ),
-                    const SizedBox(width: 6),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFF87171),
-                        side: const BorderSide(color: Color(0xFF991B1B)),
-                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: isMobile ? 8 : 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      ),
-                      icon: const Icon(Icons.delete_sweep_outlined, size: 16),
-                      label: const Text('Limpar CLP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                      onPressed: () => _handleClearEsp32Ladder(),
-                    ),
-                    const SizedBox(width: 6),
-                    Builder(
-                      builder: (context) {
-                        final isExclusiveGw = widget.networkManager?.isExclusiveGateway ?? false;
-                        final isBlockedDeploy = isExclusiveGw && _selectedControllerFilter == 'GATEWAY';
-                        return ElevatedButton.icon(
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isBlockedDeploy ? const Color(0xFF64748B) : AppTokens.run,
-                            foregroundColor: isBlockedDeploy ? Colors.white70 : AppTokens.bg,
-                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 8 : 10),
+                            backgroundColor: const Color(0xFF1E293B),
+                            foregroundColor: const Color(0xFF38BDF8),
+                            side: const BorderSide(color: Color(0xFF0284C7), width: 1),
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 12, vertical: 6),
+                            minimumSize: const Size(0, 32),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             elevation: 0,
                           ),
-                          icon: Icon(isBlockedDeploy ? Icons.lock_outline : Icons.cloud_upload_outlined, size: isMobile ? 16 : 18),
-                          label: Text(
-                            _getDeployButtonLabel(),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text(
+                            'Rung',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                           ),
-                          onPressed: () => _handleDeploy(),
-                        );
-                      },
+                          onPressed: _addNewRung,
+                        ),
+                        const SizedBox(width: 6),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFE2E8F0),
+                            side: BorderSide(color: AppTokens.line, width: 1),
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 12, vertical: 6),
+                            minimumSize: const Size(0, 32),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          icon: const Icon(Icons.handyman_outlined, size: 15, color: Color(0xFF94A3B8)),
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Text(
+                                'Ferramentas',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                              ),
+                              SizedBox(width: 2),
+                              Icon(Icons.arrow_drop_down, size: 16, color: Color(0xFF94A3B8)),
+                            ],
+                          ),
+                          onPressed: _showLadderToolsBottomSheet,
+                        ),
+                        if (!isMobile) ...[
+                          const SizedBox(width: 6),
+                          _buildActionButton(
+                            icon: _showToolbox ? Icons.view_compact_alt : Icons.view_compact_alt_outlined,
+                            label: _showToolbox ? 'Ocultar Paleta' : 'Paleta',
+                            hideLabel: isCompact,
+                            onPressed: () => setState(() => _showToolbox = !_showToolbox),
+                          ),
+                          const SizedBox(width: 4),
+                          _buildActionButton(
+                            icon: (_showSearchBar || _selectedControllerFilter != 'ALL' || _filterOnlyDisabled)
+                                ? Icons.filter_alt
+                                : Icons.search,
+                            label: 'Filtrar',
+                            hideLabel: isCompact,
+                            onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (widget.embedded) ...[
+                          if (!isMobile) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E2638),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFF2A364F), width: 1.0),
+                              ),
+                              child: Text(
+                                '${_project.networks.length} Rungs',
+                                style: const TextStyle(
+                                  color: Color(0xFF4FD1C5),
+                                  fontSize: 10,
+                                  fontFamily: 'JetBrains Mono',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          _buildModeSelector(isMobile: isMobile, allowExpand: false),
+                          const SizedBox(width: 8),
+                        ],
+                        if (!isMobile) ...[
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFE7EBF0),
+                              side: BorderSide(color: AppTokens.line, width: 1),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                            icon: const Icon(Icons.cloud_download_outlined, size: 16),
+                            label: const Text(
+                              'Baixar ESP32',
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                            ),
+                            onPressed: () => _fetchFromEsp32(),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Builder(
+                          builder: (context) {
+                            final isExclusiveGw = widget.networkManager?.isExclusiveGateway ?? false;
+                            final isBlockedDeploy = isExclusiveGw && _selectedControllerFilter == 'GATEWAY';
+                            return ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isBlockedDeploy ? const Color(0xFF64748B) : AppTokens.run,
+                                foregroundColor: isBlockedDeploy ? Colors.white70 : AppTokens.bg,
+                                padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: 6),
+                                minimumSize: const Size(0, 32),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                elevation: 0,
+                              ),
+                              icon: Icon(isBlockedDeploy ? Icons.lock_outline : Icons.bolt_rounded, size: isMobile ? 15 : 17),
+                              label: Text(
+                                isMobile ? 'Deploy' : _getDeployButtonLabel(),
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: () => _handleDeploy(),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+
+          // CONTEXTUAL MODE GUIDANCE BANNER (1 linha explicativa + controles rápidos de simulação)
+          _buildModeGuidanceBanner(isMobile),
 
           // CONTROLLER FILTER STRIP & SEARCH (Recolhido por padrão no mobile para preservar espaço)
           if (!isMobile || _showSearchBar || _selectedControllerFilter != 'ALL' || _filterOnlyDisabled || _searchQuery.isNotEmpty)
@@ -2286,6 +2206,473 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       ),
     );
       },
+    );
+  }
+
+  void _addNewRung() {
+    setState(() {
+      final isExclusive = widget.networkManager?.isExclusiveGateway ?? false;
+      String defaultController = 'GATEWAY';
+      if (isExclusive) {
+        final firstField = widget.networkManager?.nodes.firstWhere(
+          (n) => n.controllerIndex > 0,
+          orElse: () => widget.networkManager!.nodes.first,
+        );
+        defaultController = (firstField != null && firstField.controllerIndex > 0)
+            ? firstField.id
+            : 'node_01';
+      }
+      if (_selectedControllerFilter != 'ALL' && _selectedControllerFilter != 'GLOBAL') {
+        if (_selectedControllerFilter == 'GATEWAY' && isExclusive) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFD97706),
+              content: Text('Intertravamento: Gateway Dedicado não executa Ladder local. Rung direcionado ao Nó de Campo.'),
+            ),
+          );
+        } else {
+          defaultController = _selectedControllerFilter;
+        }
+      }
+      _project.networks.add(LadderNetwork(
+        id: 'net_${DateTime.now().microsecondsSinceEpoch}',
+        targetControllerId: defaultController,
+      ));
+      _selectedRungIndex = _project.networks.length - 1;
+      _saveProject();
+    });
+  }
+
+  Widget _buildModeGuidanceBanner(bool isMobile) {
+    String modeTitle;
+    String modeDescription;
+    Color accentColor;
+    IconData modeIcon;
+
+    switch (_mode) {
+      case EditorMode.editor:
+        modeTitle = 'EDIÇÃO';
+        modeDescription = 'Toque em um componente da paleta para inserir no Rung e toque no nó para vincular ou criar uma Tag.';
+        accentColor = const Color(0xFF38BDF8);
+        modeIcon = Icons.edit_note_rounded;
+        break;
+      case EditorMode.simulateLocal:
+        modeTitle = 'SIMULAÇÃO LOCAL';
+        modeDescription = 'Toque nos contatos de entrada para comutar ON/OFF e testar sua lógica no celular.';
+        accentColor = const Color(0xFF10B981);
+        modeIcon = Icons.play_circle_outline_rounded;
+        break;
+      case EditorMode.simulateHardware:
+        modeTitle = 'HARDWARE ESP32';
+        modeDescription = 'Monitorando o CLP em tempo real. Toque em um contato ou bobina para FORÇAR (Force I/O) no hardware.';
+        accentColor = const Color(0xFFF59E0B);
+        modeIcon = Icons.memory_rounded;
+        break;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: 5),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.08),
+        border: Border(
+          bottom: BorderSide(color: accentColor.withValues(alpha: 0.25), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(modeIcon, size: 14, color: accentColor),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              modeTitle,
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 9.0,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              modeDescription,
+              style: const TextStyle(
+                color: Color(0xFFCBD5E1),
+                fontSize: 10.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (_mode != EditorMode.editor) ...[
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: () => setState(() => _simulationPulseMode = !_simulationPulseMode),
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _simulationPulseMode ? Icons.touch_app : Icons.toggle_on,
+                      size: 12,
+                      color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _simulationPulseMode ? 'Pulso' : 'Retentivo',
+                      style: TextStyle(
+                        color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: _resetSimulation,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.5)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.restart_alt, size: 12, color: Color(0xFFF87171)),
+                    SizedBox(width: 3),
+                    Text(
+                      'Reset',
+                      style: TextStyle(
+                        color: Color(0xFFF87171),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showLadderToolsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF131722),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        side: BorderSide(color: Color(0xFF222B3D)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.68,
+          minChildSize: 0.45,
+          maxChildSize: 0.9,
+          builder: (_, scrollCtrl) => ListView(
+            controller: scrollCtrl,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF334155),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'FERRAMENTAS DE ENGENHARIA LADDER',
+                    style: TextStyle(
+                      color: Color(0xFFF1F5F9),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${_project.networks.length} Rung(s) • ${_project.tags.length} Tag(s)',
+                      style: const TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _buildToolsSectionHeader('📡 COMUNICAÇÃO CLP & DIAGNÓSTICO'),
+              _buildToolSheetTile(
+                icon: Icons.cloud_download_outlined,
+                color: const Color(0xFF38BDF8),
+                title: 'Baixar Lógica do ESP32 (Upload do CLP)',
+                subtitle: 'Lê os degraus (rungs) atualmente gravados na memória do hardware',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _fetchFromEsp32();
+                },
+              ),
+              _buildToolSheetTile(
+                icon: Icons.verified_outlined,
+                color: const Color(0xFF10B981),
+                title: 'Validar Sintaxe & Grafo IEC 61131-3',
+                subtitle: 'Verifica topologia, bobinas órfãs e gera diagnóstico do bytecode',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _runPassiveValidation();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFF065F46),
+                      content: Text(
+                        '✓ Validação concluída: ${_project.networks.length} Rung(s) verificado(s).',
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (widget.onOpenOrganizer != null)
+                _buildToolSheetTile(
+                  icon: Icons.account_tree_outlined,
+                  color: const Color(0xFF2DD4BF),
+                  title: 'Controller Organizer (Árvore do Projeto)',
+                  subtitle: 'Inspecionar tarefas determinísticas, MainRoutine, I/O e nós de rede',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onOpenOrganizer!.call();
+                  },
+                ),
+              if (widget.onOpenConsole != null)
+                _buildToolSheetTile(
+                  icon: Icons.terminal_rounded,
+                  color: const Color(0xFFA78BFA),
+                  title: 'Console de Compilação & Bytecode',
+                  subtitle: 'Ver tamanho do bytecode gerado e tempo de scan determinístico (µs)',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onOpenConsole!.call();
+                  },
+                ),
+              _buildToolSheetTile(
+                icon: Icons.delete_sweep_outlined,
+                color: const Color(0xFFF87171),
+                title: 'Limpar Memória Ladder do CLP (ESP32)',
+                subtitle: 'Remove a lógica gravada no controlador físico e desenergiza saídas',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleClearEsp32Ladder();
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildToolsSectionHeader('✏️ EDIÇÃO & VISUALIZAÇÃO'),
+              _buildToolSheetTile(
+                icon: _showToolbox ? Icons.visibility_off_outlined : Icons.view_compact_alt_outlined,
+                color: const Color(0xFFE2E8F0),
+                title: _showToolbox ? 'Ocultar Paleta de Componentes' : 'Mostrar Paleta de Componentes',
+                subtitle: 'Expande a área útil dos Rungs ocultando a barra de contatos/bobinas',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _showToolbox = !_showToolbox);
+                },
+              ),
+              _buildToolSheetTile(
+                icon: Icons.filter_alt_outlined,
+                color: const Color(0xFF38BDF8),
+                title: _showSearchBar ? 'Ocultar Barra de Busca e Filtro' : 'Filtrar & Buscar Rungs por Controlador/Tag',
+                subtitle: 'Localizar rapidamente degraus por endereço (%IX, %QX) ou nó de campo',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _showSearchBar = !_showSearchBar);
+                },
+              ),
+              _buildToolSheetTile(
+                icon: Icons.note_add_outlined,
+                color: const Color(0xFFF59E0B),
+                title: 'Zerar Projeto Atual (Começar Cru)',
+                subtitle: 'Apaga todas as tags, rungs e widgets para construir um projeto do zero',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final raw = await resetToRawProject();
+                  if (!mounted) return;
+                  setState(() {
+                    _replaceProjectInPlace(raw);
+                    _simulationInputs.clear();
+                    _selectedRungIndex = null;
+                    _selectedNodeIndex = null;
+                    _updateRuntimeProject();
+                    _runPassiveValidation();
+                    widget.onProjectUpdated?.call();
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFF065F46),
+                      content: Text('✓ Projeto zerado (0 Tags, 0 Rungs, 0 Widgets). Pronto para construir!'),
+                    ),
+                  );
+                },
+              ),
+              _buildToolSheetTile(
+                icon: Icons.science_outlined,
+                color: const Color(0xFF64748B),
+                title: 'Carregar Template Didático (Bancada TCC)',
+                subtitle: 'Opcional: carrega tags e lógica de exemplo (AHT10 + Relés)',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final clean = DemoProject.createCleanTccProject();
+                  await saveCurrentLadder(clean);
+                  if (!mounted) return;
+                  setState(() {
+                    _replaceProjectInPlace(clean);
+                    _simulationInputs.clear();
+                    for (var tag in _project.tags.values) {
+                      if (tag.type == TagType.bool) {
+                        _simulationInputs[tag.id] = tag.initialValue?.boolValue ?? false;
+                      }
+                    }
+                    _selectedRungIndex = null;
+                    _selectedNodeIndex = null;
+                    _updateRuntimeProject();
+                    _runPassiveValidation();
+                    widget.onProjectUpdated?.call();
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildToolsSectionHeader('📁 ARQUIVO & BACKUP (.ENDAP)'),
+              _buildToolSheetTile(
+                icon: Icons.folder_open_rounded,
+                color: const Color(0xFF38BDF8),
+                title: 'Abrir / Importar Pacote (.endap)',
+                subtitle: 'Carregar projeto salvo anteriormente no dispositivo',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final imported = await importProject();
+                  if (imported != null && mounted) {
+                    setState(() {
+                      _replaceProjectInPlace(imported);
+                      _simulationInputs.clear();
+                      for (var tag in _project.tags.values) {
+                        if (tag.type == TagType.bool) {
+                          _simulationInputs[tag.id] = tag.initialValue?.boolValue ?? false;
+                        }
+                      }
+                      _saveProject();
+                      widget.onProjectUpdated?.call();
+                    });
+                  }
+                },
+              ),
+              _buildToolSheetTile(
+                icon: Icons.download_rounded,
+                color: const Color(0xFF10B981),
+                title: 'Exportar Projeto (.endap)',
+                subtitle: 'Salvar backup completo de lógica, tags e telas IHM',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await exportProject(_project);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToolsSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, top: 4),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 10.0,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToolSheetTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A202E),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF263044)),
+      ),
+      child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        leading: Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFFF1F5F9),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B), size: 18),
+        onTap: onTap,
+      ),
     );
   }
 
@@ -2374,9 +2761,9 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       color: AppTokens.bg,
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(20.0),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 460),
             child: Card(
               color: AppTokens.panel,
               elevation: 0,
@@ -2385,50 +2772,35 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 side: BorderSide(color: AppTokens.line),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(22.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.account_tree_outlined, size: 56, color: Color(0xFF4FD1C5)),
-                    const SizedBox(height: 16),
+                    const Icon(Icons.account_tree_outlined, size: 46, color: Color(0xFF4FD1C5)),
+                    const SizedBox(height: 12),
                     const Text(
-                      'Lógica Ladder IEC Vazia',
+                      'PROGRAMA LADDER EM BRANCO',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
                         color: Color(0xFFE7EBF0),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     const Text(
-                      'Nenhum degrau (rung) cadastrado no projeto',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF8C98A8)),
+                      '1. Toque em "+ Adicionar Primeiro Rung".\n'
+                      '2. Toque ou arraste contatos (NO/NC) e bobinas (COIL) da paleta acima.\n'
+                      '3. Toque no elemento inserido para vincular ou criar uma nova Tag na hora.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), height: 1.45),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                final isExclusive = widget.networkManager?.isExclusiveGateway ?? false;
-                                String defaultController = 'GATEWAY';
-                                if (isExclusive) {
-                                  final firstField = widget.networkManager?.nodes.firstWhere(
-                                    (n) => n.controllerIndex > 0,
-                                    orElse: () => widget.networkManager!.nodes.first,
-                                  );
-                                  defaultController = (firstField != null && firstField.controllerIndex > 0)
-                                      ? firstField.id
-                                      : 'node_01';
-                                }
-                                _project.networks.add(LadderNetwork(
-                                  id: 'net_${DateTime.now().microsecondsSinceEpoch}',
-                                  targetControllerId: defaultController,
-                                ));
-                                _saveProject();
-                              });
-                            },
+                            onPressed: _addNewRung,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTokens.focus,
                               foregroundColor: AppTokens.bg,
@@ -2439,73 +2811,29 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                             ),
                             icon: const Icon(Icons.add, size: 18),
                             label: const Text(
-                              'Adicionar Rung',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              'Adicionar Primeiro Rung',
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _fetchFromEsp32(),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFE7EBF0),
-                              side: BorderSide(color: AppTokens.line, width: 1),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => _fetchFromEsp32(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFE7EBF0),
+                            side: BorderSide(color: AppTokens.line, width: 1),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            icon: const Icon(Icons.cloud_download_outlined, size: 18),
-                            label: const Text(
-                              'Baixar ESP32',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                            ),
+                          ),
+                          icon: const Icon(Icons.cloud_download_outlined, size: 17),
+                          label: const Text(
+                            'Baixar ESP32',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final clean = DemoProject.createCleanTccProject();
-                          await saveCurrentLadder(clean);
-                          setState(() {
-                            _project = clean;
-                            _simulationInputs.clear();
-                            for (var tag in _project.tags.values) {
-                              if (tag.type == TagType.bool) {
-                                _simulationInputs[tag.id] = tag.initialValue?.boolValue ?? false;
-                              }
-                            }
-                            _selectedRungIndex = null;
-                            _selectedNodeIndex = null;
-                            _updateRuntimeProject();
-                            _runPassiveValidation();
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: Color(0xFF3FBF5A),
-                              content: Text('Projeto limpo da Bancada TCC carregado!', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF4FD1C5),
-                          side: const BorderSide(color: Color(0xFF4FD1C5), width: 1),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        icon: const Icon(Icons.refresh_outlined, size: 18),
-                        label: const Text(
-                          'Carregar Lógica da Bancada TCC (Sensor + Relés)',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                      ),
                     ),
                   ],
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/tag.dart';
+import '../../../models/tag_value.dart';
 import '../../../models/enums.dart';
 
 /// Diálogo Industrial de Navegação e Seleção de Tags (Estilo TIA Portal / Rockwell RSLogix Tag Browser).
@@ -194,6 +195,24 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                       ),
                     ),
                   ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF10B981),
+                      backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: BorderSide(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
+                    label: const Text(
+                      '+ Nova Tag',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _showQuickCreateTagDialog,
+                  ),
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
                     onPressed: () => Navigator.pop(context),
@@ -323,16 +342,40 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
 
                   if (filteredList.isEmpty) {
                     return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.filter_list_off, size: 36, color: Colors.blueGrey.shade600),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Nenhuma tag encontrada nesta categoria',
-                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_link_rounded, size: 38, color: Colors.blueGrey.shade500),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Nenhuma tag cadastrada nesta categoria',
+                              style: TextStyle(color: Color(0xFFF1F5F9), fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Crie sua tag agora mesmo (Entrada, Saída, Memória, Analógica ou Timer) e vincule ao nó.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
+                            ),
+                            const SizedBox(height: 14),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: const Color(0xFF06281E),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text(
+                                'CRIAR E VINCULAR NOVA TAG AQUI',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: _showQuickCreateTagDialog,
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -560,5 +603,218 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
         ),
       ),
     );
+  }
+
+  Future<void> _showQuickCreateTagDialog() async {
+    final presets = widget.filterAnalogOnly
+        ? ['AI0.0', 'AI0.1', 'AI0.2', 'AI0.3', 'AO0.0', 'AO0.1']
+        : [
+            'I0.0',
+            'I0.1',
+            'I0.2',
+            'I0.3',
+            'Q0.0',
+            'Q0.1',
+            'Q0.2',
+            'Q0.3',
+            'M0.0',
+            'M0.1',
+            'T0',
+            'C0',
+            'AI0.0',
+            'AO0.0',
+          ];
+
+    String selectedAddress = presets.firstWhere(
+      (p) => !widget.tags.containsKey(p),
+      orElse: () => presets.first,
+    );
+    final addrCtrl = TextEditingController(text: selectedAddress);
+    final nameCtrl = TextEditingController(text: selectedAddress);
+    final descCtrl = TextEditingController();
+    final unitCtrl = TextEditingController();
+
+    final createdTagId = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final rawAddr = addrCtrl.text.trim().toUpperCase();
+          final isAnalog = rawAddr.startsWith('AI') || rawAddr.startsWith('AO') || rawAddr.startsWith('%IW') || rawAddr.startsWith('%QW');
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A222D),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFF334155)),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.bolt_rounded, color: Color(0xFF10B981), size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Criar & Vincular Nova Tag',
+                    style: TextStyle(color: Color(0xFFF1F5F9), fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '1. ESCOLHA O ENDEREÇO DE HARDWARE / IEC:',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: presets.map((p) {
+                      final isSelected = addrCtrl.text.trim().toUpperCase() == p;
+                      final exists = widget.tags.containsKey(p);
+                      return InkWell(
+                        onTap: () {
+                          setModalState(() {
+                            final prevAddr = addrCtrl.text.trim().toUpperCase();
+                            addrCtrl.text = p;
+                            if (nameCtrl.text.trim().isEmpty || nameCtrl.text.trim().toUpperCase() == prevAddr) {
+                              nameCtrl.text = p;
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF0284C7)
+                                : (exists ? const Color(0xFF0F172A) : const Color(0xFF263342)),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF38BDF8)
+                                  : (exists ? const Color(0xFF334155) : const Color(0xFF475569)),
+                            ),
+                          ),
+                          child: Text(
+                            exists ? '$p ✓' : p,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : (exists ? const Color(0xFF64748B) : const Color(0xFFE2E8F0)),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: addrCtrl,
+                    onChanged: (_) => setModalState(() {}),
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontFamily: 'monospace'),
+                    decoration: const InputDecoration(
+                      labelText: 'Endereço / ID Técnico (ex: I0.0, Q0.1, M0.0, T0)',
+                      labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                    decoration: const InputDecoration(
+                      labelText: 'Apelido Visível no Ladder (ex: BOTAO_LIGA, MOTOR_1)',
+                      labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: descCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                    decoration: const InputDecoration(
+                      labelText: 'Descrição Funcional (Opcional)',
+                      labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      isDense: true,
+                    ),
+                  ),
+                  if (isAnalog) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: unitCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                      decoration: const InputDecoration(
+                        labelText: 'Unidade de Engenharia (ex: °C, %, bar, RPM)',
+                        labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancelar', style: TextStyle(color: Color(0xFF94A3B8))),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: const Color(0xFF06281E),
+                ),
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('Criar e Vincular', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  final cleanAddr = addrCtrl.text.trim().toUpperCase();
+                  if (cleanAddr.isEmpty) return;
+                  final cleanName = nameCtrl.text.trim().isNotEmpty ? nameCtrl.text.trim() : cleanAddr;
+                  final cleanDesc = descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null;
+                  final cleanUnit = unitCtrl.text.trim().isNotEmpty ? unitCtrl.text.trim() : null;
+
+                  TagType tagType = TagType.bool;
+                  TagValue initVal = const TagValue.boolean(false);
+                  if (cleanAddr.startsWith('AI') || cleanAddr.startsWith('AO') || cleanAddr.startsWith('%IW') || cleanAddr.startsWith('%QW')) {
+                    tagType = TagType.real;
+                    initVal = const TagValue.real(0.0);
+                  } else if (cleanAddr.startsWith('T')) {
+                    tagType = TagType.timer;
+                    initVal = const TagValue.integer(0);
+                  } else if (cleanAddr.startsWith('C')) {
+                    tagType = TagType.counter;
+                    initVal = const TagValue.integer(0);
+                  }
+
+                  final newTag = Tag(
+                    id: cleanAddr,
+                    name: cleanName,
+                    address: cleanAddr,
+                    type: tagType,
+                    initialValue: initVal,
+                    description: cleanDesc,
+                    unit: cleanUnit,
+                    controllerIndex: _selectedControllerFilter ?? 0,
+                  );
+
+                  widget.tags[newTag.id] = newTag;
+                  Navigator.pop(ctx, newTag.id);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (createdTagId != null && mounted) {
+      Navigator.pop(context, createdTagId);
+    }
   }
 }
