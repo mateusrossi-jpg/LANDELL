@@ -83,27 +83,53 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
   bool _isOutputTag(String tagId) {
     final clean = tagId.trim().toUpperCase();
+    if (clean.startsWith('I') || clean.startsWith('X') || clean.startsWith('%IX')) {
+      return false;
+    }
     if (clean.startsWith('Q') || clean.startsWith('Y') || clean.startsWith('AO') || clean.startsWith('QW')) {
       return true;
     }
     final tagObj = _project.tags[tagId];
     final addr = tagObj?.address?.trim().toUpperCase();
-    if (addr != null && (addr.startsWith('Q') || addr.startsWith('Y') || addr.startsWith('AO') || addr.startsWith('QW'))) {
-      return true;
+    if (addr != null) {
+      if (addr.startsWith('I') || addr.startsWith('X') || addr.startsWith('%IX')) {
+        return false;
+      }
+      if (addr.startsWith('Q') || addr.startsWith('Y') || addr.startsWith('AO') || addr.startsWith('QW')) {
+        return true;
+      }
     }
     // Qualquer tag que seja acionada por uma bobina ou bloco funcional no projeto é controlada pelo runtime
     for (final net in _project.networks) {
+      if (!net.isEnabled) continue;
       for (final n in net.nodes) {
         if ((n.type == NodeType.coil || n.type == NodeType.coilSet || n.type == NodeType.coilReset ||
              n.type == NodeType.timerTON || n.type == NodeType.timerTOF ||
              n.type == NodeType.counterCTU || n.type == NodeType.counterCTD ||
              n.type == NodeType.pid) &&
-            n.config.tagId == tagId) {
+            n.config.tagId?.toUpperCase() == clean) {
           return true;
         }
       }
     }
     return false;
+  }
+
+  void _replaceProjectInPlace(LadderProject source) {
+    if (identical(_project, source)) return;
+    _project.name = source.name;
+    _project.tags
+      ..clear()
+      ..addAll(source.tags);
+    _project.networks
+      ..clear()
+      ..addAll(source.networks);
+    _project.dashboardWidgets
+      ..clear()
+      ..addAll(source.dashboardWidgets);
+    _project.hmiScreens
+      ..clear()
+      ..addAll(source.hmiScreens);
   }
 
   void _syncOutputs() {
@@ -232,7 +258,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     final proj = loaded ?? LadderProject.blank();
     if (mounted) {
       setState(() {
-        _project = proj;
+        _replaceProjectInPlace(proj);
         _initialized = true;
         for (var tag in _project.tags.values) {
           if (tag.type == TagType.bool) {
@@ -264,6 +290,19 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     _runPassiveValidation();
     _updateRuntimeProject();
     widget.onProjectUpdated?.call();
+    if (_mode == EditorMode.simulateHardware) {
+      unawaited(_autoDeployToHardware());
+    }
+  }
+
+  Future<void> _autoDeployToHardware() async {
+    if (_project.networks.isEmpty) return;
+    try {
+      final ip = await _resolveGatewayIp();
+      if (ip.isEmpty) return;
+      final syncService = FirmwareSyncService();
+      await syncService.syncRules(ip, _project);
+    } catch (_) {}
   }
 
   void _updateRuntimeProject() {
@@ -349,10 +388,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         _startTimedSimulation();
       }
     } else if (mode == EditorMode.simulateHardware) {
-      // 3. MODO HARDWARE: APENAS EXECUÇÃO NO ESP32 REAL
-      // Cancela timer de simulação local para NÃO sobrepor a execução do CLP real!
-      _simulationTimer?.cancel();
-      _simulationTimer = null;
+      // 3. MODO HARDWARE: EXECUÇÃO SINCRONIZADA COM O ESP32 REAL
       TelemetrySyncService.instance.injectEnabled = true;
 
       final ip = _resolveGatewayIpSync();
@@ -364,6 +400,11 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       if (TelemetrySyncService.instance.isPolling == false) {
         TelemetrySyncService.instance.start();
       }
+      if (_simulationTimer == null && widget.isActive) {
+        _startTimedSimulation();
+      }
+      // Faz deploy automático do projeto atual para garantir que SET / Selo / novos rungs estejam ativos no ESP32
+      unawaited(_autoDeployToHardware());
     }
   }
 
@@ -378,7 +419,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     final fetchedProject = await syncService.fetchRules(gatewayIp);
     if (fetchedProject != null && mounted) {
       setState(() {
-        _project = fetchedProject;
+        _replaceProjectInPlace(fetchedProject);
         _simulationInputs.clear();
         for (var tag in _project.tags.values) {
           if (tag.type == TagType.bool) {
@@ -520,8 +561,17 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         }
         break;
       case EditorMode.simulateHardware:
-        // No modo hardware real, a energização visual é atualizada pela telemetria real do ESP32 via _onTelemetryUpdated.
-        // O app NÃO executa simulação local em software por cima do hardware.
+        // Quando o ESP32 está online, o polling de telemetria executa o scan sincronizado.
+        // Quando offline (ou aguardando conexão), mantém o scan determinístico ativo para
+        // que SET, RESET, Selo, TON, TOF, CTU, CTD, Comparadores, Math e PID funcionem sem travar.
+        if (!TelemetrySyncService.instance.isOnline) {
+          _runtime.singleScan(_scanPeriodMs);
+        }
+        _syncOutputs();
+        _syncNodeEnergization();
+        if (mounted) {
+          setState(() {});
+        }
         return;
     }
   }
@@ -605,20 +655,17 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       return;
     }
 
-    if (_mode == EditorMode.simulateHardware) {
-      // Modo hardware puro: envia comando de comutação/forçamento ao ESP32 real
-      final current = _runtime.tagStore.getBool(tagId);
-      final nextVal = !current;
-      _dispatchHardwareActuation(tagId, nextVal);
+    // Saídas (Q0.x / Yx) e tags controladas por bobinas nunca devem ser forçadas diretamente
+    // ao clicar no diagrama: elas devem responder exclusivamente à lógica de SET/RESET/Selo/Bobina!
+    if (_isOutputTag(tagId)) {
       return;
     }
 
-    final isOutput = _isOutputTag(tagId);
-    if (_mode == EditorMode.simulateLocal && isOutput) {
-      return; // Em simulação puramente local, saídas normais são controladas pelo scan
-    }
-
-    final isPushbutton = tagId.contains('BTN') || tagId.contains('START') || tagId.contains('PULSE') || tagId.contains('MOMENTARY');
+    final isPushbutton = _simulationPulseMode ||
+        tagId.contains('BTN') ||
+        tagId.contains('START') ||
+        tagId.contains('PULSE') ||
+        tagId.contains('MOMENTARY');
 
     // Mapeamento e resolução de todos os aliases da tag (ID, Nome, Endereço IEC, variações)
     final tagObj = _project.tags[tagId] ??
@@ -649,15 +696,24 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         keysToUpdate.add('%IX${normDirect.substring(1)}');
       }
     }
+    final upperTag = tagId.trim().toUpperCase();
+    if (upperTag.startsWith('I0.') && upperTag.length == 4) {
+      keysToUpdate.add('X${upperTag.substring(3)}');
+    } else if (upperTag.startsWith('X') && upperTag.length == 2) {
+      keysToUpdate.add('I0.${upperTag.substring(1)}');
+    }
 
     void setAllKeys(bool value) {
       for (final k in keysToUpdate) {
         _simulationInputs[k] = value;
         _runtime.tagStore.setBool(k, value);
       }
+      if (_mode == EditorMode.simulateHardware) {
+        TelemetrySyncService.instance.registerPendingActuation(keysToUpdate, value);
+      }
     }
 
-    if (_mode == EditorMode.simulateLocal && _simulationPulseMode && isPushbutton) {
+    if (_simulationPulseMode && isPushbutton) {
       // Se a entrada já estiver ligada, um clique desliga imediatamente
       final current = _simulationInputs[tagId] ?? _runtime.tagStore.getBool(tagId);
       if (current) {
@@ -667,30 +723,39 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
           _syncOutputs();
           _syncNodeEnergization();
         });
+        if (_mode == EditorMode.simulateHardware) {
+          unawaited(_dispatchHardwareActuation(tagId, false));
+        }
         return;
       }
 
-      // MODO BOTÃO DE PULSO (MOMENTARY PUSHBUTTON):
+      // MODO BOTÃO DE PULSO (MOMENTARY PUSHBUTTON 400ms):
       setState(() {
         setAllKeys(true);
         _runtime.singleScan(_scanPeriodMs);
         _syncOutputs();
         _syncNodeEnergization();
       });
+      if (_mode == EditorMode.simulateHardware) {
+        unawaited(_dispatchHardwareActuation(tagId, true));
+      }
 
       Timer(const Duration(milliseconds: 400), () {
-        if (!mounted || _mode != EditorMode.simulateLocal) return;
+        if (!mounted || _mode == EditorMode.editor) return;
         setState(() {
           setAllKeys(false);
           _runtime.singleScan(_scanPeriodMs);
           _syncOutputs();
           _syncNodeEnergization();
         });
+        if (_mode == EditorMode.simulateHardware) {
+          unawaited(_dispatchHardwareActuation(tagId, false));
+        }
       });
       return;
     }
 
-    // MODO CHAVE RETENTIVA (TOGGLE SWITCH) NA SIMULAÇÃO LOCAL:
+    // MODO CHAVE RETENTIVA (TOGGLE SWITCH) EM SIMULAÇÃO LOCAL OU HARDWARE:
     final current = _simulationInputs[tagId] ?? _runtime.tagStore.getBool(tagId);
     final nextVal = !current;
     setState(() {
@@ -699,21 +764,27 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       _syncOutputs();
       _syncNodeEnergization();
     });
+    if (_mode == EditorMode.simulateHardware) {
+      unawaited(_dispatchHardwareActuation(tagId, nextVal));
+    }
   }
 
   Future<void> _dispatchHardwareActuation(String tagId, bool value) async {
     final tagObj = _project.tags[tagId];
-    final addr = tagObj?.address ?? tagId;
-    final chId = HardwareForceBridge.channelIdFor(addr);
+    final addr = (tagObj?.address ?? tagId).trim().toUpperCase();
+    final chId = HardwareForceBridge.channelIdFor(addr) ?? HardwareForceBridge.channelIdFor(tagId);
     final gatewayIp = await _resolveGatewayIp();
 
     if (gatewayIp.isNotEmpty && chId != null) {
       try {
         if (addr.startsWith('Q') || addr.startsWith('Y')) {
           await GpioService.instance.setOutput(gatewayIp, chId, value ? 1 : 0);
-          await GpioService.instance.postForce(gatewayIp, {'action': 'set', 'id': chId, 'value': value ? 1 : 0});
         } else {
           await GpioService.instance.postForce(gatewayIp, {'action': 'set', 'id': chId, 'value': value ? 1 : 0});
+          // Ao voltar a entrada para 0 (aberta), libera o forçamento para que o botão físico da bancada também funcione
+          if (!value) {
+            await GpioService.instance.postForce(gatewayIp, {'action': 'release', 'id': chId});
+          }
         }
       } catch (e) {
         debugPrint('Erro ao despachar comando para o hardware: $e');
@@ -722,11 +793,16 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   void _resetSimulation() {
+    TelemetrySyncService.instance.clearPendingActuations();
     setState(() {
       _simulationInputs.clear();
       for (var tag in _project.tags.values) {
         _simulationInputs[tag.id] = false;
         _runtime.tagStore.setBool(tag.id, false);
+        if (tag.address != null && tag.address!.isNotEmpty) {
+          _simulationInputs[tag.address!] = false;
+          _runtime.tagStore.setBool(tag.address!, false);
+        }
         _runtime.tagStore.setInt(tag.id, 0);
         _runtime.tagStore.setReal(tag.id, 0.0);
         _runtime.tagStore.setBool('${tag.id}.DN', false);
@@ -740,12 +816,24 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         _runtime.tagStore.setBool('${tag.id}.CD', false);
         _runtime.tagStore.setInt('${tag.id}.CV', 0);
       }
+      for (int i = 0; i < 8; i++) {
+        _runtime.tagStore.setBool('I0.$i', false);
+        _runtime.tagStore.setBool('X$i', false);
+        _runtime.tagStore.setBool('Q0.$i', false);
+        _runtime.tagStore.setBool('Y$i', false);
+      }
       _runtime.tagStore.releaseAllForces();
       for (var state in _runtime.nodeStates.values) {
         state.accumulatedTimeMs = 0;
         state.counterValue = 0;
         state.energized = false;
         state.runtimeFlags.clear();
+        for (var sub in state.subNodeStates.values) {
+          sub.accumulatedTimeMs = 0;
+          sub.counterValue = 0;
+          sub.energized = false;
+          sub.runtimeFlags.clear();
+        }
       }
       _clearNodeEnergization();
       _runtime.singleScan(0);
@@ -791,14 +879,36 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     );
   }
 
-  LadderNode _createConfiguredNode(NodeType type) {
+  LadderNode _createConfiguredNode(NodeType type, {int? rungIndex}) {
     final isTimer = type == NodeType.timerTON || type == NodeType.timerTOF;
     final isCounter = type == NodeType.counterCTU || type == NodeType.counterCTD;
     final isCompare = type == NodeType.compareEqual || type == NodeType.compareGreater || type == NodeType.compareLess;
     final isMath = type == NodeType.mathADD || type == NodeType.mathSUB || type == NodeType.mathMUL || type == NodeType.mathDIV;
     String? defaultTag;
 
-    if (isTimer) {
+    String? rungCoilTag;
+    if (rungIndex != null && rungIndex >= 0 && rungIndex < _project.networks.length) {
+      for (final existing in _project.networks[rungIndex].nodes.reversed) {
+        if ((existing.type == NodeType.coil ||
+                existing.type == NodeType.coilSet ||
+                existing.type == NodeType.coilReset) &&
+            existing.config.tagId != null &&
+            existing.config.tagId!.isNotEmpty) {
+          rungCoilTag = existing.config.tagId;
+          break;
+        }
+      }
+    }
+
+    if (type == NodeType.contactNO) {
+      defaultTag = 'I0.0';
+    } else if (type == NodeType.contactNC) {
+      defaultTag = 'I0.1';
+    } else if (type == NodeType.coil) {
+      defaultTag = 'Q0.0';
+    } else if (type == NodeType.coilSet || type == NodeType.coilReset) {
+      defaultTag = 'Q0.2';
+    } else if (isTimer) {
       for (int t = 0; t <= 15; t++) {
         final candidate = 'T$t';
         final used = _project.networks.any((net) => net.nodes.any((n) => n.config.tagId == candidate));
@@ -826,10 +936,14 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         name: defaultTag,
         type: isTimer
             ? TagType.timer
-            : (isCounter ? TagType.counter : TagType.real),
+            : (isCounter
+                ? TagType.counter
+                : (type == NodeType.pid || isCompare || isMath ? TagType.real : TagType.bool)),
         initialValue: isTimer
             ? TagValue.integer(3000)
-            : (isCounter ? TagValue.integer(5) : TagValue.real(0.0)),
+            : (isCounter
+                ? TagValue.integer(5)
+                : (type == NodeType.pid || isCompare || isMath ? TagValue.real(0.0) : TagValue.boolean(false))),
       );
     }
 
@@ -876,7 +990,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
             LadderNode(
               id: 'node_${ts}_b1',
               type: NodeType.contactNO,
-              config: NodeConfig(tagId: 'I0.1'),
+              config: NodeConfig(tagId: rungCoilTag ?? 'Q0.0'),
             ),
           ],
         ],
@@ -900,6 +1014,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                     ? TagValue.integer(50)
                     : (isMath ? TagValue.integer(1) : null))),
         outputTagId: isMath ? 'M0.6' : null,
+        resetTagId: isMath ? 'M0.6' : null,
       ),
     );
   }
@@ -991,7 +1106,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       ),
       onTap: () {
         setState(() {
-          final newNode = _createConfiguredNode(type);
+          final newNode = _createConfiguredNode(type, rungIndex: rungIndex);
           if (insertIndex != null) {
             _project.networks[rungIndex].insertNode(newNode, insertIndex);
           } else {
@@ -1005,8 +1120,24 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     );
   }
 
-  Future<void> _showPidDialog(int rungIndex, int nodeIndex) async {
-    final node = _project.networks[rungIndex].nodes[nodeIndex];
+  LadderNode _resolveTargetNode(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) {
+    final parent = _project.networks[rungIndex].nodes[nodeIndex];
+    if (branchIndex != null &&
+        branchNodeIndex != null &&
+        parent.type == NodeType.parallel &&
+        parent.branches != null &&
+        branchIndex >= 0 &&
+        branchIndex < parent.branches!.length) {
+      final branch = parent.branches![branchIndex];
+      if (branchNodeIndex >= 0 && branchNodeIndex < branch.length) {
+        return branch[branchNodeIndex];
+      }
+    }
+    return parent;
+  }
+
+  Future<void> _showPidDialog(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) async {
+    final node = _resolveTargetNode(rungIndex, nodeIndex, branchIndex, branchNodeIndex);
     final updated = await PidConfigDialog.show(
       context,
       initial: node.config,
@@ -1022,10 +1153,187 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     });
   }
 
-  void _showEditNodeBottomSheet(int rungIndex, int nodeIndex) {
-    final node = _project.networks[rungIndex].nodes[nodeIndex];
+  void _showEditParallelNodeBottomSheet(int rungIndex, int nodeIndex) {
+    final parallelNode = _project.networks[rungIndex].nodes[nodeIndex];
+    parallelNode.branches ??= [
+      [LadderNode(id: 'node_${DateTime.now().microsecondsSinceEpoch}_b0', type: NodeType.contactNO, config: NodeConfig(tagId: 'I0.0'))],
+      [LadderNode(id: 'node_${DateTime.now().microsecondsSinceEpoch}_b1', type: NodeType.contactNO, config: NodeConfig(tagId: 'Q0.0'))],
+    ];
+    while (parallelNode.branches!.length < 2) {
+      parallelNode.branches!.add([
+        LadderNode(
+          id: 'node_${DateTime.now().microsecondsSinceEpoch}_b${parallelNode.branches!.length}',
+          type: NodeType.contactNO,
+          config: NodeConfig(tagId: 'Q0.0'),
+        ),
+      ]);
+    }
+
+    final topNode = parallelNode.branches![0].first;
+    final bottomNode = parallelNode.branches![1].first;
+    final topTagCtrl = TextEditingController(text: topNode.config.tagId ?? 'I0.0');
+    final bottomTagCtrl = TextEditingController(text: bottomNode.config.tagId ?? 'Q0.0');
+    NodeType topType = topNode.type;
+    NodeType bottomType = bottomNode.type;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTokens.panel,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SafeArea(
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Configurar Ramo Paralelo / Selo (OR)',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFFE7EBF0)),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Ramo Superior (Partida / Comando):', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          DropdownButton<NodeType>(
+                            value: (topType == NodeType.contactNO || topType == NodeType.contactNC) ? topType : NodeType.contactNO,
+                            dropdownColor: AppTokens.panel2,
+                            style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 12, fontFamily: 'JetBrains Mono'),
+                            items: const [
+                              DropdownMenuItem(value: NodeType.contactNO, child: Text('NO ] [')),
+                              DropdownMenuItem(value: NodeType.contactNC, child: Text('NC ]/[')),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) setModalState(() => topType = v);
+                            },
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: topTagCtrl,
+                              style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
+                              decoration: InputDecoration(
+                                labelText: 'Tag Ramo 1 (Ex: I0.0)',
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.table_chart_outlined, size: 18, color: Color(0xFF38BDF8)),
+                                  onPressed: () async {
+                                    final sel = await IndustrialTagBrowserDialog.show(
+                                      context,
+                                      tags: _project.tags,
+                                      initialSelectedTagId: topTagCtrl.text,
+                                      title: 'Tag do Ramo Superior',
+                                    );
+                                    if (sel != null) setModalState(() => topTagCtrl.text = sel);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Ramo Inferior (Contato de Selo / Retenção):', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          DropdownButton<NodeType>(
+                            value: (bottomType == NodeType.contactNO || bottomType == NodeType.contactNC) ? bottomType : NodeType.contactNO,
+                            dropdownColor: AppTokens.panel2,
+                            style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 12, fontFamily: 'JetBrains Mono'),
+                            items: const [
+                              DropdownMenuItem(value: NodeType.contactNO, child: Text('NO ] [')),
+                              DropdownMenuItem(value: NodeType.contactNC, child: Text('NC ]/[')),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) setModalState(() => bottomType = v);
+                            },
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: bottomTagCtrl,
+                              style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
+                              decoration: InputDecoration(
+                                labelText: 'Tag do Selo (Ex: Q0.0 ou M0.0)',
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.table_chart_outlined, size: 18, color: Color(0xFF38BDF8)),
+                                  onPressed: () async {
+                                    final sel = await IndustrialTagBrowserDialog.show(
+                                      context,
+                                      tags: _project.tags,
+                                      initialSelectedTagId: bottomTagCtrl.text,
+                                      title: 'Tag do Contato de Selo',
+                                    );
+                                    if (sel != null) setModalState(() => bottomTagCtrl.text = sel);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTokens.focus,
+                          foregroundColor: AppTokens.bg,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            final t1 = topTagCtrl.text.trim().toUpperCase();
+                            final t2 = bottomTagCtrl.text.trim().toUpperCase();
+                            topNode.type = topType;
+                            topNode.config = NodeConfig(tagId: t1.isNotEmpty ? t1 : 'I0.0');
+                            bottomNode.type = bottomType;
+                            bottomNode.config = NodeConfig(tagId: t2.isNotEmpty ? t2 : 'Q0.0');
+                            for (final tid in [topNode.config.tagId!, bottomNode.config.tagId!]) {
+                              if (!_project.tags.containsKey(tid)) {
+                                _project.tags[tid] = Tag(
+                                  id: tid,
+                                  name: tid,
+                                  type: TagType.bool,
+                                  initialValue: TagValue.boolean(false),
+                                );
+                              }
+                            }
+                            _project.networks[rungIndex].rebuildConnections();
+                            _saveProject();
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Salvar Selo / Paralelo', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditNodeBottomSheet(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) {
+    final node = _resolveTargetNode(rungIndex, nodeIndex, branchIndex, branchNodeIndex);
+    if (node.type == NodeType.parallel) {
+      _showEditParallelNodeBottomSheet(rungIndex, nodeIndex);
+      return;
+    }
     if (node.type == NodeType.pid) {
-      _showPidDialog(rungIndex, nodeIndex);
+      _showPidDialog(rungIndex, nodeIndex, branchIndex, branchNodeIndex);
       return;
     }
     final initialTag = (node.config.tagId != null && node.config.tagId!.trim().isNotEmpty)
@@ -1103,10 +1411,50 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        'Tipo: ${node.type.name}',
-                        style: const TextStyle(color: Color(0xFF8C98A8), fontSize: 13),
-                      ),
+                      if (node.type == NodeType.contactNO || node.type == NodeType.contactNC) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Tipo de Contato:', style: TextStyle(color: Color(0xFF8C98A8), fontSize: 13)),
+                            SegmentedButton<NodeType>(
+                              segments: const [
+                                ButtonSegment(value: NodeType.contactNO, label: Text('NO ] [')),
+                                ButtonSegment(value: NodeType.contactNC, label: Text('NC ]/[')),
+                              ],
+                              selected: {node.type},
+                              onSelectionChanged: (sel) {
+                                setModalState(() {
+                                  node.type = sel.first;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ] else if (node.type == NodeType.coil || node.type == NodeType.coilSet || node.type == NodeType.coilReset) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Tipo de Bobina:', style: TextStyle(color: Color(0xFF8C98A8), fontSize: 13)),
+                            SegmentedButton<NodeType>(
+                              segments: const [
+                                ButtonSegment(value: NodeType.coil, label: Text('( ) Normal')),
+                                ButtonSegment(value: NodeType.coilSet, label: Text('(S) SET')),
+                                ButtonSegment(value: NodeType.coilReset, label: Text('(R) RESET')),
+                              ],
+                              selected: {node.type},
+                              onSelectionChanged: (sel) {
+                                setModalState(() {
+                                  node.type = sel.first;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ] else
+                        Text(
+                          'Tipo: ${node.type.name}',
+                          style: const TextStyle(color: Color(0xFF8C98A8), fontSize: 13),
+                        ),
                       const SizedBox(height: 16),
                       // Seletor Industrial de Tag (Operando A / Tag Principal)
                       TextField(
@@ -1305,10 +1653,20 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                                 }
                               }
                             }
+                            final destTag = isMath ? mathDestController.text.trim().toUpperCase() : null;
+                            if (destTag != null && destTag.isNotEmpty && !_project.tags.containsKey(destTag)) {
+                              _project.tags[destTag] = Tag(
+                                id: destTag,
+                                name: destTag,
+                                type: TagType.real,
+                                initialValue: TagValue.real(0.0),
+                              );
+                            }
                             node.config = NodeConfig(
                               tagId: tag,
                               presetValue: presetVal,
-                              outputTagId: isMath ? mathDestController.text.trim().toUpperCase() : null,
+                              outputTagId: destTag,
+                              resetTagId: destTag,
                             );
                             _selectedRungIndex = null;
                             _selectedNodeIndex = null;
@@ -1329,8 +1687,11 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     );
   }
 
-  void _showNodeOptionsBottomSheet(int rungIndex, int nodeIndex) {
+  void _showNodeOptionsBottomSheet(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) {
     final rung = _project.networks[rungIndex];
+    final targetNode = _resolveTargetNode(rungIndex, nodeIndex, branchIndex, branchNodeIndex);
+    final isContact = targetNode.type == NodeType.contactNO || targetNode.type == NodeType.contactNC;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTokens.panel,
@@ -1344,22 +1705,89 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Opções do elemento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFE7EBF0))),
+                Text(
+                  branchIndex != null
+                      ? 'Opções do Ramo ${branchIndex + 1} (${targetNode.config.tagId ?? targetNode.type.name})'
+                      : 'Opções do elemento (${targetNode.config.tagId ?? targetNode.type.name})',
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFFE7EBF0)),
+                ),
                 const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.edit, color: Color(0xFF4FD1C5)),
                   title: const Text('Editar configurações', style: TextStyle(color: Color(0xFFE7EBF0))),
                   onTap: () {
                     Navigator.pop(context);
-                    _showEditNodeBottomSheet(rungIndex, nodeIndex);
+                    _showEditNodeBottomSheet(rungIndex, nodeIndex, branchIndex, branchNodeIndex);
                   },
                 ),
+                if (branchIndex != null)
+                  ListTile(
+                    leading: const Icon(Icons.call_split, color: Color(0xFF38BDF8)),
+                    title: const Text('Configurar Bloco de Selo / Paralelo', style: TextStyle(color: Color(0xFFE7EBF0))),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showEditParallelNodeBottomSheet(rungIndex, nodeIndex);
+                    },
+                  ),
+                if (isContact && branchIndex == null)
+                  ListTile(
+                    leading: const Icon(Icons.call_split, color: Color(0xFF10B981)),
+                    title: const Text('Adicionar Contato de Selo em Paralelo', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      String seloTag = 'Q0.0';
+                      for (final existing in rung.nodes.reversed) {
+                        if ((existing.type == NodeType.coil ||
+                                existing.type == NodeType.coilSet ||
+                                existing.type == NodeType.coilReset) &&
+                            existing.config.tagId != null &&
+                            existing.config.tagId!.isNotEmpty) {
+                          seloTag = existing.config.tagId!;
+                          break;
+                        }
+                      }
+                      final ts = DateTime.now().microsecondsSinceEpoch;
+                      setState(() {
+                        rung.nodes[nodeIndex] = LadderNode(
+                          id: 'node_${ts}_par',
+                          type: NodeType.parallel,
+                          config: NodeConfig(),
+                          branches: [
+                            [targetNode.clone()],
+                            [
+                              LadderNode(
+                                id: 'node_${ts}_selo',
+                                type: NodeType.contactNO,
+                                config: NodeConfig(tagId: seloTag),
+                              ),
+                            ],
+                          ],
+                        );
+                        rung.rebuildConnections();
+                        _saveProject();
+                      });
+                    },
+                  ),
                 ListTile(
                   leading: const Icon(Icons.copy, color: Color(0xFF3FBF5A)),
                   title: const Text('Duplicar elemento', style: TextStyle(color: Color(0xFFE7EBF0))),
                   onTap: () {
                     setState(() {
-                      rung.duplicateNode(nodeIndex);
+                      if (branchIndex != null && branchNodeIndex != null) {
+                        final pNode = rung.nodes[nodeIndex];
+                        final branch = pNode.branches?[branchIndex];
+                        if (branch != null && branchNodeIndex < branch.length) {
+                          final cloned = branch[branchNodeIndex].clone();
+                          branch.insert(branchNodeIndex + 1, LadderNode(
+                            id: 'node_${DateTime.now().microsecondsSinceEpoch}',
+                            type: cloned.type,
+                            config: cloned.config,
+                          ));
+                          rung.rebuildConnections();
+                        }
+                      } else {
+                        rung.duplicateNode(nodeIndex);
+                      }
                       _saveProject();
                     });
                     Navigator.pop(context);
@@ -1368,7 +1796,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 Divider(color: AppTokens.line),
                 ListTile(
                   leading: const Icon(Icons.delete, color: Color(0xFFD9503F)),
-                  title: const Text('Excluir do rung', style: TextStyle(color: Color(0xFFD9503F))),
+                  title: Text(
+                    branchIndex != null ? 'Excluir do ramo paralelo' : 'Excluir do rung',
+                    style: const TextStyle(color: Color(0xFFD9503F)),
+                  ),
                   onTap: () async {
                     Navigator.pop(context);
                     final confirm = await showDialog<bool>(
@@ -1389,7 +1820,26 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                     );
                     if (confirm == true) {
                       setState(() {
-                        rung.removeNodeAt(nodeIndex);
+                        if (branchIndex != null && branchNodeIndex != null) {
+                          final pNode = rung.nodes[nodeIndex];
+                          if (pNode.branches != null && branchIndex < pNode.branches!.length) {
+                            final branch = pNode.branches![branchIndex];
+                            if (branchNodeIndex < branch.length) {
+                              branch.removeAt(branchNodeIndex);
+                            }
+                            if (branch.isEmpty) {
+                              pNode.branches!.removeAt(branchIndex);
+                            }
+                            if (pNode.branches!.isEmpty) {
+                              rung.removeNodeAt(nodeIndex);
+                            } else if (pNode.branches!.length == 1 && pNode.branches!.first.length == 1) {
+                              rung.nodes[nodeIndex] = pNode.branches!.first.first;
+                            }
+                            rung.rebuildConnections();
+                          }
+                        } else {
+                          rung.removeNodeAt(nodeIndex);
+                        }
                         _saveProject();
                       });
                     }
@@ -1482,7 +1932,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                       ),
                     ),
                     if (!isMobile) ...[
-                      if (_mode == EditorMode.simulateLocal) ...[
+                      if (_mode != EditorMode.editor) ...[
                         OutlinedButton.icon(
                           onPressed: () {
                             setState(() {
@@ -1536,7 +1986,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                   Row(
                     children: [
                       Expanded(child: _buildModeSelector(isMobile: true)),
-                      if (_mode == EditorMode.simulateLocal) ...[
+                      if (_mode != EditorMode.editor) ...[
                         const SizedBox(width: 6),
                         IconButton(
                           onPressed: () {
@@ -1647,7 +2097,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                         final imported = await importProject();
                         if (imported != null) {
                           setState(() {
-                            _project = imported;
+                            _replaceProjectInPlace(imported);
                             _simulationInputs.clear();
                             for (var tag in _project.tags.values) {
                               if (tag.type == TagType.bool) {
@@ -1675,7 +2125,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                         final clean = DemoProject.createCleanTccProject();
                         await saveCurrentLadder(clean);
                         setState(() {
-                          _project = clean;
+                          _replaceProjectInPlace(clean);
                           _simulationInputs.clear();
                           for (var tag in _project.tags.values) {
                             if (tag.type == TagType.bool) {
@@ -1686,6 +2136,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                           _selectedNodeIndex = null;
                           _updateRuntimeProject();
                           _runPassiveValidation();
+                          widget.onProjectUpdated?.call();
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -1726,7 +2177,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                       ),
                       const SizedBox(width: 8),
                       _buildModeSelector(isMobile: isMobile, allowExpand: false),
-                      if (_mode == EditorMode.simulateLocal) ...[
+                      if (_mode != EditorMode.editor) ...[
                         const SizedBox(width: 6),
                         IconButton(
                           onPressed: () => setState(() => _simulationPulseMode = !_simulationPulseMode),
@@ -2625,14 +3076,16 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       },
       onNodeEditRequest: _mode == EditorMode.editor
           ? _showEditNodeBottomSheet
-          : (rung, node) {
-              final n = _project.networks[rung].nodes[node];
+          : (rung, node, [branchIdx, branchNodeIdx]) {
+              final n = _resolveTargetNode(rung, node, branchIdx, branchNodeIdx);
               final tagId = n.config.tagId;
               if (tagId != null && tagId.isNotEmpty) {
                 _toggleSimulationTag(tagId);
               }
             },
-      onNodeOptionsRequest: _mode == EditorMode.editor ? _showNodeOptionsBottomSheet : (r, n) {},
+      onNodeOptionsRequest: _mode == EditorMode.editor
+          ? _showNodeOptionsBottomSheet
+          : (r, n, [bIdx, bNodeIdx]) {},
       onComponentAddRequest: _mode == EditorMode.editor
           ? (rung, [insertIndex]) => _showComponentBottomSheet(rung, insertIndex)
           : (r, [i]) {},

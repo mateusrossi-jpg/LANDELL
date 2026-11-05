@@ -53,7 +53,13 @@ class FirmwareSyncService {
       // 1. Gera o Bytecode Binário usando o Compiler
       final compiler = BytecodeCompiler();
       var bytecode = compiler.compile(project, targetControllerId: targetControllerId);
-      
+
+      // Limpa regras legadas de automação simples para evitar conflito com saídas do Ladder
+      try {
+        final clearLegacyUrl = Uri.parse('http://$gatewayIp/api/automation/clear');
+        await _client.get(clearLegacyUrl).timeout(const Duration(seconds: 2));
+      } catch (_) {}
+
       final url = Uri.parse('http://$gatewayIp/api/automation/ladder');
       debugPrint('Enviando payload binário (${bytecode.length} bytes) para $url');
 

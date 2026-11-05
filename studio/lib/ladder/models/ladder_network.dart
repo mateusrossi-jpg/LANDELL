@@ -63,14 +63,23 @@ class LadderNetwork {
     }
   }
 
+  LadderNode _cloneWithFreshIds(LadderNode source) {
+    return LadderNode(
+      id: _generateId(),
+      type: source.type,
+      config: source.config.clone(),
+      branches: source.branches
+          ?.map((b) => b.map(_cloneWithFreshIds).toList())
+          .toList(),
+    )
+      ..isEnergized = source.isEnergized
+      ..isConducting = source.isConducting;
+  }
+
   void duplicateNode(int index) {
     if (index >= 0 && index < nodes.length) {
       final source = nodes[index];
-      final newNode = LadderNode(
-        id: _generateId(),
-        type: source.type,
-        config: source.config.clone(),
-      )..isEnergized = source.isEnergized;
+      final newNode = _cloneWithFreshIds(source);
       nodes.insert(index + 1, newNode);
       rebuildConnections();
     }

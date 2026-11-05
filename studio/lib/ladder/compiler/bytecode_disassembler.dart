@@ -121,7 +121,7 @@ class BytecodeDisassembler {
           ),
         ));
 
-        if (pc >= bytecode.length || bytecode[pc] == Opcodes.LD || bytecode[pc] == Opcodes.LDN || bytecode[pc] == 0xFF) {
+        if (pc >= bytecode.length || bytecode[pc] == Opcodes.LD || bytecode[pc] == Opcodes.LDN || bytecode[pc] == Opcodes.OR_BLOCK_START || bytecode[pc] == 0xFF) {
           activeNetwork.rebuildConnections();
           project.networks.add(activeNetwork);
           currentNetwork = null;
@@ -145,7 +145,7 @@ class BytecodeDisassembler {
           ),
         ));
 
-        if (pc >= bytecode.length || bytecode[pc] == Opcodes.LD || bytecode[pc] == Opcodes.LDN || bytecode[pc] == 0xFF) {
+        if (pc >= bytecode.length || bytecode[pc] == Opcodes.LD || bytecode[pc] == Opcodes.LDN || bytecode[pc] == Opcodes.OR_BLOCK_START || bytecode[pc] == 0xFF) {
           activeNetwork.rebuildConnections();
           project.networks.add(activeNetwork);
           currentNetwork = null;
@@ -201,13 +201,16 @@ class BytecodeDisassembler {
           config: NodeConfig(
             tagId: tagAId,
             presetValue: presetVal,
+            outputTagId: destTagId,
             resetTagId: destTagId,
           ),
         ));
 
-        activeNetwork.rebuildConnections();
-        project.networks.add(activeNetwork);
-        currentNetwork = null;
+        if (pc >= bytecode.length || bytecode[pc] == Opcodes.LD || bytecode[pc] == Opcodes.LDN || bytecode[pc] == Opcodes.OR_BLOCK_START || bytecode[pc] == 0xFF) {
+          activeNetwork.rebuildConnections();
+          project.networks.add(activeNetwork);
+          currentNetwork = null;
+        }
       } else if (opcode == Opcodes.PID || opcode == Opcodes.PIDX) {
         final isExt = opcode == Opcodes.PIDX;
         final operandLen = isExt ? 23 : 12;

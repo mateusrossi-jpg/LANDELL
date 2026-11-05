@@ -5,25 +5,50 @@ import '../tag_state_store.dart';
 import 'node_evaluator.dart';
 
 class CoilEvaluator implements NodeEvaluator {
+  static List<String> _resolveAliases(String tagId) {
+    final clean = tagId.trim();
+    final upper = clean.toUpperCase();
+    final aliases = <String>{clean, upper};
+    if (upper.startsWith('Q0.') && upper.length == 4) {
+      aliases.add('Y${upper.substring(3)}');
+    } else if (upper.startsWith('Y') && upper.length == 2) {
+      aliases.add('Q0.${upper.substring(1)}');
+    } else if (upper.startsWith('I0.') && upper.length == 4) {
+      aliases.add('X${upper.substring(3)}');
+    } else if (upper.startsWith('X') && upper.length == 2) {
+      aliases.add('I0.${upper.substring(1)}');
+    }
+    return aliases.toList();
+  }
+
   @override
   bool evaluate(LadderNode node, NodeRuntimeState state, bool inPowerFlow, TagStateStore tagStore, int deltaTimeMs) {
     state.energized = inPowerFlow;
 
     final tagId = node.config.tagId;
-    if (tagId != null) {
+    if (tagId != null && tagId.isNotEmpty) {
+      final aliases = _resolveAliases(tagId);
       if (node.type == NodeType.coil) {
-        tagStore.setBool(tagId, inPowerFlow);
+        for (final a in aliases) {
+          tagStore.setBool(a, inPowerFlow);
+        }
       } else if (node.type == NodeType.coilSet && inPowerFlow) {
-        tagStore.setBool(tagId, true);
+        for (final a in aliases) {
+          tagStore.setBool(a, true);
+        }
       } else if (node.type == NodeType.coilReset && inPowerFlow) {
-        tagStore.setBool(tagId, false);
-        tagStore.setBool('$tagId.DN', false);
-        tagStore.setBool('$tagId.TT', false);
-        tagStore.setBool('$tagId.EN', false);
-        tagStore.setBool('$tagId.CU', false);
-        tagStore.setBool('$tagId.CD', false);
-        tagStore.setInt('$tagId.CV', 0);
-        tagStore.setInt('$tagId.ACC', 0);
+        for (final a in aliases) {
+          tagStore.setBool(a, false);
+          tagStore.setBool('$a.DN', false);
+          tagStore.setBool('$a.Q', false);
+          tagStore.setBool('$a.TT', false);
+          tagStore.setBool('$a.EN', false);
+          tagStore.setBool('$a.CU', false);
+          tagStore.setBool('$a.CD', false);
+          tagStore.setInt('$a.CV', 0);
+          tagStore.setInt('$a.ACC', 0);
+          tagStore.setInt('$a.ET', 0);
+        }
       }
     }
 

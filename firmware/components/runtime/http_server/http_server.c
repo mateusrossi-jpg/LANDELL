@@ -9362,6 +9362,7 @@ static esp_err_t automation_ladder_handler(httpd_req_t *req)
     }
 
     io_driver_force_release_all();
+    automation_engine_clear();
     esp_err_t err = ladder_engine_load_program(buf, req->content_len);
     free(buf);
 

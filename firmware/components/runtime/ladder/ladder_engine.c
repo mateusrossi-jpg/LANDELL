@@ -61,6 +61,7 @@ typedef struct {
 typedef struct {
     uint16_t tag_id;
     bool last_acc;
+    bool initialized;
     int32_t current_count;
 } counter_state_t;
 
@@ -158,6 +159,7 @@ static counter_state_t* get_or_create_counter(uint16_t tag_id) {
     if (s_counter_count < MAX_COUNTERS) {
         s_counters[s_counter_count].tag_id = tag_id;
         s_counters[s_counter_count].last_acc = false;
+        s_counters[s_counter_count].initialized = false;
         s_counters[s_counter_count].current_count = 0;
         return &s_counters[s_counter_count++];
     }
@@ -177,6 +179,7 @@ static void reset_timer_or_counter(uint16_t tag_id)
     for (size_t i = 0; i < s_counter_count; i++) {
         if (s_counters[i].tag_id == tag_id) {
             s_counters[i].last_acc = false;
+            s_counters[i].initialized = false;
             s_counters[i].current_count = 0;
             break;
         }
@@ -423,7 +426,7 @@ void IRAM_ATTR ladder_engine_run(void)
         } else if (opcode == OP_OR_BLOCK_END) {
             if (stack_ptr > 0) {
                 or_stack[stack_ptr - 1] = or_stack[stack_ptr - 1] || accumulator;
-                accumulator = or_stack[stack_ptr - 1];
+                accumulator = logic_stack[stack_ptr - 1] && or_stack[stack_ptr - 1];
                 stack_ptr--;
             }
             continue;
@@ -624,12 +627,13 @@ void IRAM_ATTR ladder_engine_run(void)
                 timer_state_t *t = get_or_create_timer(tag_id);
                 if (!t) break;
 
-                if (accumulator) {
+                bool in_acc = accumulator;
+                if (in_acc) {
                     t->active = false;
                     state_set_int(tag_id, 1);
                     accumulator = true;
                 } else {
-                    if (t->last_acc && !accumulator) {
+                    if (t->last_acc && !in_acc) {
                         t->active = true;
                         t->start_time_ms = now_ms;
                     }
@@ -648,7 +652,7 @@ void IRAM_ATTR ladder_engine_run(void)
                         accumulator = false;
                     }
                 }
-                t->last_acc = accumulator;
+                t->last_acc = in_acc;
                 break;
             }
 
@@ -679,8 +683,9 @@ void IRAM_ATTR ladder_engine_run(void)
                 counter_state_t *c = get_or_create_counter(tag_id);
                 if (!c) break;
 
-                if (c->current_count == 0) {
+                if (!c->initialized) {
                     c->current_count = preset_cnt;
+                    c->initialized = true;
                 }
 
                 if (accumulator && !c->last_acc) {

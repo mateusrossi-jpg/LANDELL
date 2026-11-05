@@ -15,8 +15,8 @@ class RungList extends StatefulWidget {
   final bool isSimulationRunning;
   final void Function(String tagId)? onToggleTag;
   final void Function(int rungIndex, int nodeIndex) onNodeSelectionChanged;
-  final void Function(int rungIndex, int nodeIndex) onNodeEditRequest;
-  final void Function(int rungIndex, int nodeIndex) onNodeOptionsRequest;
+  final void Function(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) onNodeEditRequest;
+  final void Function(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) onNodeOptionsRequest;
   final void Function(int rungIndex, [int? insertIndex]) onComponentAddRequest;
   final void Function(bool isDragging) onDraggingStateChanged;
   final VoidCallback onProjectChanged;

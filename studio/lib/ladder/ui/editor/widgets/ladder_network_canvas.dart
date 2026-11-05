@@ -19,8 +19,8 @@ class LadderNetworkCanvas extends StatelessWidget {
   final bool isSimulationRunning;
   final void Function(String tagId)? onToggleTag;
   final void Function(int rungIndex, int nodeIndex) onNodeSelectionChanged;
-  final void Function(int rungIndex, int nodeIndex) onNodeEditRequest;
-  final void Function(int rungIndex, int nodeIndex) onNodeOptionsRequest;
+  final void Function(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) onNodeEditRequest;
+  final void Function(int rungIndex, int nodeIndex, [int? branchIndex, int? branchNodeIndex]) onNodeOptionsRequest;
   final void Function(int rungIndex, [int? insertIndex]) onComponentAddRequest;
   final double? minCanvasWidth;
   final void Function(bool isDragging) onDraggingStateChanged;
@@ -89,6 +89,17 @@ class LadderNetworkCanvas extends StatelessWidget {
                     final isMath = data == NodeType.mathADD || data == NodeType.mathSUB || data == NodeType.mathMUL || data == NodeType.mathDIV;
                     final ts = DateTime.now().microsecondsSinceEpoch;
                     final LadderNode newNode;
+                    String? rungCoilTag;
+                    for (final existing in rung.nodes.reversed) {
+                      if ((existing.type == NodeType.coil ||
+                              existing.type == NodeType.coilSet ||
+                              existing.type == NodeType.coilReset) &&
+                          existing.config.tagId != null &&
+                          existing.config.tagId!.isNotEmpty) {
+                        rungCoilTag = existing.config.tagId;
+                        break;
+                      }
+                    }
                     if (data == NodeType.parallel) {
                       newNode = LadderNode(
                         id: 'node_${ts}_par',
@@ -96,35 +107,50 @@ class LadderNetworkCanvas extends StatelessWidget {
                         config: NodeConfig(),
                         branches: [
                           [LadderNode(id: 'node_${ts}_b0', type: NodeType.contactNO, config: NodeConfig(tagId: 'I0.0'))],
-                          [LadderNode(id: 'node_${ts}_b1', type: NodeType.contactNO, config: NodeConfig(tagId: 'I0.1'))],
+                          [LadderNode(id: 'node_${ts}_b1', type: NodeType.contactNO, config: NodeConfig(tagId: rungCoilTag ?? 'Q0.0'))],
                         ],
                       );
                     } else {
+                      final defaultTag = data == NodeType.contactNO
+                          ? 'I0.0'
+                          : data == NodeType.contactNC
+                              ? 'I0.1'
+                              : data == NodeType.coil
+                                  ? 'Q0.0'
+                                  : (data == NodeType.coilSet || data == NodeType.coilReset)
+                                      ? 'Q0.2'
+                                      : (isCompare || isMath)
+                                          ? 'AI0.0'
+                                          : null;
                       newNode = LadderNode(
                         id: 'node_$ts',
                         type: data,
                         config: data == NodeType.pid
                             ? NodeConfig.pid()
                             : NodeConfig(
-                                tagId: (isCompare || isMath) ? 'AI0.0' : null,
+                                tagId: defaultTag,
                                 presetValue: isTimer
                                     ? TagValue.integer(3000)
                                     : (isCounter
                                         ? TagValue.integer(5)
                                         : (isCompare ? TagValue.integer(50) : (isMath ? TagValue.integer(1) : null))),
                                 outputTagId: isMath ? 'M0.6' : null,
+                                resetTagId: isMath ? 'M0.6' : null,
                               ),
                       );
                     }
                     if (wire.parallelNodeIndex != null && wire.branchIndex != null) {
                       final pNode = rung.nodes[wire.parallelNodeIndex!];
                       pNode.branches?[wire.branchIndex!].insert(wire.insertIndex, newNode);
+                      rung.rebuildConnections();
+                      onProjectChanged();
+                      onNodeEditRequest(rungIndex, wire.parallelNodeIndex!, wire.branchIndex, wire.insertIndex);
                     } else {
                       rung.insertNode(newNode, wire.insertIndex);
+                      rung.rebuildConnections();
+                      onProjectChanged();
+                      onNodeEditRequest(rungIndex, wire.insertIndex);
                     }
-                    rung.rebuildConnections();
-                    onProjectChanged();
-                    onNodeEditRequest(rungIndex, wire.insertIndex);
                   } else if (data is Map<String, dynamic> && data['type'] == 'move') {
                     final srcRung = data['srcRung'] as int;
                     final srcNode = data['srcNode'] as int;
@@ -200,25 +226,62 @@ class LadderNetworkCanvas extends StatelessWidget {
                   if (data is NodeType) {
                     final isTimer = data == NodeType.timerTON || data == NodeType.timerTOF;
                     final isCounter = data == NodeType.counterCTU || data == NodeType.counterCTD;
+                    final isCompare = data == NodeType.compareEqual || data == NodeType.compareGreater || data == NodeType.compareLess;
+                    final isMath = data == NodeType.mathADD || data == NodeType.mathSUB || data == NodeType.mathMUL || data == NodeType.mathDIV;
+                    String? rungCoilTag;
+                    for (final existing in rung.nodes.reversed) {
+                      if ((existing.type == NodeType.coil ||
+                              existing.type == NodeType.coilSet ||
+                              existing.type == NodeType.coilReset) &&
+                          existing.config.tagId != null &&
+                          existing.config.tagId!.isNotEmpty) {
+                        rungCoilTag = existing.config.tagId;
+                        break;
+                      }
+                    }
+                    final defaultTag = data == NodeType.contactNO
+                        ? (rungCoilTag ?? 'Q0.0')
+                        : data == NodeType.contactNC
+                            ? 'I0.1'
+                            : data == NodeType.coil
+                                ? 'Q0.0'
+                                : (data == NodeType.coilSet || data == NodeType.coilReset)
+                                    ? 'Q0.2'
+                                    : (isCompare || isMath)
+                                        ? 'AI0.0'
+                                        : null;
                     final newNode = LadderNode(
                       id: 'node_${DateTime.now().microsecondsSinceEpoch}_new',
                       type: data,
-                      config: NodeConfig(
-                        presetValue: isTimer
-                            ? TagValue.integer(3000)
-                            : (isCounter ? TagValue.integer(5) : null),
-                      ),
+                      config: data == NodeType.pid
+                          ? NodeConfig.pid()
+                          : NodeConfig(
+                              tagId: defaultTag,
+                              presetValue: isTimer
+                                  ? TagValue.integer(3000)
+                                  : (isCounter
+                                      ? TagValue.integer(5)
+                                      : (isCompare ? TagValue.integer(50) : (isMath ? TagValue.integer(1) : null))),
+                              outputTagId: isMath ? 'M0.6' : null,
+                              resetTagId: isMath ? 'M0.6' : null,
+                            ),
                     );
-                    final parallelNode = LadderNode(
-                      id: 'node_${DateTime.now().microsecondsSinceEpoch}_par',
-                      type: NodeType.parallel,
-                      config: NodeConfig(),
-                      branches: [
-                        [node.clone()],
-                        [newNode],
-                      ],
-                    );
-                    rung.nodes[nodeGeo.nodeIndex] = parallelNode;
+                    if (nodeGeo.branchIndex != null) {
+                      final parentParallel = rung.nodes[nodeGeo.nodeIndex];
+                      parentParallel.branches ??= [];
+                      parentParallel.branches!.add([newNode]);
+                    } else {
+                      final parallelNode = LadderNode(
+                        id: 'node_${DateTime.now().microsecondsSinceEpoch}_par',
+                        type: NodeType.parallel,
+                        config: NodeConfig(),
+                        branches: [
+                          [node.clone()],
+                          [newNode],
+                        ],
+                      );
+                      rung.nodes[nodeGeo.nodeIndex] = parallelNode;
+                    }
                     rung.rebuildConnections();
                     onProjectChanged();
                   } else if (data is Map<String, dynamic> && data['type'] == 'tag') {
@@ -244,10 +307,20 @@ class LadderNetworkCanvas extends StatelessWidget {
                       if (isSimulationRunning && tag != null && tag.isNotEmpty && onToggleTag != null) {
                         onToggleTag!(tag);
                       } else {
-                        onNodeEditRequest(rungIndex, nodeGeo.nodeIndex);
+                        onNodeEditRequest(
+                          rungIndex,
+                          nodeGeo.nodeIndex,
+                          nodeGeo.branchIndex,
+                          nodeGeo.branchNodeIndex,
+                        );
                       }
                     },
-                    onLongPress: () => onNodeOptionsRequest(rungIndex, nodeGeo.nodeIndex),
+                    onLongPress: () => onNodeOptionsRequest(
+                      rungIndex,
+                      nodeGeo.nodeIndex,
+                      nodeGeo.branchIndex,
+                      nodeGeo.branchNodeIndex,
+                    ),
                     child: visualWidget,
                   );
 

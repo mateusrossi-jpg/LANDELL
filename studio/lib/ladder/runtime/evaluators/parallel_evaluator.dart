@@ -8,9 +8,11 @@ import 'coil_evaluator.dart';
 import 'timer_evaluator.dart';
 import 'counter_evaluator.dart';
 import 'compare_evaluator.dart';
+import 'math_evaluator.dart';
+import 'pid_evaluator.dart';
 
 class ParallelEvaluator implements NodeEvaluator {
-  final Map<NodeType, NodeEvaluator> _localRegistry = {
+  late final Map<NodeType, NodeEvaluator> _localRegistry = {
     NodeType.contactNO: ContactEvaluator(),
     NodeType.contactNC: ContactEvaluator(),
     NodeType.coil: CoilEvaluator(),
@@ -23,6 +25,12 @@ class ParallelEvaluator implements NodeEvaluator {
     NodeType.compareEqual: CompareEvaluator(),
     NodeType.compareGreater: CompareEvaluator(),
     NodeType.compareLess: CompareEvaluator(),
+    NodeType.mathADD: MathEvaluator(),
+    NodeType.mathSUB: MathEvaluator(),
+    NodeType.mathMUL: MathEvaluator(),
+    NodeType.mathDIV: MathEvaluator(),
+    NodeType.pid: PidEvaluator(),
+    NodeType.parallel: this,
   };
 
   @override
@@ -48,6 +56,7 @@ class ParallelEvaluator implements NodeEvaluator {
             evaluator.evaluate(child, childState, false, tagStore, deltaTimeMs);
           }
           child.isEnergized = false;
+          child.isConducting = false;
         }
       }
       return false;
@@ -72,6 +81,7 @@ class ParallelEvaluator implements NodeEvaluator {
           currentPower = false;
         }
         child.isEnergized = currentPower;
+        child.isConducting = currentPower;
       }
 
       if (currentPower) {

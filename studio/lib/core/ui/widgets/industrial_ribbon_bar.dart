@@ -110,6 +110,60 @@ class IndustrialRibbonBar extends StatelessWidget {
 
             const Spacer(),
 
+            if (onDeploy != null) ...[
+              Tooltip(
+                message: 'Gravar Lógica no ESP32 (Deploy)',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: onDeploy,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF0284C7), width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF38BDF8)),
+                        SizedBox(width: 2),
+                        Text(
+                          'GRAVAR',
+                          style: TextStyle(
+                            color: Color(0xFFE0F2FE),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+
+            if (onFetch != null) ...[
+              Tooltip(
+                message: 'Ler Lógica do ESP32 (Fetch)',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: onFetch,
+                  child: Container(
+                    padding: const EdgeInsets.all(4.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF252A36),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF353B4A), width: 1),
+                    ),
+                    child: const Icon(Icons.cloud_download_outlined, size: 14, color: Color(0xFF38BDF8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+
             // Menu Dropdown de Seleção de Persona no Mobile
             PopupMenuButton<String>(
               tooltip: 'Selecionar Perfil',

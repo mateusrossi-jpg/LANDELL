@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../core/network/authenticated_http_client.dart';
 import '../../../core/services/studio_event_bus.dart';
 import '../../models/ladder_project.dart';
+import '../../models/ladder_node.dart';
 import '../../models/tag.dart';
 import '../../models/enums.dart';
 import '../../models/tag_value.dart';
@@ -42,6 +43,43 @@ class TelemetrySyncService extends ChangeNotifier {
   bool get injectEnabled => _injectEnabled;
   set injectEnabled(bool value) {
     _injectEnabled = value;
+  }
+
+  /// Mapa de atuações recentes disparadas pela UI no modo Hardware (evita que um
+  /// poll em voo de /api/io/map sobrescreva imediatamente o sinal antes do ESP32 processar).
+  final Map<String, ({bool value, DateTime expiresAt})> _pendingActuations = {};
+
+  /// Controle de throttling para sincronização de saídas físicas (Q0.x) com o ESP32.
+  final Map<int, ({bool value, DateTime sentAt})> _lastSyncedHardwareOutputs = {};
+
+  void registerPendingActuation(
+    Iterable<String> keys,
+    bool value, {
+    Duration ttl = const Duration(milliseconds: 1100),
+  }) {
+    final expiresAt = DateTime.now().add(ttl);
+    for (final k in keys) {
+      final clean = k.trim();
+      if (clean.isEmpty) continue;
+      _pendingActuations[clean] = (value: value, expiresAt: expiresAt);
+      _pendingActuations[clean.toUpperCase()] = (value: value, expiresAt: expiresAt);
+    }
+  }
+
+  void clearPendingActuations() {
+    _pendingActuations.clear();
+    _lastSyncedHardwareOutputs.clear();
+  }
+
+  bool _isPendingActuation(String key) {
+    final entry = _pendingActuations[key] ?? _pendingActuations[key.toUpperCase()];
+    if (entry == null) return false;
+    if (DateTime.now().isAfter(entry.expiresAt)) {
+      _pendingActuations.remove(key);
+      _pendingActuations.remove(key.toUpperCase());
+      return false;
+    }
+    return true;
   }
 
   TelemetryConnectionStatus get status => _status;
@@ -286,6 +324,140 @@ class TelemetrySyncService extends ChangeNotifier {
     );
   }
 
+  /// Identifica quais tags (e seus aliases canônicos) são comandadas por bobinas/blocos
+  /// no projeto atual, e quais possuem retenção por SET/RESET ou Selo (auto-retenção).
+  ({Set<String> drivenTags, Set<String> retentiveOrSeloTags}) _analyzeProjectDrivenTags() {
+    final driven = <String>{};
+    final retentive = <String>{};
+    if (_project == null) return (drivenTags: driven, retentiveOrSeloTags: retentive);
+
+    Set<String> expandAliases(String rawTag) {
+      final res = <String>{};
+      final clean = rawTag.trim();
+      if (clean.isEmpty) return res;
+      final upper = clean.toUpperCase();
+      res.add(clean);
+      res.add(upper);
+
+      if (_project!.tags.containsKey(clean)) {
+        final t = _project!.tags[clean]!;
+        res.add(t.id);
+        res.add(t.id.toUpperCase());
+        if (t.address != null && t.address!.trim().isNotEmpty) {
+          res.add(t.address!.trim());
+          res.add(t.address!.trim().toUpperCase());
+        }
+      }
+      for (final entry in _project!.tags.entries) {
+        final addr = entry.value.address?.trim().toUpperCase();
+        if (addr == upper || entry.key.toUpperCase() == upper) {
+          res.add(entry.key);
+          res.add(entry.key.toUpperCase());
+          if (addr != null && addr.isNotEmpty) {
+            res.add(addr);
+          }
+        }
+      }
+      if (upper.startsWith('Q0.') && upper.length == 4) {
+        res.add('Y${upper.substring(3)}');
+      } else if (upper.startsWith('Y') && upper.length == 2) {
+        res.add('Q0.${upper.substring(1)}');
+      } else if (upper.startsWith('I0.') && upper.length == 4) {
+        res.add('X${upper.substring(3)}');
+      } else if (upper.startsWith('X') && upper.length == 2) {
+        res.add('I0.${upper.substring(1)}');
+      }
+      return res;
+    }
+
+    void collectContacts(List<LadderNode> nodes, Set<String> contactTags) {
+      for (final n in nodes) {
+        if (n.type == NodeType.parallel && n.branches != null) {
+          for (final b in n.branches!) {
+            collectContacts(b, contactTags);
+          }
+        } else if (n.type == NodeType.contactNO || n.type == NodeType.contactNC) {
+          final tid = n.config.tagId;
+          if (tid != null && tid.isNotEmpty) {
+            contactTags.addAll(expandAliases(tid));
+          }
+        }
+      }
+    }
+
+    for (final net in _project!.networks) {
+      if (!net.isEnabled) continue;
+      final netContacts = <String>{};
+      collectContacts(net.nodes, netContacts);
+
+      for (final n in net.nodes) {
+        final tid = n.config.tagId;
+        if (n.type == NodeType.coilSet || n.type == NodeType.coilReset) {
+          if (tid != null && tid.isNotEmpty) {
+            final aliases = expandAliases(tid);
+            driven.addAll(aliases);
+            retentive.addAll(aliases);
+          }
+        } else if (n.type == NodeType.coil) {
+          if (tid != null && tid.isNotEmpty) {
+            final aliases = expandAliases(tid);
+            driven.addAll(aliases);
+            if (aliases.any(netContacts.contains)) {
+              retentive.addAll(aliases);
+            }
+          }
+        } else if (n.type == NodeType.timerTON ||
+            n.type == NodeType.timerTOF ||
+            n.type == NodeType.counterCTU ||
+            n.type == NodeType.counterCTD) {
+          if (tid != null && tid.isNotEmpty) {
+            final aliases = expandAliases(tid);
+            driven.addAll(aliases);
+            for (final a in aliases.toList()) {
+              driven.add('$a.DN');
+              driven.add('$a.Q');
+              driven.add('$a.ACC');
+              driven.add('$a.ET');
+              driven.add('$a.CV');
+            }
+          }
+        } else if (n.type == NodeType.mathADD ||
+            n.type == NodeType.mathSUB ||
+            n.type == NodeType.mathMUL ||
+            n.type == NodeType.mathDIV) {
+          final dest = n.config.outputTagId ?? n.config.resetTagId;
+          if (dest != null && dest.isNotEmpty) {
+            driven.addAll(expandAliases(dest));
+          }
+        } else if (n.type == NodeType.pid) {
+          final mv = n.config.outputTagId;
+          if (mv != null && mv.isNotEmpty) {
+            driven.addAll(expandAliases(mv));
+          }
+        }
+      }
+    }
+
+    return (drivenTags: driven, retentiveOrSeloTags: retentive);
+  }
+
+  void _syncTagAliasesInStore() {
+    if (_project == null || _runtime == null) return;
+    final store = _runtime!.tagStore;
+    for (final tag in _project!.tags.values) {
+      final addr = tag.address?.trim();
+      if (addr == null || addr.isEmpty) continue;
+      if (tag.type == TagType.bool) {
+        final vId = store.getBool(tag.id);
+        final vAddr = store.getBool(addr);
+        if (vId != vAddr) {
+          // Propaga o estado atualizado (prioriza tag.id se foi escrito pelo avaliador)
+          store.setBool(addr, vId);
+        }
+      }
+    }
+  }
+
   /// Processa o JSON retornado por /api/io/map e injeta os estados no TagStateStore.
   /// [controllerIndex] identifica de qual controlador veio o io/map:
   /// 0 = primário (endereços I0.x/Q0.x), 1 = secundário (I1.x/Q1.x), etc.
@@ -296,6 +468,10 @@ class TelemetrySyncService extends ChangeNotifier {
     _lastTelemetryReceived = DateTime.now();
     if (_runtime == null) return;
     if (!_injectEnabled) return;
+
+    final analysis = _analyzeProjectDrivenTags();
+    final drivenTags = analysis.drivenTags;
+    final retentiveTags = analysis.retentiveOrSeloTags;
 
     final inputs = json['inputs'];
     if (inputs is List) {
@@ -310,12 +486,18 @@ class TelemetrySyncService extends ChangeNotifier {
       }
     }
 
-    // Aplica as saídas e memórias do hardware real
+    // Aplica as saídas e memórias do hardware real (preservando estados retentivos de SET e Selo)
     final outputs = json['outputs'];
     if (outputs is List) {
       for (var item in outputs) {
         if (item is Map) {
-          _applyIoEntry(item, isOutput: true, controllerIndex: controllerIndex);
+          _applyIoEntry(
+            item,
+            isOutput: true,
+            controllerIndex: controllerIndex,
+            preserveLatchedTags: retentiveTags,
+            skipDrivenTags: drivenTags.difference(retentiveTags),
+          );
         }
       }
     }
@@ -326,20 +508,38 @@ class TelemetrySyncService extends ChangeNotifier {
       if (internals is List) {
         for (var item in internals) {
           if (item is Map) {
-            _applyIoEntry(item, isOutput: false, controllerIndex: 0);
+            _applyIoEntry(
+              item,
+              isOutput: false,
+              controllerIndex: 0,
+              preserveLatchedTags: retentiveTags,
+              skipDrivenTags: drivenTags.difference(retentiveTags),
+            );
           }
         }
       }
     }
 
-    // Avalia a topologia localmente com base nos sinais recebidos para energização dos nós
+    _syncTagAliasesInStore();
+
+    // Avalia a topologia localmente com base nos sinais recebidos para energização dos nós e retenção SET/Selo
     _runtime!.singleScan(100);
 
-    // Re-garante a autoridade do hardware sobre saídas e memórias após a varredura
+    _syncTagAliasesInStore();
+
+    // Após a varredura, aplica do hardware apenas saídas/memórias que NÃO são comandadas por rungs ativos locais,
+    // e sincroniza com o ESP32 qualquer saída física Q0.x comandada por SET/Selo/Bobina local que esteja divergente.
     if (outputs is List) {
       for (var item in outputs) {
         if (item is Map) {
-          _applyIoEntry(item, isOutput: true, controllerIndex: controllerIndex);
+          _applyIoEntry(
+            item,
+            isOutput: true,
+            controllerIndex: controllerIndex,
+            preserveLatchedTags: retentiveTags,
+            skipDrivenTags: drivenTags,
+            syncDrivenOutputToHardware: true,
+          );
         }
       }
     }
@@ -348,7 +548,13 @@ class TelemetrySyncService extends ChangeNotifier {
       if (internals is List) {
         for (var item in internals) {
           if (item is Map) {
-            _applyIoEntry(item, isOutput: false, controllerIndex: 0);
+            _applyIoEntry(
+              item,
+              isOutput: false,
+              controllerIndex: 0,
+              preserveLatchedTags: retentiveTags,
+              skipDrivenTags: drivenTags,
+            );
           }
         }
       }
@@ -455,6 +661,9 @@ class TelemetrySyncService extends ChangeNotifier {
     Map entry, {
     required bool isOutput,
     int controllerIndex = 0,
+    Set<String>? preserveLatchedTags,
+    Set<String>? skipDrivenTags,
+    bool syncDrivenOutputToHardware = false,
   }) {
     dynamic rawValue;
     if (isOutput) {
@@ -624,6 +833,11 @@ class TelemetrySyncService extends ChangeNotifier {
         resolvedChannelId >= 40 &&
         resolvedChannelId <= 71 &&
         plcAddress != null) {
+      if (skipDrivenTags != null &&
+          (skipDrivenTags.contains(plcAddress) ||
+              skipDrivenTags.contains('$plcAddress.DN'))) {
+        return;
+      }
       keysToUpdate.addAll(['$plcAddress.DN', '$plcAddress.Q']);
       if (resolvedChannelId >= 40 && resolvedChannelId <= 55) {
         final active = entry['active'] == true;
@@ -671,6 +885,63 @@ class TelemetrySyncService extends ChangeNotifier {
         resolvedChannelId == 73 ||
         name == 'AI0.0' ||
         name == 'AI0.1');
+
+    // Se qualquer chave da entrada possuir atuação recente disparada pela UI, preserva o estado otimista
+    if (keysToUpdate.any(_isPendingActuation)) {
+      return;
+    }
+
+    // Se a saída física é comandada pela lógica Ladder local e estamos na fase pós-scan,
+    // sincroniza o estado calculado (SET/Selo/Bobina) com o hardware caso esteja divergente.
+    if (syncDrivenOutputToHardware &&
+        isOutput &&
+        localChannelId != null &&
+        localChannelId >= 100 &&
+        localChannelId <= 115 &&
+        skipDrivenTags != null &&
+        keysToUpdate.any(skipDrivenTags.contains)) {
+      final primaryKey = plcAddress ?? matchedTagId ?? canonicalAddress;
+      if (primaryKey != null) {
+        final localVal = _runtime!.tagStore.getBool(primaryKey);
+        for (final k in keysToUpdate) {
+          _runtime!.tagStore.setBool(k, localVal);
+        }
+        if (localVal != boolVal) {
+          final lastSync = _lastSyncedHardwareOutputs[localChannelId];
+          final now = DateTime.now();
+          if (lastSync == null ||
+              lastSync.value != localVal ||
+              now.difference(lastSync.sentAt) > const Duration(milliseconds: 600)) {
+            _lastSyncedHardwareOutputs[localChannelId] = (value: localVal, sentAt: now);
+            final targetIp = (controllerIndex >= 0 && controllerIndex < _controllerIps.length)
+                ? _controllerIps[controllerIndex]
+                : _gatewayIp;
+            final valInt = localVal ? 1 : 0;
+            unawaited(
+              _client
+                  .get(Uri.parse('http://$targetIp/api/set?id=$localChannelId&value=$valInt'))
+                  .timeout(const Duration(milliseconds: 900))
+                  .then((_) {}, onError: (_) {}),
+            );
+          }
+        }
+      }
+      return;
+    }
+
+    // Se a tag é comandada localmente pelo Ladder e foi solicitado pular, não sobrescreve
+    if (skipDrivenTags != null && keysToUpdate.any(skipDrivenTags.contains)) {
+      return;
+    }
+
+    // Se a tag faz parte de um SET/RESET ou Selo (auto-retenção), nunca permite que um 0 do
+    // /api/io/map desarme a retenção antes do singleScan avaliar a condição de Reset/Parada.
+    if (preserveLatchedTags != null && keysToUpdate.any(preserveLatchedTags.contains)) {
+      final isCurrentlyLatched = keysToUpdate.any((k) => _runtime!.tagStore.getBool(k));
+      if (isCurrentlyLatched && !boolVal) {
+        return;
+      }
+    }
 
     for (final key in keysToUpdate) {
       if (!_runtime!.tagStore.isForced(key)) {

@@ -578,9 +578,16 @@ class _StudioScaffoldState extends State<StudioScaffold> {
 
     if (fetched != null && fetched.networks.isNotEmpty) {
       setState(() {
-        _project = fetched;
+        _project.name = fetched.name;
+        _project.tags
+          ..clear()
+          ..addAll(fetched.tags);
+        _project.networks
+          ..clear()
+          ..addAll(fetched.networks);
         _syncRuntime();
       });
+      await saveCurrentLadder(_project);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('✓ ${fetched.networks.length} Rungs recuperados com sucesso do CLP!'),

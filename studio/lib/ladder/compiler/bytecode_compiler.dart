@@ -55,7 +55,7 @@ class BytecodeCompiler {
            bytecode.add(Opcodes.OR_BLOCK_START);
            for (int b = 0; b < node.branches!.length; b++) {
                if (b > 0) bytecode.add(Opcodes.OR_BLOCK_NEXT);
-               _compileNodeList(node.branches![b], project, bytecode, isFirstOfNetwork: true, useLegacyPid: useLegacyPid);
+               _compileNodeList(node.branches![b], project, bytecode, isFirstOfNetwork: isFirst, useLegacyPid: useLegacyPid);
            }
            bytecode.add(Opcodes.OR_BLOCK_END);
         }

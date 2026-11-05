@@ -16,12 +16,14 @@ class LadderToolbox extends StatelessWidget {
   static const List<Map<String, dynamic>> _tools = [
     {'label': 'NO', 'type': NodeType.contactNO, 'description': 'Contato Normal Aberto (NO)'},
     {'label': 'NC', 'type': NodeType.contactNC, 'description': 'Contato Normal Fechado (NC)'},
+    {'label': 'SELO', 'type': NodeType.parallel, 'description': 'Ramo Paralelo / Selo (OR)'},
     {'label': 'COIL', 'type': NodeType.coil, 'description': 'Bobina de Saída (COIL)'},
     {'label': 'SET', 'type': NodeType.coilSet, 'description': 'Bobina de Retenção Set (SET)'},
     {'label': 'RST', 'type': NodeType.coilReset, 'description': 'Bobina de Reset (RST)'},
     {'label': 'TON', 'type': NodeType.timerTON, 'description': 'Temporizador Atraso na Ligação (TON)'},
     {'label': 'TOF', 'type': NodeType.timerTOF, 'description': 'Temporizador Atraso no Desligamento (TOF)'},
     {'label': 'CTU', 'type': NodeType.counterCTU, 'description': 'Contador Crescente (CTU)'},
+    {'label': 'CTD', 'type': NodeType.counterCTD, 'description': 'Contador Decrescente (CTD)'},
     {'label': 'EQU', 'type': NodeType.compareEqual, 'description': 'Comparador Igual (EQU)'},
     {'label': 'GRT', 'type': NodeType.compareGreater, 'description': 'Comparador Maior Que (GRT)'},
     {'label': 'LES', 'type': NodeType.compareLess, 'description': 'Comparador Menor Que (LES)'},
@@ -229,6 +231,27 @@ class _ToolSvgIconPainter extends CustomPainter {
         canvas.drawLine(Offset(w * 0.68, cy), Offset(w, cy), paint);
         // Diagonal slash
         canvas.drawLine(Offset(w * 0.68 + 2, cy - 7), Offset(w * 0.32 - 2, cy + 7), paint);
+        break;
+
+      case NodeType.parallel:
+        final topY = cy - 4.5;
+        final botY = cy + 4.5;
+        // Entry & exit leads
+        canvas.drawLine(Offset(0, topY), Offset(w * 0.2, topY), paint);
+        canvas.drawLine(Offset(w * 0.8, topY), Offset(w, topY), paint);
+        // Vertical parallel rails
+        canvas.drawLine(Offset(w * 0.2, topY), Offset(w * 0.2, botY), paint);
+        canvas.drawLine(Offset(w * 0.8, topY), Offset(w * 0.8, botY), paint);
+        // Top branch mini contact
+        canvas.drawLine(Offset(w * 0.2, topY), Offset(w * 0.42, topY), paint);
+        canvas.drawLine(Offset(w * 0.42, topY - 2.5), Offset(w * 0.42, topY + 2.5), paint);
+        canvas.drawLine(Offset(w * 0.58, topY - 2.5), Offset(w * 0.58, topY + 2.5), paint);
+        canvas.drawLine(Offset(w * 0.58, topY), Offset(w * 0.8, topY), paint);
+        // Bottom branch mini contact (Selo)
+        canvas.drawLine(Offset(w * 0.2, botY), Offset(w * 0.42, botY), paint);
+        canvas.drawLine(Offset(w * 0.42, botY - 2.5), Offset(w * 0.42, botY + 2.5), paint);
+        canvas.drawLine(Offset(w * 0.58, botY - 2.5), Offset(w * 0.58, botY + 2.5), paint);
+        canvas.drawLine(Offset(w * 0.58, botY), Offset(w * 0.8, botY), paint);
         break;
 
       case NodeType.coil:

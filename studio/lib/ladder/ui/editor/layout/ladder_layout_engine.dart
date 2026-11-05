@@ -96,6 +96,7 @@ class NodeGeometry {
   final int rungIndex;
   final int nodeIndex;
   final int? branchIndex; // null if on main rung line
+  final int? branchNodeIndex; // index inside branch if branchIndex != null
   final String? parentParallelId;
 
   const NodeGeometry({
@@ -106,6 +107,7 @@ class NodeGeometry {
     required this.rungIndex,
     required this.nodeIndex,
     this.branchIndex,
+    this.branchNodeIndex,
     this.parentParallelId,
   });
 }
@@ -397,6 +399,7 @@ class LadderLayoutEngine {
           rungIndex: rungIndex,
           nodeIndex: nodeIndex,
           branchIndex: bIdx,
+          branchNodeIndex: nIdx,
           parentParallelId: parallelNode.id,
         ));
 
