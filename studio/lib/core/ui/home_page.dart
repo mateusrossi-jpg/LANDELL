@@ -1138,99 +1138,41 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildEmptyState() {
-    final isConnected = widget.networkManager.isHardwareOnline;
-    final tagCount = _localProject.tags.length;
-    final rungCount = _localProject.networks.length;
-
     return Container(
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      margin: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: AppTokens.panel,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTokens.line, width: 1.0),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTokens.focus.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3)),
-                ),
-                child: const EndapLogoWidget(
-                  size: 24,
-                  showText: false,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'PROJETO CRU — CONSTRUA SEU SISTEMA',
-                      style: TextStyle(
-                        color: AppTokens.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Siga os 4 passos abaixo ou crie tags e widgets diretamente neste painel. Tudo é salvo automaticamente.',
-                      style: TextStyle(color: AppTokens.muted, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          const Text(
+            'Painel sem widgets configurados',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTokens.textPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              letterSpacing: 0.3,
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildGuidedStepTile(
-            stepNumber: '1',
-            title: 'Conectar CLP ou Operar em Simulação',
-            subtitle: isConnected
-                ? 'CLP Online (${widget.networkManager.gatewayIp})'
-                : 'Modo Simulação Local ativo (toque para buscar ESP32 na Rede)',
-            badgeText: isConnected ? 'ONLINE' : 'SIMULAÇÃO',
-            badgeColor: isConnected ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
-            onTap: () => widget.onNavigateTab?.call(3),
+          const SizedBox(height: 6),
+          Text(
+            'Adicione cartões de supervisão, acionamentos ou variáveis ao painel.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTokens.muted, fontSize: 11.5),
           ),
-          const SizedBox(height: 8),
-          _buildGuidedStepTile(
-            stepNumber: '2',
-            title: 'Mapear Pinos & Cadastrar Tags (I/O)',
-            subtitle: tagCount > 0
-                ? '$tagCount Tag(s) configurada(s) no dicionário do projeto'
-                : 'Nenhuma tag criada. Cadastre entradas (I0.x), saídas (Q0.x) ou memórias (M0.x)',
-            badgeText: '$tagCount TAGS',
-            badgeColor: tagCount > 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-            onTap: () => widget.onNavigateTab?.call(2),
-          ),
-          const SizedBox(height: 8),
-          _buildGuidedStepTile(
-            stepNumber: '3',
-            title: 'Construir Lógica de Controle (Ladder)',
-            subtitle: rungCount > 0
-                ? '$rungCount Rung(s) programado(s) no editor IEC 61131-3'
-                : 'Adicione degraus (rungs), contatos, bobinas, timers ou blocos PID',
-            badgeText: '$rungCount RUNGS',
-            badgeColor: rungCount > 0 ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-            onTap: () => widget.onNavigateTab?.call(1),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             alignment: WrapAlignment.center,
             children: [
-              ElevatedButton.icon(
+              ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTokens.focus,
                   foregroundColor: AppTokens.bg,
@@ -1238,28 +1180,22 @@ class _HomePageState extends State<HomePage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                icon: const Icon(Icons.add_box_outlined, size: 16),
-                label: const Text(
-                  '4. ADICIONAR WIDGET IHM',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 ),
                 onPressed: _openAddWidgetFlow,
+                child: const Text(
+                  'Adicionar Widget',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
               ),
-              OutlinedButton.icon(
+              OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF10B981),
-                  side: const BorderSide(color: Color(0xFF10B981)),
+                  foregroundColor: AppTokens.textPrimary,
+                  side: BorderSide(color: AppTokens.line),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-                icon: const Icon(Icons.bolt_rounded, size: 16),
-                label: const Text(
-                  '+ CRIAR TAG RÁPIDA (I/O)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 onPressed: () async {
                   final newTag = await CreateIoDialog.show(
@@ -1274,101 +1210,14 @@ class _HomePageState extends State<HomePage> {
                     await _saveWidgets();
                   }
                 },
+                child: const Text(
+                  'Nova Tag',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildGuidedStepTile({
-    required String stepNumber,
-    required String title,
-    required String subtitle,
-    required String badgeText,
-    required Color badgeColor,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: const Color(0xFF141822),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF252D3D)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 26,
-                height: 26,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E2536),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  stepNumber,
-                  style: const TextStyle(
-                    color: Color(0xFFE2E8F0),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Color(0xFFE2E8F0),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 10.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    color: badgeColor,
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B), size: 18),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1410,22 +1259,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 12),
               ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A202E),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF222B3D),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.memory,
-                    color: Color(0xFF2DD4BF),
-                    size: 18,
-                  ),
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 title: const Text(
                   'Novo Ponto de I/O (Tag)',
                   style: TextStyle(
@@ -1435,7 +1269,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 subtitle: const Text(
-                  'Criar entrada/saída digital ou analógica no CLP',
+                  'Criar entrada, saída ou variável de memória no projeto',
                   style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
                 ),
                 onTap: () async {
@@ -1456,22 +1290,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const Divider(color: Color(0xFF1E2638)),
               ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A202E),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFF222B3D),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.widgets_outlined,
-                    color: Color(0xFF2DD4BF),
-                    size: 18,
-                  ),
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 title: const Text(
                   'Adicionar Widget HMI',
                   style: TextStyle(
@@ -1481,7 +1300,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 subtitle: const Text(
-                  'Escolher mostrador, gauge, sparkline ou atuador',
+                  'Escolher mostrador, indicador, gráfico ou atuador',
                   style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
                 ),
                 onTap: () {
@@ -1510,11 +1329,9 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.tune_rounded, size: 16, color: Color(0xFFEAB308)),
-            const SizedBox(width: 8),
             const Expanded(
               child: Text(
-                'EDIT DASHBOARD',
+                'EDIÇÃO DO PAINEL',
                 style: TextStyle(
                   color: Color(0xFFEAB308),
                   fontSize: 11.5,
@@ -1525,12 +1342,12 @@ class _HomePageState extends State<HomePage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              icon: const Icon(Icons.add, color: Color(0xFF0284C7), size: 20),
-              tooltip: 'Adicionar Widget',
+            TextButton(
               onPressed: _openAddWidgetFlow,
+              child: const Text(
+                'ADICIONAR WIDGET',
+                style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10.5, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
@@ -1540,10 +1357,10 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
               ),
               onPressed: () => setState(() => _isEditMode = false),
-              child: const Text('DONE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+              child: const Text('CONCLUIR', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1555,15 +1372,14 @@ class _HomePageState extends State<HomePage> {
     // Normal Mode Header com Gerenciador de Telas IHM
     return Container(
       width: double.infinity,
-      height: widget.embedded ? 36 : 44,
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 6 : 10),
+      height: widget.embedded ? 38 : 44,
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12),
       decoration: const BoxDecoration(
         color: Color(0xFF1E222B),
         border: Border(bottom: BorderSide(color: Color(0xFF2A303D), width: 1.0)),
       ),
       child: Row(
         children: [
-          // Se não estiver embutido no Scaffold global, exibe botão de menu
           if (!widget.embedded && widget.onOpenDrawer != null) ...[
             IconButton(
               icon: const Icon(Icons.menu, size: 18, color: Colors.white70),
@@ -1586,34 +1402,18 @@ class _HomePageState extends State<HomePage> {
             Container(width: 1, height: 16, color: const Color(0xFF2A303D)),
             SizedBox(width: isMobile ? 4 : 8),
           ] else ...[
-            // Quando embutido no StudioScaffold, evita duplicar o logo/marca já presente no Ribbon Bar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFF252A36),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const Color(0xFF353B4A)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  EndapLogoWidget(size: 13, showText: false),
-                  SizedBox(width: 5),
-                  Text(
-                    'TELAS',
-                    style: TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+            const Text(
+              'TELAS',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
               ),
             ),
-            SizedBox(width: isMobile ? 6 : 8),
+            SizedBox(width: isMobile ? 6 : 10),
             Container(width: 1, height: 14, color: const Color(0xFF2A303D)),
-            SizedBox(width: isMobile ? 6 : 8),
+            SizedBox(width: isMobile ? 6 : 10),
           ],
 
           // Screen Selector Tabs roláveis no centro
@@ -1670,29 +1470,22 @@ class _HomePageState extends State<HomePage> {
                     message: 'Adicionar Nova Tela de IHM',
                     child: InkWell(
                       key: const Key('btn_nova_tela_ihm'),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(5),
                       onTap: _openNewScreenDialog,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2B303C),
-                          borderRadius: BorderRadius.circular(4),
+                          color: const Color(0xFF252A36),
+                          borderRadius: BorderRadius.circular(5),
                           border: Border.all(color: const Color(0xFF353B4A)),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.add, size: 13, color: Color(0xFF0284C7)),
-                            SizedBox(width: 4),
-                            Text(
-                              'Nova Tela',
-                              style: TextStyle(
-                                color: Color(0xFF0284C7),
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        child: const Text(
+                          '+ Nova Tela',
+                          style: TextStyle(
+                            color: Color(0xFF38BDF8),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -1704,16 +1497,19 @@ class _HomePageState extends State<HomePage> {
                     message: 'Configurar permissões e nome da tela ativa',
                     child: InkWell(
                       key: const Key('btn_config_tela_ihm'),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(5),
                       onTap: () => _openEditScreenDialog(_activeScreenIndex),
                       child: Container(
-                        padding: const EdgeInsets.all(5),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
                           color: const Color(0xFF161B26),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF222B3D)),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: const Color(0xFF2A303D)),
                         ),
-                        child: const Icon(Icons.settings_outlined, size: 14, color: Color(0xFF94A3B8)),
+                        child: const Text(
+                          'Opções',
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ),
@@ -1724,16 +1520,19 @@ class _HomePageState extends State<HomePage> {
                     Tooltip(
                       message: 'Excluir esta tela de IHM',
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(5),
                         onTap: () => _deleteScreen(_activeScreenIndex),
                         child: Container(
-                          padding: const EdgeInsets.all(5),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                           decoration: BoxDecoration(
                             color: const Color(0xFF161B26),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF222B3D)),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFF2A303D)),
                           ),
-                          child: const Icon(Icons.delete_outline, size: 14, color: Color(0xFFF43F5E)),
+                          child: const Text(
+                            'Excluir',
+                            style: TextStyle(color: Color(0xFFF43F5E), fontSize: 10, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ),
@@ -1743,7 +1542,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          SizedBox(width: isMobile ? 3 : 6),
+          SizedBox(width: isMobile ? 4 : 8),
 
           // Ações Fixas à Direita
           Row(
@@ -1751,85 +1550,88 @@ class _HomePageState extends State<HomePage> {
             children: [
               // Botão: Modo Kiosk (Touch Operator)
               Tooltip(
-                message: 'Iniciar Modo Touch Kiosk para chão de fábrica',
-                child: isMobile
-                    ? IconButton(
-                        key: const Key('btn_modo_kiosk'),
-                        icon: const Icon(Icons.touch_app, size: 16, color: Color(0xFF2DD4BF)),
-                        tooltip: 'KIOSK',
-                        padding: const EdgeInsets.all(2),
-                        constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                        onPressed: _enterKioskMode,
-                      )
-                    : ElevatedButton.icon(
-                        key: const Key('btn_modo_kiosk'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E293B),
-                          foregroundColor: const Color(0xFF2DD4BF),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          side: const BorderSide(color: Color(0xFF2DD4BF), width: 1.0),
-                        ),
-                        icon: const Icon(Icons.touch_app, size: 14),
-                        label: const Text('KIOSK', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                        onPressed: _enterKioskMode,
-                      ),
-              ),
-              SizedBox(width: isMobile ? 2 : 4),
-
-              // Botão: Exportar Pacote IHM (.endap-hmi)
-              Tooltip(
-                message: 'Exportar pacote IHM para tablets e painéis embutidos',
-                child: isMobile
-                    ? IconButton(
-                        key: const Key('btn_exportar_ihm'),
-                        icon: const Icon(Icons.download, size: 16, color: Color(0xFF0284C7)),
-                        tooltip: 'Exportar IHM',
-                        padding: const EdgeInsets.all(2),
-                        constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-                        onPressed: _openExportHmiDialog,
-                      )
-                    : ElevatedButton.icon(
-                        key: const Key('btn_exportar_ihm'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0284C7),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                        ),
-                        icon: const Icon(Icons.download, size: 14),
-                        label: const Text('EXPORTAR IHM', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                        onPressed: _openExportHmiDialog,
-                      ),
-              ),
-              SizedBox(width: isMobile ? 2 : 4),
-
-              // Ícone: Adicionar Widget
-              Tooltip(
-                message: 'Adicionar Widget na tela atual',
+                message: 'Iniciar Modo Touch Kiosk',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(4),
-                  onTap: _openAddWidgetFlow,
-                  child: Padding(
-                    padding: EdgeInsets.all(isMobile ? 3 : 5),
-                    child: Icon(Icons.add_rounded, size: isMobile ? 16 : 18, color: const Color(0xFF2DD4BF)),
+                  key: const Key('btn_modo_kiosk'),
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: _enterKioskMode,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.6), width: 1.0),
+                    ),
+                    child: const Text(
+                      'KIOSK',
+                      style: TextStyle(color: Color(0xFF2DD4BF), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
+              SizedBox(width: isMobile ? 4 : 6),
 
-              // Ícone: Reordenar / Editar Layout
+              // Botão: Exportar Pacote IHM (.endap-hmi)
+              Tooltip(
+                message: 'Exportar pacote IHM',
+                child: InkWell(
+                  key: const Key('btn_exportar_ihm'),
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: _openExportHmiDialog,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF252A36),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFF353B4A)),
+                    ),
+                    child: Text(
+                      isMobile ? 'EXPORTAR' : 'EXPORTAR IHM',
+                      style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: isMobile ? 4 : 6),
+
+              // Botão: Adicionar Widget
+              Tooltip(
+                message: 'Adicionar Widget na tela atual',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: _openAddWidgetFlow,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      isMobile ? '+ WIDGET' : 'NOVO WIDGET',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: isMobile ? 4 : 6),
+
+              // Botão: Reordenar / Editar Layout
               Tooltip(
                 message: 'Editar Dashboard',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(5),
                   onTap: () => setState(() => _isEditMode = true),
-                  child: Padding(
-                    padding: EdgeInsets.all(isMobile ? 3 : 5),
-                    child: Icon(Icons.tune_rounded, size: isMobile ? 15 : 16, color: const Color(0xFF94A3B8)),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF252A36),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFF353B4A)),
+                    ),
+                    child: const Text(
+                      'EDITAR',
+                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),

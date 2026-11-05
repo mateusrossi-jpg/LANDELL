@@ -30,7 +30,7 @@ void main() async {
       ),
     );
   };
-  await SessionManager.instance.init();
+  await SessionManager.instance.logout();
   final savedProject = await loadCurrentLadder();
   runApp(AppShell(initialProject: savedProject));
 }

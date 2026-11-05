@@ -7,13 +7,12 @@ import '../../../ladder/models/tag_value.dart';
 import '../../../ladder/models/enums.dart';
 import '../../services/studio_event_bus.dart';
 import '../../../ladder_autosave.dart';
-import 'endap_logo_widget.dart';
 
 enum IoPointType {
-  digitalInput('Digital Input'),
-  digitalOutput('Digital Output'),
-  analogInput('Analog Input'),
-  analogOutput('Analog Output');
+  digitalInput('Entrada Digital (%IX)'),
+  digitalOutput('Saída Digital (%QX)'),
+  analogInput('Entrada Analógica (%IW)'),
+  analogOutput('Saída Analógica (%QW)');
 
   final String label;
   const IoPointType(this.label);
@@ -193,7 +192,7 @@ class _CreateIoDialogState extends State<CreateIoDialog> {
 
     // Check unit for analog
     final isAnalog = _selectedType == IoPointType.analogInput || _selectedType == IoPointType.analogOutput;
-    final finalUnit = unit.isNotEmpty ? unit : (isAnalog ? '°C' : '');
+    final finalUnit = unit;
 
     // 2. Determine TagType and initial value
     final TagType tagType = isAnalog ? TagType.real : TagType.bool;
@@ -258,24 +257,14 @@ class _CreateIoDialogState extends State<CreateIoDialog> {
               // Header
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTokens.panel2,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
-                    ),
-                    child: const EndapLogoWidget(size: 18, showText: false),
-                  ),
-                  const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
                       'NOVO PONTO DE I/O',
                       style: TextStyle(
                         color: AppTokens.text,
                         fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),

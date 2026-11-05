@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../design_system/tokens.dart';
 import '../../../models/tag.dart';
 import '../../../models/tag_value.dart';
 import '../../../models/enums.dart';
@@ -159,10 +160,10 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1A222D),
+      backgroundColor: AppTokens.panel,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0xFF334155), width: 1.2),
+        side: const BorderSide(color: AppTokens.line, width: 1.0),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
@@ -172,49 +173,46 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
         ),
         child: Column(
           children: [
-            // Header estilo Painel Industrial
+            // Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: const BoxDecoration(
-                color: Color(0xFF222C3A),
+                color: AppTokens.panel2,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
-                border: Border(bottom: BorderSide(color: Color(0xFF334155), width: 1.0)),
+                border: Border(bottom: BorderSide(color: AppTokens.line, width: 1.0)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.account_tree_outlined, color: Color(0xFF38BDF8), size: 22),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       widget.title,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFF1F5F9),
+                        color: AppTokens.text,
                         letterSpacing: 0.3,
                       ),
                     ),
                   ),
-                  TextButton.icon(
+                  TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF10B981),
-                      backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      foregroundColor: AppTokens.green,
+                      backgroundColor: AppTokens.green.withValues(alpha: 0.12),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
-                        side: BorderSide(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                        side: BorderSide(color: AppTokens.green.withValues(alpha: 0.4)),
                       ),
                     ),
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
-                    label: const Text(
+                    onPressed: _showQuickCreateTagDialog,
+                    child: const Text(
                       '+ Nova Tag',
                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                     ),
-                    onPressed: _showQuickCreateTagDialog,
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
+                    icon: const Icon(Icons.close, color: AppTokens.textDim, size: 20),
                     onPressed: () => Navigator.pop(context),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -228,14 +226,14 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
               child: TextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                style: const TextStyle(color: Color(0xFFF8FAFC), fontSize: 13),
+                style: const TextStyle(color: AppTokens.text, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Filtrar por nome, endereço IEC (%IW0.0, Q0.1) ou descrição...',
-                  hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF38BDF8), size: 18),
+                  hintStyle: const TextStyle(color: AppTokens.textDim, fontSize: 12),
+                  prefixIcon: const Icon(Icons.search, color: AppTokens.focus, size: 18),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, size: 16, color: Color(0xFF94A3B8)),
+                          icon: const Icon(Icons.clear, size: 16, color: AppTokens.textDim),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -243,15 +241,15 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                         )
                       : null,
                   filled: true,
-                  fillColor: const Color(0xFF0F172A),
+                  fillColor: AppTokens.background,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                    borderSide: const BorderSide(color: AppTokens.line),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF38BDF8), width: 1.5),
+                    borderSide: const BorderSide(color: AppTokens.focus, width: 1.5),
                   ),
                 ),
               ),
@@ -259,15 +257,13 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
 
             // Barra de Filtro de Controlador (Topologia Distribuída: Nó 0, Nó 1, Nó 2, Nó 3...)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              color: const Color(0xFF1E293B).withValues(alpha: 0.6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: AppTokens.panel2,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    const Icon(Icons.hub_outlined, size: 14, color: Color(0xFF94A3B8)),
-                    const SizedBox(width: 6),
-                    const Text('NÓ:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    const Text('NÓ:', style: TextStyle(color: AppTokens.textDim, fontSize: 10.5, fontWeight: FontWeight.bold)),
                     const SizedBox(width: 8),
                     _buildControllerChip(label: 'Todos', index: null),
                     const SizedBox(width: 6),
@@ -286,15 +282,15 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
             // Abas de Categorias Industriais
             Container(
               decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFF334155), width: 1.0)),
+                border: Border(bottom: BorderSide(color: AppTokens.line, width: 1.0)),
               ),
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
-                indicatorColor: const Color(0xFF38BDF8),
+                indicatorColor: AppTokens.focus,
                 indicatorWeight: 2.5,
-                labelColor: const Color(0xFF38BDF8),
-                unselectedLabelColor: const Color(0xFF94A3B8),
+                labelColor: AppTokens.focus,
+                unselectedLabelColor: AppTokens.textDim,
                 labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                 unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                 tabs: _categories.map((c) => Tab(text: c)).toList(),
@@ -347,32 +343,30 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_link_rounded, size: 38, color: Colors.blueGrey.shade500),
-                            const SizedBox(height: 10),
                             const Text(
                               'Nenhuma tag cadastrada nesta categoria',
-                              style: TextStyle(color: Color(0xFFF1F5F9), fontSize: 13, fontWeight: FontWeight.w600),
+                              style: TextStyle(color: AppTokens.text, fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'Crie sua tag agora mesmo (Entrada, Saída, Memória, Analógica ou Timer) e vincule ao nó.',
+                              'Crie uma nova tag (Entrada, Saída, Memória, Analógica ou Timer) para vincular ao elemento.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
+                              style: TextStyle(color: AppTokens.textDim, fontSize: 11.5),
                             ),
                             const SizedBox(height: 14),
-                            ElevatedButton.icon(
+                            ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF10B981),
-                                foregroundColor: const Color(0xFF06281E),
+                                backgroundColor: AppTokens.green,
+                                foregroundColor: Colors.black,
+                                elevation: 0,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text(
-                                'CRIAR E VINCULAR NOVA TAG AQUI',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                              ),
                               onPressed: _showQuickCreateTagDialog,
+                              child: const Text(
+                                'Nova Tag',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ],
                         ),
@@ -384,7 +378,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     itemCount: filteredList.length,
                     separatorBuilder: (_, __) => const Divider(
-                      color: Color(0xFF263342),
+                      color: AppTokens.line,
                       height: 1,
                       indent: 16,
                       endIndent: 16,
@@ -403,7 +397,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                         },
                         child: Container(
                           color: isSelected
-                              ? const Color(0xFF38BDF8).withValues(alpha: 0.15)
+                              ? AppTokens.focus.withValues(alpha: 0.14)
                               : Colors.transparent,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           child: Row(
@@ -445,7 +439,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
-                                              color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFFF1F5F9),
+                                              color: isSelected ? AppTokens.focus : AppTokens.text,
                                               fontFamily: 'JetBrains Mono',
                                             ),
                                             maxLines: 1,
@@ -456,15 +450,16 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF334155),
+                                            color: AppTokens.panel2,
                                             borderRadius: BorderRadius.circular(3),
+                                            border: Border.all(color: AppTokens.line),
                                           ),
                                           child: Text(
                                             _getTagTypeLabel(tag),
                                             style: const TextStyle(
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFFCBD5E1),
+                                              color: AppTokens.textDim,
                                             ),
                                           ),
                                         ),
@@ -473,13 +468,13 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                           decoration: BoxDecoration(
                                             color: tag.controllerIndex == 0
-                                                ? const Color(0xFF0284C7).withValues(alpha: 0.15)
-                                                : const Color(0xFF10B981).withValues(alpha: 0.15),
+                                                ? AppTokens.focus.withValues(alpha: 0.12)
+                                                : AppTokens.green.withValues(alpha: 0.12),
                                             borderRadius: BorderRadius.circular(3),
                                             border: Border.all(
                                               color: tag.controllerIndex == 0
-                                                  ? const Color(0xFF38BDF8)
-                                                  : const Color(0xFF34D399),
+                                                  ? AppTokens.focus.withValues(alpha: 0.5)
+                                                  : AppTokens.green.withValues(alpha: 0.5),
                                               width: 0.8,
                                             ),
                                           ),
@@ -489,8 +484,8 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.w700,
                                               color: tag.controllerIndex == 0
-                                                  ? const Color(0xFF38BDF8)
-                                                  : const Color(0xFF34D399),
+                                                  ? AppTokens.focus
+                                                  : AppTokens.green,
                                             ),
                                           ),
                                         ),
@@ -502,7 +497,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                                         tag.description!,
                                         style: const TextStyle(
                                           fontSize: 11.5,
-                                          color: Color(0xFF94A3B8),
+                                          color: AppTokens.textDim,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -514,9 +509,15 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
 
                               // Indicador de Seleção
                               if (isSelected)
-                                const Icon(Icons.check_circle, color: Color(0xFF38BDF8), size: 20)
-                              else
-                                const Icon(Icons.radio_button_unchecked, color: Color(0xFF475569), size: 18),
+                                const Text(
+                                  'SELECIONADO',
+                                  style: TextStyle(
+                                    color: AppTokens.focus,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -531,9 +532,9 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: const BoxDecoration(
-                color: Color(0xFF222C3A),
+                color: AppTokens.panel2,
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(13)),
-                border: Border(top: BorderSide(color: Color(0xFF334155), width: 1.0)),
+                border: Border(top: BorderSide(color: AppTokens.line, width: 1.0)),
               ),
               child: Wrap(
                 alignment: WrapAlignment.spaceBetween,
@@ -546,7 +547,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: _selectedTagId != null ? const Color(0xFF38BDF8) : const Color(0xFF64748B),
+                      color: _selectedTagId != null ? AppTokens.focus : AppTokens.textDim,
                       fontFamily: 'JetBrains Mono',
                     ),
                   ),
@@ -555,21 +556,21 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar', style: TextStyle(color: Color(0xFF94A3B8))),
+                        child: const Text('Cancelar', style: TextStyle(color: AppTokens.textDim)),
                       ),
                       const SizedBox(width: 10),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.check, size: 16),
-                        label: const Text('Confirmar Tag'),
+                      ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0284C7),
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppTokens.focus,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         onPressed: _selectedTagId != null
                             ? () => Navigator.pop(context, _selectedTagId)
                             : null,
+                        child: const Text('Confirmar Tag', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -590,15 +591,18 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF334155),
+          color: isSelected ? AppTokens.focus.withValues(alpha: 0.16) : AppTokens.background,
           borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected ? AppTokens.focus : AppTokens.line,
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 10,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+            color: isSelected ? AppTokens.focus : AppTokens.textDim,
           ),
         ),
       ),
@@ -642,22 +646,14 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
           final isAnalog = rawAddr.startsWith('AI') || rawAddr.startsWith('AO') || rawAddr.startsWith('%IW') || rawAddr.startsWith('%QW');
 
           return AlertDialog(
-            backgroundColor: const Color(0xFF1A222D),
+            backgroundColor: AppTokens.panel,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Color(0xFF334155)),
+              side: const BorderSide(color: AppTokens.line),
             ),
-            title: const Row(
-              children: [
-                Icon(Icons.bolt_rounded, color: Color(0xFF10B981), size: 20),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Criar & Vincular Nova Tag',
-                    style: TextStyle(color: Color(0xFFF1F5F9), fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+            title: const Text(
+              'Criar e Vincular Nova Tag',
+              style: TextStyle(color: AppTokens.text, fontSize: 14, fontWeight: FontWeight.bold),
             ),
             content: SingleChildScrollView(
               child: Column(
@@ -665,8 +661,8 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '1. ESCOLHA O ENDEREÇO DE HARDWARE / IEC:',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5, fontWeight: FontWeight.bold),
+                    'ENDEREÇO DE HARDWARE / IEC:',
+                    style: TextStyle(color: AppTokens.textDim, fontSize: 10.5, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -690,21 +686,21 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? const Color(0xFF0284C7)
-                                : (exists ? const Color(0xFF0F172A) : const Color(0xFF263342)),
+                                ? AppTokens.focus.withValues(alpha: 0.18)
+                                : (exists ? AppTokens.background : AppTokens.panel2),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: isSelected
-                                  ? const Color(0xFF38BDF8)
-                                  : (exists ? const Color(0xFF334155) : const Color(0xFF475569)),
+                                  ? AppTokens.focus
+                                  : AppTokens.line,
                             ),
                           ),
                           child: Text(
-                            exists ? '$p ✓' : p,
+                            p,
                             style: TextStyle(
                               color: isSelected
-                                  ? Colors.white
-                                  : (exists ? const Color(0xFF64748B) : const Color(0xFFE2E8F0)),
+                                  ? AppTokens.focus
+                                  : (exists ? AppTokens.textDim : AppTokens.text),
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'monospace',
@@ -718,30 +714,30 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                   TextField(
                     controller: addrCtrl,
                     onChanged: (_) => setModalState(() {}),
-                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontFamily: 'monospace'),
+                    style: const TextStyle(color: AppTokens.text, fontSize: 12.5, fontFamily: 'monospace'),
                     decoration: const InputDecoration(
                       labelText: 'Endereço / ID Técnico (ex: I0.0, Q0.1, M0.0, T0)',
-                      labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      labelStyle: TextStyle(color: AppTokens.textDim, fontSize: 11),
                       isDense: true,
                     ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: nameCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                    style: const TextStyle(color: AppTokens.text, fontSize: 12.5),
                     decoration: const InputDecoration(
                       labelText: 'Apelido Visível no Ladder (ex: BOTAO_LIGA, MOTOR_1)',
-                      labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      labelStyle: TextStyle(color: AppTokens.textDim, fontSize: 11),
                       isDense: true,
                     ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: descCtrl,
-                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                    style: const TextStyle(color: AppTokens.text, fontSize: 12.5),
                     decoration: const InputDecoration(
                       labelText: 'Descrição Funcional (Opcional)',
-                      labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      labelStyle: TextStyle(color: AppTokens.textDim, fontSize: 11),
                       isDense: true,
                     ),
                   ),
@@ -749,10 +745,10 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                     const SizedBox(height: 10),
                     TextField(
                       controller: unitCtrl,
-                      style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                      style: const TextStyle(color: AppTokens.text, fontSize: 12.5),
                       decoration: const InputDecoration(
                         labelText: 'Unidade de Engenharia (ex: °C, %, bar, RPM)',
-                        labelStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        labelStyle: TextStyle(color: AppTokens.textDim, fontSize: 11),
                         isDense: true,
                       ),
                     ),
@@ -763,15 +759,14 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancelar', style: TextStyle(color: Color(0xFF94A3B8))),
+                child: const Text('Cancelar', style: TextStyle(color: AppTokens.textDim)),
               ),
-              ElevatedButton.icon(
+              ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: const Color(0xFF06281E),
+                  backgroundColor: AppTokens.green,
+                  foregroundColor: Colors.black,
+                  elevation: 0,
                 ),
-                icon: const Icon(Icons.check, size: 16),
-                label: const Text('Criar e Vincular', style: TextStyle(fontWeight: FontWeight.bold)),
                 onPressed: () {
                   final cleanAddr = addrCtrl.text.trim().toUpperCase();
                   if (cleanAddr.isEmpty) return;
@@ -805,6 +800,7 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                   widget.tags[newTag.id] = newTag;
                   Navigator.pop(ctx, newTag.id);
                 },
+                child: const Text('Criar e Vincular', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           );

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../ladder_autosave.dart';
 import '../../models/ladder_project.dart';
-import '../../models/demo_project.dart';
 import '../../models/ladder_network.dart';
 import '../../models/ladder_node.dart';
 import '../../models/node_config.dart';
@@ -436,20 +435,28 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       _applyMode(EditorMode.simulateHardware);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF3FBF5A),
+          backgroundColor: AppTokens.panel2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: AppTokens.green, width: 1.0),
+          ),
           content: Text(
-            'Lógica recuperada do ESP32 ($gatewayIp) com ${fetchedProject.networks.length} rungs!',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            'Lógica recuperada do controlador ($gatewayIp) com ${fetchedProject.networks.length} rungs.',
+            style: const TextStyle(color: AppTokens.text, fontWeight: FontWeight.w600),
           ),
         ),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFFD9503F),
+          backgroundColor: AppTokens.panel2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: AppTokens.red, width: 1.0),
+          ),
           content: Text(
-            'Nenhuma lógica válida recuperada do ESP32 ($gatewayIp)',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            'Nenhuma lógica válida recuperada do controlador ($gatewayIp).',
+            style: const TextStyle(color: AppTokens.text, fontWeight: FontWeight.w600),
           ),
         ),
       );
@@ -474,18 +481,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         ),
         actionsOverflowDirection: VerticalDirection.down,
         actionsOverflowButtonSpacing: 8,
-        title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: Color(0xFFF87171), size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Limpar Lógica do CLP?',
-                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: const Text(
+          'Limpar Lógica do CLP?',
+          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
         ),
         content: Text(
           'Deseja apagar o programa Ladder gravado no CLP ($gatewayIp)?\n\n'
@@ -517,12 +516,16 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: ok ? const Color(0xFF059669) : const Color(0xFFDC2626),
+        backgroundColor: AppTokens.panel2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: ok ? AppTokens.green : AppTokens.red, width: 1.0),
+        ),
         content: Text(
           ok
-              ? '✓ Lógica Ladder removida do CLP com sucesso. Todas as saídas estão livres!'
+              ? 'Lógica Ladder removida do CLP com sucesso.'
               : 'Falha ao limpar lógica no CLP ($gatewayIp).',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppTokens.text, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -2245,31 +2248,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   Widget _buildModeGuidanceBanner(bool isMobile) {
-    String modeTitle;
-    String modeDescription;
-    Color accentColor;
-    IconData modeIcon;
-
-    switch (_mode) {
-      case EditorMode.editor:
-        modeTitle = 'EDIÇÃO';
-        modeDescription = 'Toque em um componente da paleta para inserir no Rung e toque no nó para vincular ou criar uma Tag.';
-        accentColor = const Color(0xFF38BDF8);
-        modeIcon = Icons.edit_note_rounded;
-        break;
-      case EditorMode.simulateLocal:
-        modeTitle = 'SIMULAÇÃO LOCAL';
-        modeDescription = 'Toque nos contatos de entrada para comutar ON/OFF e testar sua lógica no celular.';
-        accentColor = const Color(0xFF10B981);
-        modeIcon = Icons.play_circle_outline_rounded;
-        break;
-      case EditorMode.simulateHardware:
-        modeTitle = 'HARDWARE ESP32';
-        modeDescription = 'Monitorando o CLP em tempo real. Toque em um contato ou bobina para FORÇAR (Force I/O) no hardware.';
-        accentColor = const Color(0xFFF59E0B);
-        modeIcon = Icons.memory_rounded;
-        break;
+    if (_mode == EditorMode.editor) {
+      return const SizedBox.shrink();
     }
+
+    final bool isHardware = _mode == EditorMode.simulateHardware;
+    final String modeTitle = isHardware ? 'ONLINE ESP32' : 'SIMULAÇÃO LOCAL';
+    final Color accentColor = isHardware ? const Color(0xFFF59E0B) : const Color(0xFF10B981);
 
     return Container(
       width: double.infinity,
@@ -2282,10 +2267,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       ),
       child: Row(
         children: [
-          Icon(modeIcon, size: 14, color: accentColor),
-          const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(4),
@@ -2294,88 +2277,56 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               modeTitle,
               style: TextStyle(
                 color: accentColor,
-                fontSize: 9.0,
+                fontSize: 9.5,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'monospace',
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              modeDescription,
-              style: const TextStyle(
-                color: Color(0xFFCBD5E1),
-                fontSize: 10.5,
+          const Spacer(),
+          InkWell(
+            onTap: () => setState(() => _simulationPulseMode = !_simulationPulseMode),
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              child: Text(
+                _simulationPulseMode ? 'Modo: Pulso' : 'Modo: Retentivo',
+                style: TextStyle(
+                  color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
-          if (_mode != EditorMode.editor) ...[
-            const SizedBox(width: 6),
-            InkWell(
-              onTap: () => setState(() => _simulationPulseMode = !_simulationPulseMode),
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _simulationPulseMode ? Icons.touch_app : Icons.toggle_on,
-                      size: 12,
-                      color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _simulationPulseMode ? 'Pulso' : 'Retentivo',
-                      style: TextStyle(
-                        color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: _resetSimulation,
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.5)),
+              ),
+              child: const Text(
+                'Resetar Estados',
+                style: TextStyle(
+                  color: Color(0xFFF87171),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            const SizedBox(width: 6),
-            InkWell(
-              onTap: _resetSimulation,
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.5)),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.restart_alt, size: 12, color: Color(0xFFF87171)),
-                    SizedBox(width: 3),
-                    Text(
-                      'Reset',
-                      style: TextStyle(
-                        color: Color(0xFFF87171),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
@@ -2534,9 +2485,9 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               ),
               _buildToolSheetTile(
                 icon: Icons.note_add_outlined,
-                color: const Color(0xFFF59E0B),
-                title: 'Zerar Projeto Atual (Começar Cru)',
-                subtitle: 'Apaga todas as tags, rungs e widgets para construir um projeto do zero',
+                color: const Color(0xFFE2E8F0),
+                title: 'Novo Projeto',
+                subtitle: 'Limpar tags, rungs e widgets atuais',
                 onTap: () async {
                   Navigator.pop(ctx);
                   final raw = await resetToRawProject();
@@ -2552,36 +2503,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      backgroundColor: Color(0xFF065F46),
-                      content: Text('✓ Projeto zerado (0 Tags, 0 Rungs, 0 Widgets). Pronto para construir!'),
+                      backgroundColor: Color(0xFF1E222B),
+                      content: Text('Novo projeto iniciado.'),
                     ),
                   );
-                },
-              ),
-              _buildToolSheetTile(
-                icon: Icons.science_outlined,
-                color: const Color(0xFF64748B),
-                title: 'Carregar Template Didático (Bancada TCC)',
-                subtitle: 'Opcional: carrega tags e lógica de exemplo (AHT10 + Relés)',
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final clean = DemoProject.createCleanTccProject();
-                  await saveCurrentLadder(clean);
-                  if (!mounted) return;
-                  setState(() {
-                    _replaceProjectInPlace(clean);
-                    _simulationInputs.clear();
-                    for (var tag in _project.tags.values) {
-                      if (tag.type == TagType.bool) {
-                        _simulationInputs[tag.id] = tag.initialValue?.boolValue ?? false;
-                      }
-                    }
-                    _selectedRungIndex = null;
-                    _selectedNodeIndex = null;
-                    _updateRuntimeProject();
-                    _runPassiveValidation();
-                    widget.onProjectUpdated?.call();
-                  });
                 },
               ),
               const SizedBox(height: 12),
@@ -2771,61 +2696,57 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 460),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Card(
               color: AppTokens.panel,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
                 side: BorderSide(color: AppTokens.line),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(22.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.account_tree_outlined, size: 46, color: Color(0xFF4FD1C5)),
-                    const SizedBox(height: 12),
                     const Text(
-                      'PROGRAMA LADDER EM BRANCO',
+                      'Nenhum rung configurado',
                       style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
                         color: Color(0xFFE7EBF0),
                       ),
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      '1. Toque em "+ Adicionar Primeiro Rung".\n'
-                      '2. Toque ou arraste contatos (NO/NC) e bobinas (COIL) da paleta acima.\n'
-                      '3. Toque no elemento inserido para vincular ou criar uma nova Tag na hora.',
+                      'Adicione um rung para programar a lógica ou leia o programa ativo do controlador.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), height: 1.45),
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8), height: 1.4),
                     ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton.icon(
+                          child: ElevatedButton(
                             onPressed: _addNewRung,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTokens.focus,
                               foregroundColor: AppTokens.bg,
+                              elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text(
-                              'Adicionar Primeiro Rung',
-                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                            child: const Text(
+                              'Adicionar Rung',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        OutlinedButton.icon(
+                        OutlinedButton(
                           onPressed: () => _fetchFromEsp32(),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFFE7EBF0),
@@ -2835,9 +2756,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          icon: const Icon(Icons.cloud_download_outlined, size: 17),
-                          label: const Text(
-                            'Baixar ESP32',
+                          child: const Text(
+                            'Ler do Controlador',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -3043,12 +2963,16 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: allOk ? const Color(0xFF3FBF5A) : const Color(0xFFD9503F),
+          backgroundColor: AppTokens.panel2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: allOk ? AppTokens.green : AppTokens.red, width: 1.0),
+          ),
           content: Text(
             allOk
                 ? 'Deploy da Célula Particionada OK: ${deployedDetails.join(", ")}'
                 : 'Deploy parcial ($successCount/$targetCount nós alcançados)',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(color: AppTokens.text, fontWeight: FontWeight.w600),
           ),
         ),
       );
@@ -3082,12 +3006,16 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: success ? const Color(0xFF3FBF5A) : const Color(0xFFD9503F),
+        backgroundColor: AppTokens.panel2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: success ? AppTokens.green : AppTokens.red, width: 1.0),
+        ),
         content: Text(
           success
-              ? 'Deploy particionado realizado com sucesso em $targetDesc'
-              : 'Falha no deploy - verifique conexão com $targetDesc',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+              ? 'Deploy realizado com sucesso em $targetDesc.'
+              : 'Falha no deploy. Verifique a conexão com $targetDesc.',
+          style: const TextStyle(color: AppTokens.text, fontWeight: FontWeight.w600),
         ),
       ),
     );

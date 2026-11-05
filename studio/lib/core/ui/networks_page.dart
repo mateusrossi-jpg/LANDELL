@@ -11,7 +11,6 @@ import '../network/authenticated_http_client.dart';
 import '../services/network_manager.dart';
 import '../../ladder/ui/editor/telemetry_sync_service.dart';
 import 'widgets/adopt_node_dialog.dart';
-import 'widgets/endap_logo_widget.dart';
 
 class NetworksPage extends StatefulWidget {
   final NetworkManager networkManager;
@@ -489,18 +488,16 @@ class _NetworksPageState extends State<NetworksPage> {
     final isDesktop = MediaQuery.of(context).size.width >= 1024;
     return Container(
       width: double.infinity,
-      height: widget.embedded ? 36 : null,
-      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 16 : 12, vertical: widget.embedded ? 4 : 8),
+      height: widget.embedded ? 38 : null,
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 16 : 14, vertical: widget.embedded ? 4 : 8),
       decoration: const BoxDecoration(
         color: AppTokens.panel,
         border: Border(bottom: BorderSide(color: AppTokens.line, width: 1.0)),
       ),
       child: Row(
         children: [
-          const EndapLogoWidget(size: 15, showText: false),
-          const SizedBox(width: 8),
           Text(
-            'Rede & Topologia',
+            'REDE & TOPOLOGIA',
             style: TextStyle(
               color: AppTokens.text,
               fontSize: isDesktop ? 12 : 11,
@@ -509,25 +506,30 @@ class _NetworksPageState extends State<NetworksPage> {
             ),
           ),
           if (!widget.embedded) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             const Text(
-              '· Descoberta e provisionamento',
-              style: TextStyle(color: AppTokens.muted, fontSize: 10),
+              'Descoberta e provisionamento de dispositivos',
+              style: TextStyle(color: AppTokens.muted, fontSize: 10.5),
             ),
           ],
           const Spacer(),
-          IconButton(
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: widget.networkManager.isScanning ? null : () => widget.networkManager.scanNetwork(),
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            padding: EdgeInsets.zero,
-            icon: widget.networkManager.isScanning
+            child: widget.networkManager.isScanning
                 ? const SizedBox(
-                    width: 14,
-                    height: 14,
+                    width: 12,
+                    height: 12,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppTokens.focus),
                   )
-                : const Icon(Icons.refresh, color: AppTokens.focus, size: 16),
-            tooltip: 'Escanear rede',
+                : const Text(
+                    'ESCANEAR REDE',
+                    style: TextStyle(color: AppTokens.focus, fontSize: 10.5, fontWeight: FontWeight.bold),
+                  ),
           ),
         ],
       ),
@@ -554,12 +556,12 @@ class _NetworksPageState extends State<NetworksPage> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 3,
+                  height: 34,
                   decoration: BoxDecoration(
-                    color: AppTokens.panel2,
-                    borderRadius: BorderRadius.circular(8),
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(1.5),
                   ),
-                  child: const EndapLogoWidget(size: 22, showText: false),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -573,7 +575,7 @@ class _NetworksPageState extends State<NetworksPage> {
                               controller.nodeName.isEmpty ? 'Controlador Principal' : controller.nodeName,
                               style: TextStyle(
                                 color: AppTokens.textPrimary,
-                                fontSize: 15,
+                                fontSize: 14.5,
                                 fontWeight: FontWeight.bold,
                               ),
                               maxLines: 1,
@@ -589,10 +591,10 @@ class _NetworksPageState extends State<NetworksPage> {
                               border: Border.all(color: statusColor.withValues(alpha: 0.6)),
                             ),
                             child: Text(
-                              controller.isOnline ? 'Online' : 'Offline',
+                              controller.isOnline ? 'ONLINE' : 'OFFLINE',
                               style: TextStyle(
                                 color: statusColor,
-                                fontSize: 10,
+                                fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
                                 fontFamily: 'JetBrains Mono',
                               ),
@@ -600,9 +602,9 @@ class _NetworksPageState extends State<NetworksPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
-                        'IP: ${nm.gatewayIp} · ID: ${controller.id.isEmpty ? "esp32-gw" : controller.id}',
+                        'IP: ${nm.gatewayIp}  |  ID: ${controller.id.isEmpty ? "esp32-gw" : controller.id}',
                         style: TextStyle(
                           color: AppTokens.muted,
                           fontSize: 11,

@@ -13,7 +13,6 @@ import '../../../ladder/models/plc_tag_contract.dart';
 import '../../../ladder/models/enums.dart';
 import '../../../ladder/runtime/ladder_runtime.dart';
 import '../../services/hardware_force_bridge.dart';
-import '../widgets/endap_logo_widget.dart';
 
 /// Tela de MANUTENÇÃO & DIAGNÓSTICO (Field Troubleshooting & Real I/O Forcing)
 /// 100% conectada às TAGs do projeto, ao LadderRuntime e ao Hardware ESP32.
@@ -446,17 +445,10 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
                 const SizedBox(height: 16),
                 Expanded(
                   child: networks.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              EndapLogoWidget(size: 32, showText: false, isLive: false),
-                              SizedBox(height: 10),
-                              Text(
-                                'Nenhum diagrama Ladder carregado.',
-                                style: TextStyle(color: Colors.white54, fontSize: 12),
-                              ),
-                            ],
+                      ? const Center(
+                          child: Text(
+                            'Nenhum diagrama Ladder carregado.',
+                            style: TextStyle(color: Colors.white54, fontSize: 12),
                           ),
                         )
                       : ListView.builder(

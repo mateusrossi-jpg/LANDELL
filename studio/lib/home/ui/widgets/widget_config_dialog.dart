@@ -73,8 +73,8 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
             : WidgetSizePreset.standard);
     _decimalPlaces = w?.decimalPlaces ?? 1;
 
-    _titleController = TextEditingController(text: w?.title ?? _suggestTitle());
-    _unitController = TextEditingController(text: w?.unit ?? _suggestUnit());
+    _titleController = TextEditingController(text: w?.title ?? '');
+    _unitController = TextEditingController(text: w?.unit ?? '');
     _minController = TextEditingController(text: w?.minValue?.toString() ?? '0');
     _maxController = TextEditingController(text: w?.maxValue?.toString() ?? '100');
     _warningMaxController = TextEditingController(text: w?.warningMax?.toString() ?? '');
@@ -92,40 +92,6 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
     }
   }
 
-  String _suggestTitle() {
-    switch (widget.templateType) {
-      case WidgetTemplateType.gauge:
-        return 'PRESSÃO AI0.1';
-      case WidgetTemplateType.sparkline:
-        return 'ENTRADA ANALÓGICA AI0.0';
-      case WidgetTemplateType.numeric:
-        return 'SAÍDA ANALÓGICA AO0.0';
-      case WidgetTemplateType.digital:
-        return 'ENTRADA DIGITAL I0.0';
-      case WidgetTemplateType.actuator:
-        return 'SAÍDA DIGITAL Q0.0';
-      case WidgetTemplateType.metric:
-        return 'EFICIÊNCIA';
-      case WidgetTemplateType.ioMatrix:
-        return 'DIGITAL I/O MATRIX';
-    }
-  }
-
-  String _suggestUnit() {
-    switch (widget.templateType) {
-      case WidgetTemplateType.gauge:
-        return 'PSI';
-      case WidgetTemplateType.sparkline:
-        return '°C';
-      case WidgetTemplateType.numeric:
-        return 'RPM';
-      case WidgetTemplateType.metric:
-        return '%';
-      default:
-        return '';
-    }
-  }
-
   void _onTagChanged(String? tagId) {
     final oldTagId = _selectedTagId;
     setState(() {
@@ -135,14 +101,12 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
         final oldTag = oldTagId != null ? widget.project.tags[oldTagId] : null;
 
         final isDefaultOrOldTitle = _titleController.text.isEmpty ||
-            _titleController.text == _suggestTitle() ||
             (oldTag != null && (_titleController.text == oldTag.name || _titleController.text == (oldTag.description ?? '')));
         if (isDefaultOrOldTitle) {
           _titleController.text = tag.description ?? tag.name;
         }
 
         final isDefaultOrOldUnit = _unitController.text.isEmpty ||
-            _unitController.text == _suggestUnit() ||
             (oldTag != null && _unitController.text == (oldTag.unit ?? ''));
         if (tag.unit != null && tag.unit!.isNotEmpty && isDefaultOrOldUnit) {
           _unitController.text = tag.unit!;
@@ -153,18 +117,6 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
         }
         if (tag.scaledMax != null) {
           _maxController.text = tag.scaledMax!.toString();
-        }
-        // Faixas industriais recomendadas para sensores conhecidos
-        if (tag.id == 'TEMP_AHT10' || (tag.unit == '°C' && _warningMaxController.text.isEmpty)) {
-          _minController.text = '0';
-          _maxController.text = '60';
-          _warningMaxController.text = '30';
-          _criticalMaxController.text = '45';
-        } else if (tag.id == 'UMID_AHT10' || (tag.unit == '%' && _warningMaxController.text.isEmpty)) {
-          _minController.text = '0';
-          _maxController.text = '100';
-          _warningMaxController.text = '70';
-          _criticalMaxController.text = '85';
         }
       }
     });
@@ -341,16 +293,6 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
               // Header
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppTokens.panel2,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
-                    ),
-                    child: const Icon(Icons.tune, color: AppTokens.focus, size: 18),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,15 +301,16 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                           widget.existingWidget != null ? 'EDITAR WIDGET' : 'CONFIGURAR WIDGET',
                           style: const TextStyle(
                             color: AppTokens.text,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           widget.templateType.label,
-                          style: const TextStyle(color: AppTokens.focus, fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: AppTokens.focus, fontSize: 10.5, fontFamily: 'monospace', fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -396,21 +339,16 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                           children: [
                             const Expanded(
                               child: Text(
-                                'VARIÁVEL / TAG DO CLP (IEC 61131-3)',
+                                'VARIÁVEL / TAG DO CLP',
                                 style: TextStyle(color: AppTokens.textDim, fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                               ),
                             ),
-                            TextButton.icon(
+                            TextButton(
                               style: TextButton.styleFrom(
                                 foregroundColor: const Color(0xFF10B981),
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
-                              label: const Text(
-                                '+ CRIAR NOVA TAG AQUI',
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                               onPressed: () async {
                                 final newTag = await CreateIoDialog.show(
@@ -425,6 +363,10 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                                   setState(() => _isSelectingTag = false);
                                 }
                               },
+                              child: const Text(
+                                '+ NOVA TAG',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                              ),
                             ),
                           ],
                         ),
@@ -489,17 +431,12 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                                           ],
                                         )
                                       : const Text(
-                                          '(Nenhuma tag vinculada / Modo Didático)',
+                                          '(Nenhuma tag vinculada)',
                                           style: TextStyle(color: AppTokens.textDim, fontSize: 12),
                                         ),
                                 ),
                                 const SizedBox(width: 8),
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.search, size: 14),
-                                  label: Text(
-                                    selectedTag != null ? 'ALTERAR' : 'ESCOLHER',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                  ),
+                                OutlinedButton(
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppTokens.focus,
                                     side: const BorderSide(color: AppTokens.focus, width: 1),
@@ -513,6 +450,10 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                                       _isSelectingTag = true;
                                     });
                                   },
+                                  child: Text(
+                                    selectedTag != null ? 'ALTERAR' : 'ESCOLHER',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                               ],
                             ),
@@ -587,7 +528,7 @@ class _WidgetConfigDialogState extends State<WidgetConfigDialog> {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: const Text(
-                                            '(Nenhuma tag vinculada / Modo Didático)',
+                                            '(Nenhuma tag vinculada)',
                                             style: TextStyle(color: AppTokens.textDim, fontSize: 11, fontStyle: FontStyle.italic),
                                           ),
                                         ),

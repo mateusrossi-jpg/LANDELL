@@ -81,6 +81,21 @@ class AppTheme {
         borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.2),
       ),
     ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: const Color(0xFF252A36),
+      contentTextStyle: const TextStyle(
+        color: Color(0xFFE2E8F0),
+        fontSize: 12.5,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'Inter',
+      ),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: Color(0xFF353B4A), width: 1.0),
+      ),
+    ),
   );
 
   static final ThemeData light = dark;

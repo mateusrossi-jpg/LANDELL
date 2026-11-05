@@ -154,12 +154,11 @@ class HomeWidgetRenderer extends StatelessWidget {
   Widget _buildEditHeader(BuildContext context) {
     return Row(
       children: [
-        // Reorder Drag Handle (44x44 touch area)
         const SizedBox(
-          width: 36,
-          height: 36,
+          width: 32,
+          height: 32,
           child: Center(
-            child: Icon(Icons.drag_indicator, color: Color(0xFF64748B), size: 20),
+            child: Icon(Icons.drag_indicator, color: Color(0xFF64748B), size: 18),
           ),
         ),
         const SizedBox(width: 4),
@@ -177,19 +176,30 @@ class HomeWidgetRenderer extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        // Edit Button (>=44x44 touch target)
-        IconButton(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          icon: const Icon(Icons.tune, color: Color(0xFF2DD4BF), size: 18),
-          tooltip: 'Configurar Widget',
+        TextButton(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: onEdit,
+          child: const Text(
+            'EDITAR',
+            style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold),
+          ),
         ),
-        // Delete Button (>=44x44 touch target)
-        IconButton(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          icon: const Icon(Icons.delete_outline, color: Color(0xFFF43F5E), size: 18),
-          tooltip: 'Remover Widget',
+        const SizedBox(width: 4),
+        TextButton(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           onPressed: onDelete,
+          child: const Text(
+            'REMOVER',
+            style: TextStyle(color: Color(0xFFF43F5E), fontSize: 10, fontWeight: FontWeight.bold),
+          ),
         ),
       ],
     );
@@ -203,22 +213,14 @@ class HomeWidgetRenderer extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'VARIÁVEL NÃO ENCONTRADA (${config.tagId ?? 'N/A'})',
-              style: const TextStyle(
-                color: Color(0xFFFDE68A),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        'VARIÁVEL NÃO ENCONTRADA (${config.tagId ?? 'N/A'})',
+        style: const TextStyle(
+          color: Color(0xFFFDE68A),
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'monospace',
+        ),
       ),
     );
   }

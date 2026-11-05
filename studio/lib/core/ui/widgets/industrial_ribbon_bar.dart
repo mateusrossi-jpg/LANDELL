@@ -117,8 +117,8 @@ class IndustrialRibbonBar extends StatelessWidget {
                     Flexible(
                       child: Text(
                         networkManager.isHardwareOnline
-                            ? '${networkManager.gatewayIp} • ${networkManager.kernelExecMaxUs > 0 ? "${(networkManager.kernelExecMaxUs / 1000.0).toStringAsFixed(1)}ms" : "1.0ms"}'
-                            : 'SIM • ${scanDurationUs != null && scanDurationUs! > 0 ? "${(scanDurationUs! / 1000.0).toStringAsFixed(1)}ms" : "1.0ms"}',
+                            ? '${networkManager.gatewayIp}  ${networkManager.kernelExecMaxUs > 0 ? "${(networkManager.kernelExecMaxUs / 1000.0).toStringAsFixed(1)}ms" : "1.0ms"}'
+                            : 'LOCAL  ${scanDurationUs != null && scanDurationUs! > 0 ? "${(scanDurationUs! / 1000.0).toStringAsFixed(1)}ms" : "1.0ms"}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: IndustrialTokens.codeMonospace.copyWith(
@@ -140,13 +140,16 @@ class IndustrialRibbonBar extends StatelessWidget {
                 child: InkWell(
                   onTap: onOpenDrawer,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAB308).withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
+                      color: const Color(0xFFEAB308).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: const Color(0xFFEAB308), width: 1.0),
                     ),
-                    child: const Icon(Icons.sensors_rounded, size: 12, color: Color(0xFFEAB308)),
+                    child: Text(
+                      '+${networkManager.unclaimedNodes.length}',
+                      style: const TextStyle(color: Color(0xFFEAB308), fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
@@ -156,31 +159,25 @@ class IndustrialRibbonBar extends StatelessWidget {
 
             if (onDeploy != null) ...[
               Tooltip(
-                message: 'Gravar Lógica no ESP32 (Deploy)',
+                message: 'Gravar Lógica no Controlador',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(5),
                   onTap: onDeploy,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0284C7).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(5),
                       border: Border.all(color: const Color(0xFF0284C7), width: 1),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.bolt_rounded, size: 13, color: Color(0xFF38BDF8)),
-                        SizedBox(width: 2),
-                        Text(
-                          'GRAVAR',
-                          style: TextStyle(
-                            color: Color(0xFFE0F2FE),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                    child: const Text(
+                      'GRAVAR',
+                      style: TextStyle(
+                        color: Color(0xFFE0F2FE),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
                 ),
@@ -190,18 +187,26 @@ class IndustrialRibbonBar extends StatelessWidget {
 
             if (onFetch != null) ...[
               Tooltip(
-                message: 'Ler Lógica do ESP32 (Fetch)',
+                message: 'Ler Lógica do Controlador',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(5),
                   onTap: onFetch,
                   child: Container(
-                    padding: const EdgeInsets.all(4.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFF252A36),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(5),
                       border: Border.all(color: const Color(0xFF353B4A), width: 1),
                     ),
-                    child: const Icon(Icons.cloud_download_outlined, size: 14, color: Color(0xFF38BDF8)),
+                    child: const Text(
+                      'LER',
+                      style: TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -273,29 +278,22 @@ class IndustrialRibbonBar extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: onTriggerFailsafe,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(5),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
                   decoration: BoxDecoration(
                     color: const Color(0xFF3B181E),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(5),
                     border: Border.all(color: const Color(0xFF6B2129), width: 1),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.stop_circle_outlined, size: 12, color: Color(0xFFEF4444)),
-                      SizedBox(width: 3),
-                      Text(
-                        'STOP',
-                        style: TextStyle(
-                          color: Color(0xFFFCA5A5),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 9,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                  child: const Text(
+                    'STOP',
+                    style: TextStyle(
+                      color: Color(0xFFFCA5A5),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 9,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),
@@ -356,34 +354,24 @@ class IndustrialRibbonBar extends StatelessWidget {
 
                 // Telemetria Real do Kernel Determinístico / Runtime
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                   decoration: BoxDecoration(
                     color: const Color(0xFF252A36),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(5),
                     border: Border.all(color: const Color(0xFF353B4A)),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.speed,
-                        size: 12,
-                        color: networkManager.isHardwareOnline ? const Color(0xFF22C55E) : const Color(0xFF0284C7),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        networkManager.isHardwareOnline
-                            ? (networkManager.kernelExecMaxUs > 0
-                                ? '${networkManager.kernelExecMaxUs}µs • ${networkManager.kernelJitterMaxUs}µs JITTER'
-                                : '1.0ms • KERNEL OK')
-                            : (scanDurationUs != null && scanDurationUs! > 0
-                                ? '${(scanDurationUs! / 1000.0).toStringAsFixed(2)}ms • SIMULADOR'
-                                : 'SIMULADOR LOCAL'),
-                        style: IndustrialTokens.codeMonospace.copyWith(
-                          color: const Color(0xFF94A3B8),
-                          fontSize: 10.5,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    networkManager.isHardwareOnline
+                        ? (networkManager.kernelExecMaxUs > 0
+                            ? '${networkManager.kernelExecMaxUs}µs  |  ${networkManager.kernelJitterMaxUs}µs JITTER'
+                            : '1.0ms  |  KERNEL ATIVO')
+                        : (scanDurationUs != null && scanDurationUs! > 0
+                            ? '${(scanDurationUs! / 1000.0).toStringAsFixed(2)}ms  |  LOCAL'
+                            : 'EXECUÇÃO LOCAL'),
+                    style: IndustrialTokens.codeMonospace.copyWith(
+                      color: const Color(0xFF94A3B8),
+                      fontSize: 10.5,
+                    ),
                   ),
                 ),
 
@@ -395,28 +383,21 @@ class IndustrialRibbonBar extends StatelessWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: onOpenDrawer,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(5),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
                           decoration: BoxDecoration(
                             color: const Color(0xFFEAB308).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(5),
                             border: Border.all(color: const Color(0xFFEAB308).withValues(alpha: 0.6), width: 1.0),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.sensors_rounded, color: Color(0xFFEAB308), size: 13),
-                              const SizedBox(width: 5),
-                              Text(
-                                '${networkManager.unclaimedNodes.length} NÓ PENDENTE',
-                                style: const TextStyle(
-                                  color: Color(0xFFEAB308),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            '${networkManager.unclaimedNodes.length} NÓ PENDENTE',
+                            style: const TextStyle(
+                              color: Color(0xFFEAB308),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -436,54 +417,97 @@ class IndustrialRibbonBar extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (onToggleTerminal != null)
-                  IconButton(
-                    tooltip: 'Terminal de Diagnóstico',
-                    icon: Icon(
-                      Icons.terminal_rounded,
-                      color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                      size: 18,
+                if (onToggleTerminal != null) ...[
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: isTerminalVisible ? const Color(0xFF0284C7).withValues(alpha: 0.15) : const Color(0xFF252A36),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        side: BorderSide(color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF353B4A)),
+                      ),
                     ),
                     onPressed: onToggleTerminal,
+                    child: Text(
+                      'TERMINAL',
+                      style: TextStyle(
+                        color: isTerminalVisible ? const Color(0xFF38BDF8) : const Color(0xFF94A3B8),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
                   ),
-                IconButton(
-                  tooltip: 'Gravar Lógica (Deploy)',
-                  icon: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF22C55E), size: 18),
+                  const SizedBox(width: 6),
+                ],
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      side: const BorderSide(color: Color(0xFF0284C7)),
+                    ),
+                  ),
                   onPressed: onDeploy,
+                  child: const Text(
+                    'GRAVAR',
+                    style: TextStyle(
+                      color: Color(0xFFE0F2FE),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
                 ),
-                IconButton(
-                  tooltip: 'Ler do CLP (Fetch)',
-                  icon: const Icon(Icons.cloud_download_outlined, color: Color(0xFF38BDF8), size: 18),
+                const SizedBox(width: 6),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    backgroundColor: const Color(0xFF252A36),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                      side: const BorderSide(color: Color(0xFF353B4A)),
+                    ),
+                  ),
                   onPressed: onFetch,
+                  child: const Text(
+                    'LER CLP',
+                    style: TextStyle(
+                      color: Color(0xFF38BDF8),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: onTriggerFailsafe,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(5),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF3B181E),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(5),
                         border: Border.all(color: const Color(0xFF6B2129), width: 1),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.stop_circle_outlined, size: 13, color: Color(0xFFEF4444)),
-                          SizedBox(width: 4),
-                          Text(
-                            'FAILSAFE',
-                            style: TextStyle(
-                              color: Color(0xFFFCA5A5),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 10,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
+                      child: const Text(
+                        'FAILSAFE',
+                        style: TextStyle(
+                          color: Color(0xFFFCA5A5),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
@@ -619,18 +643,14 @@ class IndustrialRibbonBar extends StatelessWidget {
       value: id,
       child: Row(
         children: [
-          if (isSelected)
-            const EndapLogoWidget(size: 14, showText: false)
-          else
-            Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: const BoxDecoration(
-                color: Color(0xFF475569),
-                shape: BoxShape.circle,
-              ),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: isSelected ? IndustrialTokens.telemetryCyan : const Color(0xFF475569),
+              shape: BoxShape.circle,
             ),
+          ),
           const SizedBox(width: 10),
           Text(
             label,

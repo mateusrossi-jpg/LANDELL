@@ -12,7 +12,6 @@ import '../services/gpio_service.dart';
 import 'widgets/configure_pin_dialog.dart';
 import 'widgets/analog_calibration_dialog.dart';
 import '../../../design_system/tokens.dart';
-import '../../../core/ui/widgets/endap_logo_widget.dart';
 
 class GpioTagsPage extends StatefulWidget {
   final NetworkManager networkManager;
@@ -436,9 +435,13 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
 
   Future<void> _toggleOutput(GpioHardwareChannel ch) async {
     if (!widget.networkManager.controller.isOnline) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: Color(0xFF991B1B),
-        content: Text('Hardware offline. Conecte ao controlador para testar saída real.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: AppTokens.panel2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: AppTokens.amber, width: 1.0),
+        ),
+        content: const Text('Hardware offline. Conecte ao controlador para testar saída real.'),
       ));
       return;
     }
@@ -464,9 +467,13 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
     if (success) {
       await _refreshHardware();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: Color(0xFF991B1B),
-        content: Text('Falha ao enviar comando para a saída.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: AppTokens.panel2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: AppTokens.red, width: 1.0),
+        ),
+        content: const Text('Falha ao enviar comando para a saída.'),
       ));
     }
   }
@@ -518,8 +525,6 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                     ),
                     child: Row(
                       children: [
-                        const EndapLogoWidget(size: 16, showText: false),
-                        const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +534,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                                 style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                               const Text(
-                                'Deseja mudar para I2C AHT10, Analógico ou Saída?',
+                                'Configuração física de entrada, saída, analógico ou barramento',
                                 style: TextStyle(color: Color(0xFF8C98A8), fontSize: 9.5),
                               ),
                             ],
@@ -741,14 +746,20 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                 ),
               ),
               leading: widget.onOpenDrawer != null
-                  ? const Center(
-                      child: EndapLogoWidget(size: 18, showText: false),
+                  ? TextButton(
+                      onPressed: widget.onOpenDrawer,
+                      child: const Text(
+                        'MENU',
+                        style: TextStyle(color: AppColors.text, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
                     )
                   : Builder(
-                      builder: (ctx) => IconButton(
-                        icon: const Icon(Icons.menu, color: AppColors.text, size: 20),
-                        tooltip: 'Menu',
+                      builder: (ctx) => TextButton(
                         onPressed: () => Scaffold.of(ctx).openDrawer(),
+                        child: const Text(
+                          'MENU',
+                          style: TextStyle(color: AppColors.text, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
               title: Column(
@@ -765,25 +776,25 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                     ),
                   ),
                   const Text(
-                    'Relação física: GPIO → TAG IEC → Função',
+                    'Mapeamento de canais físicos e variáveis',
                     style: TextStyle(fontSize: 10, color: AppColors.textDim),
                   ),
                 ],
               ),
               actions: [
-                IconButton(
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.refresh, color: Color(0xFF4FD1C5), size: 18),
-                  tooltip: 'Atualizar Hardware',
+                TextButton(
                   onPressed: _refreshHardware,
+                  child: const Text(
+                    'ATUALIZAR',
+                    style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10.5, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                IconButton(
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.add, color: Color(0xFF4FD1C5), size: 20),
-                  tooltip: 'Nova Tag',
+                TextButton(
                   onPressed: () => _openTagDialog(),
+                  child: const Text(
+                    'NOVA TAG',
+                    style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10.5, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -860,7 +871,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
 
   Widget _buildEmbeddedToolbar(bool isDesktop) {
     return Container(
-      height: 36,
+      height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: const BoxDecoration(
         color: AppColors.panel,
@@ -868,8 +879,6 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       ),
       child: Row(
         children: [
-          const EndapLogoWidget(size: 15, showText: false),
-          const SizedBox(width: 8),
           Text(
             'MAPEAMENTO GPIO & TAGS',
             style: TextStyle(
@@ -879,21 +888,39 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
               letterSpacing: 0.8,
             ),
           ),
+          const SizedBox(width: 10),
+          if (isDesktop)
+            const Text(
+              'Mapeamento de canais físicos e variáveis',
+              style: TextStyle(color: AppColors.textDim, fontSize: 10.5),
+            ),
           const Spacer(),
-          IconButton(
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            padding: EdgeInsets.zero,
-            icon: const Icon(Icons.refresh, color: AppColors.focus, size: 17),
-            tooltip: 'Atualizar Hardware',
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             onPressed: _refreshHardware,
+            child: const Text(
+              'ATUALIZAR',
+              style: TextStyle(color: AppColors.focus, fontSize: 10.5, fontWeight: FontWeight.bold),
+            ),
           ),
-          const SizedBox(width: 4),
-          IconButton(
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            padding: EdgeInsets.zero,
-            icon: const Icon(Icons.add, color: AppColors.focus, size: 19),
-            tooltip: 'Nova Tag',
+          const SizedBox(width: 6),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.focus.withValues(alpha: 0.14),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+            ),
             onPressed: () => _openTagDialog(),
+            child: const Text(
+              'NOVA TAG',
+              style: TextStyle(color: AppColors.focus, fontSize: 10.5, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -1039,24 +1066,22 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  const EndapLogoWidget(size: 18, showText: false),
-                  const SizedBox(width: 10),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'MAPA DE PINOS — PINOS UTILIZÁVEIS',
+                          'MAPA DE PINOS DO CONTROLADOR',
                           style: TextStyle(
                             color: Color(0xFFE7EBF0),
-                            fontSize: 12.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
                           ),
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Cada pino físico do ESP32, sua função e se está em uso',
+                          'Pinos físicos disponíveis, funções atribuídas e estado de ocupação',
                           style: TextStyle(color: Color(0xFF8C98A8), fontSize: 10.5),
                         ),
                       ],
@@ -1064,17 +1089,20 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                   ),
                   Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
+                    spacing: 8,
                     runSpacing: 2,
                     children: [
                       const _PinLegendDot(color: Color(0xFF3FBF5A), label: 'LIVRE'),
                       const _PinLegendDot(color: Color(0xFF4FD1C5), label: 'IN'),
                       const _PinLegendDot(color: Color(0xFFFF9500), label: 'OUT'),
                       const _PinLegendDot(color: Color(0xFFF43F5E), label: 'RES'),
-                      Icon(
-                        _showPinMap ? Icons.expand_less : Icons.expand_more,
-                        color: const Color(0xFF8C98A8),
-                        size: 18,
+                      Text(
+                        _showPinMap ? 'OCULTAR' : 'EXPANDIR',
+                        style: const TextStyle(
+                          color: Color(0xFF4FD1C5),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -1242,22 +1270,22 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
     );
 
     if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'IN') && digitalInputs.isNotEmpty) {
-      widgets.add(_buildSectionHeader('Entradas Digitais — $nodeLabel'));
+      widgets.add(_buildSectionHeader('Entradas Digitais - $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(digitalInputs, online));
     }
 
     if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'ANA') && analogInputs.isNotEmpty) {
-      widgets.add(_buildSectionHeader('Entradas Analógicas — $nodeLabel'));
+      widgets.add(_buildSectionHeader('Entradas Analógicas - $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(analogInputs, online));
     }
 
     if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'OUT') && digitalOutputs.isNotEmpty) {
-      widgets.add(_buildSectionHeader('Saídas Digitais — $nodeLabel'));
+      widgets.add(_buildSectionHeader('Saídas Digitais - $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(digitalOutputs, online));
     }
 
     if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'ANA') && analogOutputs.isNotEmpty) {
-      widgets.add(_buildSectionHeader('Saídas Analógicas — $nodeLabel'));
+      widgets.add(_buildSectionHeader('Saídas Analógicas - $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(analogOutputs, online));
     }
 
@@ -1299,8 +1327,8 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       final String iecCode = ch.name;
 
       final nodeOrigin = nodeIdx == 0
-          ? 'Gateway · Local'
-          : (ch.nodeId != null ? 'Field Node · ${ch.nodeId}' : 'Field Node · .229');
+          ? 'Gateway Local'
+          : (ch.nodeId != null ? 'Field Node ${ch.nodeId}' : 'Field Node');
 
       final isFieldNode = nodeIdx > 0;
       final effectiveState = _remoteChannelStates[ch.channelId] ?? ch.state;
@@ -1323,7 +1351,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
         ),
         child: Row(
           children: [
-            // Badge Unificado (IEC • GPIO)
+            // Badge Unificado (IEC e GPIO)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
@@ -1336,7 +1364,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                 ),
               ),
               child: Text(
-                ch.gpio != null ? '$iecCode • G${ch.gpio}' : iecCode,
+                ch.gpio != null ? '$iecCode G${ch.gpio}' : iecCode,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1393,13 +1421,14 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                       ],
                     ],
                   ),
-                  if (tag?.description?.isNotEmpty == true || (tag?.name != null && tag!.name != iecCode))
-                    Text(
-                      tag?.description?.isNotEmpty == true ? tag!.description! : '$nodeOrigin · GPIO ${ch.gpio ?? "?"}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Color(0xFF8C98A8), fontSize: 10),
-                    ),
+                  Text(
+                    tag?.description?.isNotEmpty == true
+                        ? tag!.description!
+                        : '$nodeOrigin, Pino GPIO ${ch.gpio ?? "-"}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Color(0xFF8C98A8), fontSize: 10),
+                  ),
                 ],
               ),
             ),
@@ -1427,7 +1456,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                 const SizedBox(width: 6),
               ] else ...[
                 SizedBox(
-                  height: 32,
+                  height: 30,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: effectiveState > 0 ? const Color(0xFFB91C1C) : const Color(0xFF059669),
@@ -1438,7 +1467,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                         ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : Text(
                             effectiveState > 0 ? 'DESLIGAR' : 'LIGAR',
-                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
@@ -1453,7 +1482,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                   border: Border.all(color: effectiveState > 0 ? AppTokens.run.withValues(alpha: 0.4) : AppTokens.line),
                 ),
                 child: Text(
-                  ch.isAnalog ? '${effectiveState} mV' : (effectiveState > 0 ? 'ON' : 'OFF'),
+                  ch.isAnalog ? '$effectiveState mV' : (effectiveState > 0 ? 'ON' : 'OFF'),
                   style: TextStyle(
                     color: effectiveState > 0 ? AppTokens.run : AppTokens.muted,
                     fontSize: 10,
@@ -1465,9 +1494,12 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
             ],
 
             if (ch.isAnalog || tag?.type == TagType.real || (tag?.address?.startsWith('%IW') ?? false)) ...[
-              IconButton(
-                icon: const Icon(Icons.tune, color: Color(0xFFF59E0B), size: 18),
-                tooltip: 'Calibração Universal de Processo',
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 onPressed: () {
                   final targetTag = tag ?? Tag(
                     id: ch.name,
@@ -1504,14 +1536,28 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                     ),
                   );
                 },
+                child: const Text(
+                  'CALIBRAR',
+                  style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.bold),
+                ),
               ),
+              const SizedBox(width: 4),
             ],
 
             // Botão de Associar/Editar Tag
-            IconButton(
-              icon: Icon(tag != null ? Icons.edit_outlined : Icons.link, color: const Color(0xFF4FD1C5), size: 18),
-              tooltip: tag != null ? 'Editar Tag' : 'Associar Tag',
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFF4FD1C5).withValues(alpha: 0.12),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+              ),
               onPressed: () => _openTagDialog(existingTag: tag, channel: ch),
+              child: Text(
+                tag != null ? 'EDITAR' : 'TAG',
+                style: const TextStyle(color: Color(0xFF4FD1C5), fontSize: 10, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -1529,17 +1575,10 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTokens.line, width: 1.0),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const EndapLogoWidget(size: 32, showText: false, isLive: false),
-          const SizedBox(height: 12),
-          Text(
-            'Nenhum Field Node adotado — adote um dispositivo na tela Rede & Topologia',
-            style: TextStyle(color: AppTokens.muted, fontSize: 13, fontWeight: FontWeight.w600),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: Text(
+        'Nenhum Field Node adotado. Adicione dispositivos na tela Rede & Topologia.',
+        style: TextStyle(color: AppTokens.muted, fontSize: 12.5, fontWeight: FontWeight.w500),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -1593,26 +1632,28 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       return Container(
         padding: const EdgeInsets.all(24),
         alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppTokens.panel,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTokens.line),
+        ),
         child: Column(
           children: [
-            const EndapLogoWidget(size: 32, showText: false, isLive: false),
-            const SizedBox(height: 10),
             Text(
-              'Nenhum canal físico detectado e nenhuma Tag cadastrada.',
+              'Nenhuma variável cadastrada nesta categoria.',
               style: TextStyle(color: AppTokens.muted, fontSize: 12),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 14),
-            ElevatedButton.icon(
+            ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTokens.focus,
                 foregroundColor: AppTokens.bg,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Cadastrar Nova Tag'),
               onPressed: () => _openTagDialog(),
+              child: const Text('Nova Tag', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
             ),
           ],
         ),
@@ -1737,11 +1778,12 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (parsedGpio != null)
-                        IconButton(
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.settings_input_composite, color: Color(0xFF8C98A8), size: 16),
-                          tooltip: 'Configurar Função do Pino (GPIO $parsedGpio)',
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           onPressed: () {
                             final targetPin = _inventoryPins.firstWhere(
                               (p) => p.gpio == parsedGpio,
@@ -1765,13 +1807,18 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                               },
                             );
                           },
+                          child: const Text(
+                            'PINO',
+                            style: TextStyle(color: Color(0xFF8C98A8), fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       if (t.type == TagType.real || (t.address?.startsWith('%IW') ?? false) || (t.address?.startsWith('AI') ?? false))
-                        IconButton(
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.tune, color: Color(0xFFF59E0B), size: 16),
-                          tooltip: 'Calibração Universal de Processo',
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                           onPressed: () {
                             showDialog(
                               context: context,
@@ -1802,13 +1849,22 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                               ),
                             );
                           },
+                          child: const Text(
+                            'CALIBRAR',
+                            style: TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      IconButton(
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.edit_outlined, color: Color(0xFF4FD1C5), size: 16),
-                        tooltip: 'Editar Tag IEC',
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         onPressed: () => _openTagDialog(existingTag: t),
+                        child: const Text(
+                          'EDITAR',
+                          style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),

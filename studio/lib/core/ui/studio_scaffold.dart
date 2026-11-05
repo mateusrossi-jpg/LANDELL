@@ -254,22 +254,14 @@ class _StudioScaffoldState extends State<StudioScaffold> {
         backgroundColor: const Color(0xFF131722),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFFF59E0B), width: 1.0),
+          side: const BorderSide(color: Color(0xFF353B4A), width: 1.0),
         ),
-        title: const Row(
-          children: [
-            Icon(Icons.note_add_outlined, color: Color(0xFFF59E0B), size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Novo Projeto em Branco (Cru)',
-                style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+        title: const Text(
+          'Novo Projeto',
+          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
         ),
         content: const Text(
-          'Deseja criar um novo projeto totalmente limpo (0 Tags, 0 Rungs e 0 Widgets)?\n\nIsso limpará os dados atuais do aplicativo para que você construa do zero.',
+          'Deseja iniciar um novo projeto? As tags, rungs e widgets atuais serão removidos.',
           style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
         ),
         actions: [
@@ -279,12 +271,12 @@ class _StudioScaffoldState extends State<StudioScaffold> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF59E0B),
-              foregroundColor: Colors.black,
+              backgroundColor: const Color(0xFF0284C7),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Zerar e Começar do Zero', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
+            child: const Text('Confirmar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
           ),
         ],
       ),
@@ -299,8 +291,8 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       _syncRuntime();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Color(0xFF064E3B),
-          content: Text('✓ Projeto cru iniciado! Construa suas Tags, Rungs e Painel HMI.'),
+          backgroundColor: Color(0xFF1E222B),
+          content: Text('Novo projeto iniciado.'),
         ),
       );
     }
@@ -507,8 +499,12 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ok ? '✓ Lógica Ladder removida do CLP com sucesso. Todas as saídas estão livres!' : 'Falha ao limpar lógica no CLP ($gatewayIp).'),
-          backgroundColor: ok ? const Color(0xFF064E3B) : const Color(0xFF991B1B),
+          content: Text(ok ? 'Lógica Ladder removida do CLP com sucesso.' : 'Falha ao limpar lógica no CLP ($gatewayIp).'),
+          backgroundColor: const Color(0xFF252A36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: ok ? const Color(0xFF10B981) : const Color(0xFFEF4444), width: 1.0),
+          ),
         ),
       );
       return;
@@ -518,12 +514,12 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       SnackBar(
         content: Row(
           children: const [
-            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF38BDF8))),
             SizedBox(width: 12),
             Text('Compilando e gravando lógica no CLP...'),
           ],
         ),
-        backgroundColor: const Color(0xFF1E3A8A),
+        backgroundColor: const Color(0xFF252A36),
         duration: const Duration(seconds: 4),
       ),
     );
@@ -588,15 +584,23 @@ class _StudioScaffoldState extends State<StudioScaffold> {
     if (allOk) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ Deploy realizado com sucesso: $targetDesc! Modo RUN ativo.'),
-          backgroundColor: const Color(0xFF064E3B),
+          content: Text('Deploy realizado com sucesso: $targetDesc. Modo RUN ativo.'),
+          backgroundColor: const Color(0xFF252A36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Color(0xFF10B981), width: 1.0),
+          ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✕ Falha ao gravar lógica em $targetDesc. Verifique conexão.'),
-          backgroundColor: const Color(0xFFDC2626),
+          content: Text('Falha ao gravar lógica em $targetDesc. Verifique a conexão.'),
+          backgroundColor: const Color(0xFF252A36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Color(0xFFEF4444), width: 1.0),
+          ),
         ),
       );
     }
@@ -611,7 +615,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nenhum Gateway configurado para leitura.'),
-          backgroundColor: Color(0xFFDC2626),
         ),
       );
       return;
@@ -621,12 +624,12 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       SnackBar(
         content: Row(
           children: const [
-            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF38BDF8))),
             SizedBox(width: 12),
             Text('Baixando lógica em execução no CLP...'),
           ],
         ),
-        backgroundColor: const Color(0xFF1E3A8A),
+        backgroundColor: const Color(0xFF252A36),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -651,15 +654,23 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       await saveCurrentLadder(_project);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ ${fetched.networks.length} Rungs recuperados com sucesso do CLP!'),
-          backgroundColor: const Color(0xFF064E3B),
+          content: Text('${fetched.networks.length} Rungs recuperados do CLP.'),
+          backgroundColor: const Color(0xFF252A36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Color(0xFF10B981), width: 1.0),
+          ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Nenhuma lógica prévia encontrada no CLP ($gatewayIp).'),
-          backgroundColor: const Color(0xFFD97706),
+          backgroundColor: const Color(0xFF252A36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Color(0xFFF59E0B), width: 1.0),
+          ),
         ),
       );
     }
@@ -848,8 +859,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.account_circle_outlined, size: 16, color: Color(0xFF0284C7)),
-                            const SizedBox(width: 8),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -875,7 +884,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.swap_horiz, size: 14, color: Color(0xFF64748B)),
+                            const Text(
+                              'PERFIL',
+                              style: TextStyle(
+                                color: Color(0xFF38BDF8),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -890,31 +907,31 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     _buildDrawerItem(
                       index: 0,
                       title: 'Painel HMI (Telas & Kiosk)',
-                      subtitle: 'Supervisão de processo, IHM de máquina e modo tablet',
+                      subtitle: 'Supervisão de processo e operação',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 1,
                       title: 'Lógica Ladder IEC',
-                      subtitle: 'Rungs, tags e lógica do controlador',
+                      subtitle: 'Rungs, variáveis e lógica do controlador',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 2,
                       title: 'GPIO / TAGS',
-                      subtitle: 'Mapeamento físico GPIO ↔ TAG IEC ↔ Função',
+                      subtitle: 'Mapeamento de pinos físicos e variáveis',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 4,
                       title: 'Diagnósticos de Campo',
-                      subtitle: 'Live Energy Flow e Forçamento de E/S',
+                      subtitle: 'Monitoramento de continuidade e forçamento de E/S',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 5,
                       title: 'Gestão, OEE & Relatórios',
-                      subtitle: 'Indicadores, perdas e frota de nós',
+                      subtitle: 'Indicadores operacionais e frota de nós',
                     ),
                   ],
                 ),
@@ -932,7 +949,7 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     const Padding(
                       padding: EdgeInsets.only(left: 12, top: 4, bottom: 8),
                       child: Text(
-                        'FERRAMENTAS & DIAGNÓSTICO',
+                        'FERRAMENTAS E SISTEMA',
                         style: TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 10,
@@ -944,7 +961,7 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     _buildDrawerItem(
                       index: 3,
                       title: 'Rede & Topologia',
-                      subtitle: 'Descoberta de nós, IP e status Wi-Fi',
+                      subtitle: 'Descoberta de dispositivos, IP e conectividade',
                     ),
                     const SizedBox(height: 4),
                     Material(
@@ -952,14 +969,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                       child: ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                        leading: Container(
-                          width: 3,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF64748B),
-                            borderRadius: BorderRadius.circular(1.5),
-                          ),
-                        ),
                         title: const Text(
                           'Trilha de Auditoria & Eventos',
                           style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.w600),
@@ -980,14 +989,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                       child: ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                        leading: Container(
-                          width: 3,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF64748B),
-                            borderRadius: BorderRadius.circular(1.5),
-                          ),
-                        ),
                         title: const Text(
                           'Gestão de Usuários & Login',
                           style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.w600),
@@ -1021,21 +1022,13 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E222B),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4), width: 1.0),
+                      border: Border.all(color: const Color(0xFF353B4A), width: 1.0),
                     ),
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      leading: Container(
-                        width: 3,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B),
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ),
-                      title: const Text('Novo Projeto em Branco (Cru)', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 12.5, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('Zerar tags, lógica e widgets para criar do zero', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
+                      title: const Text('Novo Projeto', style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Limpar projeto atual', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
                       onTap: () {
                         Navigator.pop(context);
                         _confirmResetToRawProject();
@@ -1058,16 +1051,8 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      leading: Container(
-                        width: 3,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ),
                       title: const Text('Exportar Projeto', style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('Salvar pacote .endap consolidado', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
+                      subtitle: const Text('Salvar arquivo de projeto .endap', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
                       onTap: () {
                         Navigator.pop(context);
                         ExportProjectDialog.show(context, project: _project);
@@ -1090,16 +1075,8 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      leading: Container(
-                        width: 3,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0284C7),
-                          borderRadius: BorderRadius.circular(1.5),
-                        ),
-                      ),
-                      title: const Text('Restaurar Pacote .endap', style: TextStyle(color: Color(0xFF0284C7), fontSize: 12.5, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('Importar backup completo da máquina', style: TextStyle(color: Color(0xFF64748B), fontSize: 10.5)),
+                      title: const Text('Importar Projeto', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12.5, fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Carregar arquivo de projeto .endap', style: TextStyle(color: Color(0xFF64748B), fontSize: 10.5)),
                       onTap: () async {
                         Navigator.pop(context);
                         final imported = await importProject();
@@ -1113,7 +1090,7 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 backgroundColor: const Color(0xFF064E3B),
-                                content: Text('✓ Pacote "${imported.name}" restaurado com sucesso!'),
+                                content: Text('Projeto "${imported.name}" importado com sucesso.'),
                               ),
                             );
                           }
@@ -1133,14 +1110,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                 child: ListTile(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  leading: Container(
-                    width: 3,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                  ),
                   title: const Text('Encerrar Sessão', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12.5, fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -1277,33 +1246,16 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                   ),
                 ),
                 alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isSelected)
-                      const EndapLogoWidget(size: 13, showText: false)
-                    else
-                      Container(
-                        width: 5,
-                        height: 5,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF475569),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: isSelected ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8),
-                        fontSize: 9.5,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8),
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    letterSpacing: 0.6,
+                  ),
                 ),
               ),
             ),
@@ -1351,31 +1303,21 @@ class _StudioScaffoldState extends State<StudioScaffold> {
       child: Ink(
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF252A36) : Colors.transparent,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected ? const Color(0xFF0284C7).withValues(alpha: 0.6) : Colors.transparent,
             width: 1.0,
           ),
         ),
         child: ListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          leading: isSelected
-              ? const EndapLogoWidget(size: 18, showText: false)
-              : Container(
-                  width: 3,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF334155),
-                    borderRadius: BorderRadius.circular(1.5),
-                  ),
-                ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
           title: Text(
             title,
             style: TextStyle(
               color: isSelected ? const Color(0xFFF1F5F9) : const Color(0xFFE2E8F0),
               fontSize: 12.5,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               letterSpacing: 0.2,
             ),
           ),

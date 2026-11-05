@@ -9,7 +9,6 @@ import '../../../ladder/models/ladder_project.dart';
 import '../../../ladder/models/tag.dart';
 import '../../../ladder/runtime/ladder_runtime.dart';
 import '../widgets/audit_log_dialog.dart';
-import '../widgets/endap_logo_widget.dart';
 
 /// Tela do GESTOR / SUPERVISOR INDUSTRIAL: Análise Real do Controlador, Frota de Nós e Auditoria
 /// 100% conectada ao NetworkManager, TagStateStore e EventBus (Zero dados mockados).
@@ -234,15 +233,22 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
       ),
       child: Row(
         children: [
-          const EndapLogoWidget(size: 16, showText: false),
-          const SizedBox(width: 8),
+          Container(
+            width: 3,
+            height: 28,
+            decoration: BoxDecoration(
+              color: isOnline ? IndustrialTokens.runGreen : IndustrialTokens.telemetryCyan,
+              borderRadius: BorderRadius.circular(1.5),
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'PAINEL DE OPERAÇÃO & GESTÃO DO CONTROLADOR',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
@@ -252,7 +258,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${_config.lineName} • GATEWAY $gatewayIp • ${isOnline ? "HARDWARE ONLINE" : "EMULAÇÃO LOCAL"}',
+                  '${_config.lineName}  |  GATEWAY $gatewayIp  |  ${isOnline ? "HARDWARE ONLINE" : "EMULAÇÃO LOCAL"}',
                   style: TextStyle(
                     color: isOnline ? IndustrialTokens.runGreen : Colors.white60,
                     fontSize: 9.5,
@@ -267,10 +273,12 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
           ),
           if (SessionManager.instance.isIntegrator) ...[
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.tune, color: IndustrialTokens.telemetryCyan, size: 20),
-              tooltip: 'Configurar Metas da Célula',
+            TextButton(
               onPressed: _showConfigDialog,
+              child: const Text(
+                'CONFIGURAR',
+                style: TextStyle(color: IndustrialTokens.telemetryCyan, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ],

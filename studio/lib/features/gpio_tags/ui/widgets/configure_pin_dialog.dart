@@ -6,7 +6,6 @@ import '../../../../ladder_autosave.dart';
 import '../../services/gpio_service.dart';
 import 'analog_calibration_dialog.dart';
 import '../../../../design_system/tokens.dart';
-import '../../../../core/ui/widgets/endap_logo_widget.dart';
 
 enum GpioFunctionType {
   digitalInput,
@@ -277,37 +276,22 @@ class _ConfigurePinDialogState extends State<ConfigurePinDialog> {
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: AppTokens.line, width: 1.0),
       ),
-      title: Row(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4FD1C5).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
+          Text(
+            'CONFIGURAR GPIO $gpio',
+            style: const TextStyle(
+              color: Color(0xFFE7EBF0),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.1,
             ),
-            child: const EndapLogoWidget(size: 20, showText: false),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CONFIGURAR GPIO $gpio',
-                  style: const TextStyle(
-                    color: Color(0xFFE7EBF0),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Hardware Setup Industrial • Atribuição Dinâmica de TAGs',
-                  style: const TextStyle(color: Color(0xFF8C98A8), fontSize: 10),
-                ),
-              ],
-            ),
+          const SizedBox(height: 2),
+          const Text(
+            'Configuração física do pino e atribuição de variável',
+            style: TextStyle(color: Color(0xFF8C98A8), fontSize: 10),
           ),
         ],
       ),
@@ -621,7 +605,14 @@ class _ConfigurePinDialogState extends State<ConfigurePinDialog> {
           ),
           child: Row(
             children: [
-              Icon(icon, color: allowed ? color : AppTokens.muted.withValues(alpha: 0.5), size: 18),
+              Container(
+                width: 3,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: allowed ? color : AppTokens.muted.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

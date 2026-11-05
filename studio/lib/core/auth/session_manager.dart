@@ -9,9 +9,9 @@ class SessionManager {
   static const String _kSessionUserKey = 'endap_session_user';
   static const String _kSessionRoleKey = 'endap_session_role';
 
-  bool _isLoggedIn = true;
-  String? _currentUser = 'ENGENHEIRO';
-  String? _currentRole = 'INTEGRADOR';
+  bool _isLoggedIn = false;
+  String? _currentUser;
+  String? _currentRole;
   String? _sessionToken;
 
   bool get isLoggedIn => _isLoggedIn;
@@ -44,17 +44,21 @@ class SessionManager {
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
-      // Por padrão inicia logado como Integrador para permitir construção completa do projeto
-      _isLoggedIn = prefs.getBool(_kSessionActiveKey) ?? true;
-      _currentUser = prefs.getString(_kSessionUserKey) ?? 'ENGENHEIRO';
-      _currentRole = prefs.getString(_kSessionRoleKey) ?? 'INTEGRADOR';
-      if (_isLoggedIn && _currentUser != null) {
-        StudioEventBus.instance.emit(
-          type: 'AUTH',
-          source: 'SESSION_MANAGER',
-          message: 'SESSÃO RESTAURADA: $_currentUser ($_currentRole)',
-          severity: EventSeverity.info,
-        );
+      _isLoggedIn = prefs.getBool(_kSessionActiveKey) ?? false;
+      if (_isLoggedIn) {
+        _currentUser = prefs.getString(_kSessionUserKey);
+        _currentRole = prefs.getString(_kSessionRoleKey) ?? 'INTEGRADOR';
+        if (_currentUser != null) {
+          StudioEventBus.instance.emit(
+            type: 'AUTH',
+            source: 'SESSION_MANAGER',
+            message: 'SESSÃO RESTAURADA: $_currentUser ($_currentRole)',
+            severity: EventSeverity.info,
+          );
+        }
+      } else {
+        _currentUser = null;
+        _currentRole = null;
       }
     } catch (_) {
       // Offline fallback
@@ -77,8 +81,10 @@ class SessionManager {
         _currentRole = 'INTEGRADOR';
       } else if (upper.contains('MANUT')) {
         _currentRole = 'MANUTENÇÃO';
-      } else if (upper.contains('GEST')) {
+      } else if (upper.contains('GEST') || upper.contains('SUPERV')) {
         _currentRole = 'GESTOR';
+      } else if (upper.contains('OPER')) {
+        _currentRole = 'OPERADOR INDUSTRIAL';
       } else {
         _currentRole = 'INTEGRADOR';
       }

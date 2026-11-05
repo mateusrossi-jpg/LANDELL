@@ -215,74 +215,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-
-                  // Acesso Rápido Orientado por Perfil (1 Toque)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppTokens.panel,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTokens.line, width: 1.0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const EndapLogoWidget(size: 14, showText: false),
-                            const SizedBox(width: 6),
-                            Text(
-                              'ACESSO RÁPIDO POR PERFIL (1 TOQUE)',
-                              style: TextStyle(
-                                color: AppTokens.focus,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            _buildPersonaQuickPill(
-                              label: 'Engenheiro',
-                              subtitle: 'Acesso Total + Ladder',
-                              color: const Color(0xFF38BDF8),
-                              onTap: () => _handleQuickPersonaLogin('ENGENHEIRO', 'INTEGRADOR'),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildPersonaQuickPill(
-                              label: 'Manutenção',
-                              subtitle: 'Diagnóstico & Force',
-                              color: const Color(0xFFF59E0B),
-                              onTap: () => _handleQuickPersonaLogin('MANUTENCAO', 'MANUTENÇÃO'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            _buildPersonaQuickPill(
-                              label: 'Operador IHM',
-                              subtitle: 'Painel & Comando',
-                              color: const Color(0xFF10B981),
-                              onTap: () => _handleQuickPersonaLogin('OPERADOR', 'OPERADOR INDUSTRIAL'),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildPersonaQuickPill(
-                              label: 'Gestor OEE',
-                              subtitle: 'Métricas & Auditoria',
-                              color: const Color(0xFFA855F7),
-                              onTap: () => _handleQuickPersonaLogin('GESTOR', 'GESTOR'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 28),
 
                   // Login Form Card
                   Container(
@@ -296,7 +229,7 @@ class _LoginPageState extends State<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'IDENTIFICAÇÃO DO OPERADOR',
+                          'IDENTIFICAÇÃO DO USUÁRIO',
                           style: TextStyle(
                             color: AppTokens.muted,
                             fontSize: 11,
@@ -326,9 +259,8 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           decoration: InputDecoration(
                             isDense: true,
-                            hintText: 'ex: operador_01',
+                            hintText: 'Digite seu usuário',
                             hintStyle: TextStyle(color: AppTokens.muted.withValues(alpha: 0.6), fontSize: 12),
-                            prefixIcon: Icon(Icons.person_outline, color: AppTokens.focus, size: 18),
                             filled: true,
                             fillColor: AppTokens.panel2,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -371,14 +303,16 @@ class _LoginPageState extends State<LoginPage> {
                             isDense: true,
                             hintText: '••••••••',
                             hintStyle: TextStyle(color: AppTokens.muted.withValues(alpha: 0.6), fontSize: 12),
-                            prefixIcon: Icon(Icons.lock_outline, color: AppTokens.focus, size: 18),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                color: AppTokens.muted,
-                                size: 18,
-                              ),
+                            suffixIcon: TextButton(
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                              child: Text(
+                                _obscurePassword ? 'MOSTRAR' : 'OCULTAR',
+                                style: TextStyle(
+                                  color: AppTokens.muted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                             filled: true,
                             fillColor: AppTokens.panel2,
@@ -406,17 +340,9 @@ class _LoginPageState extends State<LoginPage> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: AppTokens.error.withValues(alpha: 0.4)),
                             ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: AppTokens.error, size: 16),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: TextStyle(color: AppTokens.error, fontSize: 11, fontWeight: FontWeight.w500),
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(color: AppTokens.error, fontSize: 11, fontWeight: FontWeight.w500),
                             ),
                           ),
                         ],
@@ -455,7 +381,68 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // Perfis de Operação
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTokens.panel,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTokens.line, width: 1.0),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SELECIONAR PERFIL DE ACESSO',
+                          style: TextStyle(
+                            color: AppTokens.muted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _buildPersonaQuickPill(
+                              label: 'Engenheiro',
+                              subtitle: 'Acesso completo',
+                              color: const Color(0xFF38BDF8),
+                              onTap: () => _handleQuickPersonaLogin('ENGENHEIRO', 'INTEGRADOR'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPersonaQuickPill(
+                              label: 'Manutenção',
+                              subtitle: 'Diagnóstico e E/S',
+                              color: const Color(0xFFF59E0B),
+                              onTap: () => _handleQuickPersonaLogin('MANUTENCAO', 'MANUTENÇÃO'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _buildPersonaQuickPill(
+                              label: 'Operador IHM',
+                              subtitle: 'Supervisão e comando',
+                              color: const Color(0xFF10B981),
+                              onTap: () => _handleQuickPersonaLogin('OPERADOR', 'OPERADOR INDUSTRIAL'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildPersonaQuickPill(
+                              label: 'Gestor',
+                              subtitle: 'Indicadores e auditoria',
+                              color: const Color(0xFFA855F7),
+                              onTap: () => _handleQuickPersonaLogin('GESTOR', 'GESTOR'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
                   // Secondary Technical Access Button
                   SizedBox(

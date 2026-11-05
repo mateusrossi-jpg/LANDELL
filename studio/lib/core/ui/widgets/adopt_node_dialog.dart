@@ -1,9 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../design_system/industrial_tokens.dart';
 import '../../services/network_manager.dart';
-import '../../network/authenticated_http_client.dart';
-import 'endap_logo_widget.dart';
 
 enum IndustrialNodeProfile {
   fieldNode,
@@ -15,13 +12,6 @@ enum IndustrialNodeProfile {
 enum IndustrialClusterTransport {
   espNow,
   wifiUdp,
-}
-
-enum IndustrialTemplatePreset {
-  motorDirectStart,
-  pidTankControl,
-  irrigationSoil,
-  pureRemoteIo,
 }
 
 class AdoptNodeDialog extends StatefulWidget {
@@ -57,7 +47,6 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
   late final TextEditingController _nameController;
   IndustrialNodeProfile _selectedProfile = IndustrialNodeProfile.fieldNode;
   IndustrialClusterTransport _selectedTransport = IndustrialClusterTransport.espNow;
-  IndustrialTemplatePreset _selectedTemplate = IndustrialTemplatePreset.motorDirectStart;
   bool _isSubmitting = false;
   String? _errorMessage;
 
@@ -94,29 +83,11 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
     }
   }
 
-  String _templateToString(IndustrialTemplatePreset template) {
-    switch (template) {
-      case IndustrialTemplatePreset.motorDirectStart:
-        return 'Partida Direta de Motores (Selo + Térmico)';
-      case IndustrialTemplatePreset.pidTankControl:
-        return 'Controle de Nível / Vazão (PID Determinístico)';
-      case IndustrialTemplatePreset.irrigationSoil:
-        return 'Estação de Solo & Irrigação Automática';
-      case IndustrialTemplatePreset.pureRemoteIo:
-        return 'E/S Remota Pura (Fieldbus Transparente)';
-    }
-  }
-
   Future<void> _handleAdopt() async {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
-
-    final cleanTargetId = widget.node.id.replaceAll('LANDELL-', '').replaceAll('ENDAP-', '');
-    final name = _nameController.text.trim().isEmpty
-        ? 'LANDELL-$cleanTargetId'
-        : _nameController.text.trim();
 
     try {
       final success = await widget.networkManager.adoptNode(
@@ -129,26 +100,9 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
         throw Exception(err.isNotEmpty ? err : 'Falha ao adotar nó via claim.');
       }
 
-      // Aplica template de aplicação no nó
+      // Configura meio de transporte escolhido (ESP-NOW vs Wi-Fi UDP)
       final gatewayIp = widget.networkManager.gatewayIp.trim();
       if (gatewayIp.isNotEmpty) {
-        final client = AuthenticatedHttpClient();
-        final templatePayload = {
-          'target_node_id': cleanTargetId,
-          'template': _selectedTemplate.name,
-          'node_name': name,
-          'profile': _selectedProfile.name,
-        };
-
-        try {
-          await client.post(
-            Uri.parse('http://$gatewayIp/api/nodes/template/apply'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(templatePayload),
-          ).timeout(const Duration(seconds: 4));
-        } catch (_) {}
-
-        // Aplica meio de transporte escolhido (ESP-NOW vs Wi-Fi UDP)
         final transportStr = _selectedTransport == IndustrialClusterTransport.espNow ? 'wifi-now' : 'wifi-udp';
         await widget.networkManager.setNodeTransport(widget.node.id, transportStr);
       }
@@ -188,16 +142,6 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
               // Cabeçalho
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: IndustrialTokens.bgSubtle,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: IndustrialTokens.telemetryCyan),
-                    ),
-                    child: const EndapLogoWidget(size: 20, showText: false),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +156,7 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
                           ),
                         ),
                         Text(
-                          'ID: ${widget.node.id} • IP: ${widget.node.ip}',
+                          'ID: ${widget.node.id}  |  IP: ${widget.node.ip}',
                           style: const TextStyle(
                             color: IndustrialTokens.infoBlue,
                             fontSize: 11,
@@ -316,42 +260,7 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
               ),
               const SizedBox(height: 16),
 
-              // 3. Template Inicial
-              const Text(
-                'TEMPLATE INICIAL DE APLICAÇÃO (AUTOMAÇÃO)',
-                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: IndustrialTokens.bgCanvas,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: IndustrialTokens.borderSubtle),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<IndustrialTemplatePreset>(
-                    value: _selectedTemplate,
-                    isExpanded: true,
-                    dropdownColor: IndustrialTokens.bgPanel,
-                    items: IndustrialTemplatePreset.values.map((t) {
-                      return DropdownMenuItem(
-                        value: t,
-                        child: Text(
-                          _templateToString(t),
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: _isSubmitting ? null : (v) {
-                      if (v != null) setState(() => _selectedTemplate = v);
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 4. Meio de Transporte do Cluster
+              // 3. Meio de Transporte do Cluster
               const Text(
                 'MEIO DE TRANSPORTE DO CLUSTER (COMUNICAÇÃO)',
                 style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
