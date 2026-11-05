@@ -4,7 +4,7 @@ import 'node_config.dart';
 /// Representa apenas a essencia instrucional. Nenhuma coordenada visual permitida.
 class LadderNode {
   final String id;
-  final NodeType type;
+  NodeType type;
   NodeConfig config;
   bool isEnergized = false;
   bool isConducting = false;

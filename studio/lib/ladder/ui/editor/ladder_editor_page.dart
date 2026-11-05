@@ -124,12 +124,12 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     _project.networks
       ..clear()
       ..addAll(source.networks);
-    _project.dashboardWidgets
-      ..clear()
-      ..addAll(source.dashboardWidgets);
-    _project.hmiScreens
-      ..clear()
-      ..addAll(source.hmiScreens);
+    _project.dashboardWidgets = source.dashboardWidgets != null
+        ? List.of(source.dashboardWidgets!)
+        : null;
+    _project.hmiScreens = source.hmiScreens != null
+        ? List.of(source.hmiScreens!)
+        : null;
   }
 
   void _syncOutputs() {
