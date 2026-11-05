@@ -35,7 +35,6 @@ class LadderNodeVisual extends StatelessWidget {
     final tagText = node.config.tagId ?? '';
     final hasTag = tagText.isNotEmpty;
     final Tag? tagObj = (hasTag && tags != null) ? tags![tagText] : null;
-    final bool isForced = tagObj?.isForced ?? false;
     final displayTag = hasTag ? (tagObj?.name ?? tagText) : '[Vincular]';
     final subAddress = (hasTag && tagObj?.address != null && tagObj!.address != displayTag)
         ? tagObj.address!
@@ -46,20 +45,16 @@ class LadderNodeVisual extends StatelessWidget {
       if (subAddress != null && subAddress.isNotEmpty) {
         parts.add(subAddress);
       }
-      if (isForced) {
-        parts.add('FORCE');
-      } else if (isLatchedSet) {
+      if (isLatchedSet) {
         parts.add('SET');
       } else if (isActive) {
         parts.add('ON');
       }
       if (parts.isEmpty) return const SizedBox.shrink();
 
-      final Color pillColor = isForced
-          ? const Color(0xFFF59E0B)
-          : (isLatchedSet
-              ? const Color(0xFF38BDF8)
-              : (isActive ? const Color(0xFF10B981) : const Color(0xFF94A3B8)));
+      final Color pillColor = isLatchedSet
+          ? const Color(0xFF38BDF8)
+          : (isActive ? const Color(0xFF10B981) : const Color(0xFF94A3B8));
 
       return Positioned(
         bottom: 2,
