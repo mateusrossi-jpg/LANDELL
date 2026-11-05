@@ -76,10 +76,13 @@ class AppTokens {
   static const Color focus = AppColors.focus;
   static const Color primary = AppColors.primary;
   static const Color run = AppColors.run;
+  static const Color green = AppColors.run;
   static const Color success = AppColors.success;
   static const Color warn = AppColors.warn;
+  static const Color amber = AppColors.warn;
   static const Color warning = AppColors.warning;
   static const Color fault = AppColors.fault;
+  static const Color red = AppColors.fault;
   static const Color error = AppColors.error;
 }
 
