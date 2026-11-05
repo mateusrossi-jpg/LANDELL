@@ -12,6 +12,7 @@ import '../services/gpio_service.dart';
 import 'widgets/configure_pin_dialog.dart';
 import 'widgets/analog_calibration_dialog.dart';
 import '../../../design_system/tokens.dart';
+import '../../../core/ui/widgets/endap_logo_widget.dart';
 
 class GpioTagsPage extends StatefulWidget {
   final NetworkManager networkManager;
@@ -517,7 +518,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.settings_input_composite, color: Color(0xFF4FD1C5), size: 18),
+                        const EndapLogoWidget(size: 16, showText: false),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
@@ -741,7 +742,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
               ),
               leading: widget.onOpenDrawer != null
                   ? const Center(
-                      child: Icon(Icons.memory_outlined, color: AppColors.focus, size: 18),
+                      child: EndapLogoWidget(size: 18, showText: false),
                     )
                   : Builder(
                       builder: (ctx) => IconButton(
@@ -867,7 +868,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.memory_outlined, color: AppColors.focus, size: 16),
+          const EndapLogoWidget(size: 15, showText: false),
           const SizedBox(width: 8),
           Text(
             'MAPEAMENTO GPIO & TAGS',
@@ -940,33 +941,32 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildFilterSegment('Todos', Icons.devices),
+            _buildFilterSegment('Todos'),
             const SizedBox(width: 4),
             _buildFilterSegment(
               isExclusive ? 'Gateway [DEDICADO]' : 'Gateway',
-              isExclusive ? Icons.lock_outline : Icons.router,
               filterKey: 'Gateway',
             ),
             const SizedBox(width: 4),
             if (fieldNodes.isEmpty)
-              _buildFilterSegment('Field Node', Icons.developer_board, filterKey: 'Field Node')
+              _buildFilterSegment('Field Node', filterKey: 'Field Node')
             else
               ...fieldNodes.map((n) {
                 final label = 'Nó ${n.controllerIndex}';
                 return Padding(
                   padding: const EdgeInsets.only(right: 4),
-                  child: _buildFilterSegment(label, Icons.memory, filterKey: 'node_${n.controllerIndex}'),
+                  child: _buildFilterSegment(label, filterKey: 'node_${n.controllerIndex}'),
                 );
               }),
             const SizedBox(width: 4),
-            _buildFilterSegment('Memória (M)', Icons.data_object, filterKey: 'Memória / Tags Internas'),
+            _buildFilterSegment('Memória (M)', filterKey: 'Memória / Tags Internas'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFilterSegment(String label, IconData icon, {String? filterKey}) {
+  Widget _buildFilterSegment(String label, {String? filterKey}) {
     final key = filterKey ?? label;
     final isSelected = _selectedNodeFilter == key;
     return InkWell(
@@ -974,25 +974,19 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       borderRadius: BorderRadius.circular(8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected ? AppTokens.focus : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: isSelected ? AppTokens.bg : AppTokens.muted),
-            const SizedBox(width: 4),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: isSelected ? AppTokens.bg : AppTokens.muted,
-                fontSize: 10.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-              ),
-            ),
-          ],
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            color: isSelected ? AppTokens.bg : AppTokens.muted,
+            fontSize: 10.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            letterSpacing: 0.4,
+          ),
         ),
       ),
     );
@@ -1003,7 +997,14 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       child: Row(
         children: [
-          const Icon(Icons.sensors, color: Color(0xFF4FD1C5), size: 16),
+          Container(
+            width: 3,
+            height: 12,
+            decoration: BoxDecoration(
+              color: const Color(0xFF4FD1C5),
+              borderRadius: BorderRadius.circular(1.5),
+            ),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -1038,7 +1039,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(Icons.developer_board, color: Color(0xFF4FD1C5), size: 18),
+                  const EndapLogoWidget(size: 18, showText: false),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Column(
@@ -1531,7 +1532,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.developer_board_off, color: AppTokens.muted, size: 40),
+          const EndapLogoWidget(size: 32, showText: false, isLive: false),
           const SizedBox(height: 12),
           Text(
             'Nenhum Field Node adotado — adote um dispositivo na tela Rede & Topologia',
@@ -1594,7 +1595,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
         alignment: Alignment.center,
         child: Column(
           children: [
-            Icon(Icons.developer_board_off, color: AppTokens.muted, size: 36),
+            const EndapLogoWidget(size: 32, showText: false, isLive: false),
             const SizedBox(height: 10),
             Text(
               'Nenhum canal físico detectado e nenhuma Tag cadastrada.',
@@ -1641,7 +1642,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
              !a.startsWith('IN') && !a.startsWith('OUT') && !a.startsWith('AIN') && !a.startsWith('AOUT');
     }).toList();
 
-    Widget buildSection(String title, Color headerColor, IconData icon, List<Tag> sectionTags) {
+    Widget buildSection(String title, Color headerColor, List<Tag> sectionTags) {
       if (sectionTags.isEmpty) return const SizedBox.shrink();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1650,7 +1651,14 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             child: Row(
               children: [
-                Icon(icon, color: headerColor, size: 16),
+                Container(
+                  width: 3,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: headerColor,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -1815,11 +1823,11 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildSection('Entradas Digitais (I0.x)', const Color(0xFF4FD1C5), Icons.login, inputs),
-        buildSection('Saídas Digitais (Q0.x)', const Color(0xFFFF9500), Icons.logout, outputs),
-        buildSection('Entradas Analógicas (AI0.x)', const Color(0xFF8B5CF6), Icons.sensors, analogInputs),
-        buildSection('Saídas Analógicas (AO0.x - DAC)', const Color(0xFFEC4899), Icons.tune, analogOutputs),
-        buildSection('Outras Variáveis / Memórias', const Color(0xFFE0A430), Icons.memory, others),
+        buildSection('Entradas Digitais (I0.x)', const Color(0xFF4FD1C5), inputs),
+        buildSection('Saídas Digitais (Q0.x)', const Color(0xFFFF9500), outputs),
+        buildSection('Entradas Analógicas (AI0.x)', const Color(0xFF8B5CF6), analogInputs),
+        buildSection('Saídas Analógicas (AO0.x - DAC)', const Color(0xFFEC4899), analogOutputs),
+        buildSection('Outras Variáveis / Memórias', const Color(0xFFE0A430), others),
       ],
     );
   }

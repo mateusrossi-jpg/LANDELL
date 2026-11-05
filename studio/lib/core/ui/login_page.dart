@@ -119,7 +119,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildPersonaQuickPill({
-    required IconData icon,
     required String label,
     required String subtitle,
     required Color color,
@@ -138,7 +137,14 @@ class _LoginPageState extends State<LoginPage> {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 16, color: color),
+              Container(
+                width: 3,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -224,7 +230,7 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.bolt, size: 15, color: AppTokens.focus),
+                            const EndapLogoWidget(size: 14, showText: false),
                             const SizedBox(width: 6),
                             Text(
                               'ACESSO RÁPIDO POR PERFIL (1 TOQUE)',
@@ -241,7 +247,6 @@ class _LoginPageState extends State<LoginPage> {
                         Row(
                           children: [
                             _buildPersonaQuickPill(
-                              icon: Icons.engineering_outlined,
                               label: 'Engenheiro',
                               subtitle: 'Acesso Total + Ladder',
                               color: const Color(0xFF38BDF8),
@@ -249,7 +254,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(width: 8),
                             _buildPersonaQuickPill(
-                              icon: Icons.build_circle_outlined,
                               label: 'Manutenção',
                               subtitle: 'Diagnóstico & Force',
                               color: const Color(0xFFF59E0B),
@@ -261,7 +265,6 @@ class _LoginPageState extends State<LoginPage> {
                         Row(
                           children: [
                             _buildPersonaQuickPill(
-                              icon: Icons.dashboard_outlined,
                               label: 'Operador IHM',
                               subtitle: 'Painel & Comando',
                               color: const Color(0xFF10B981),
@@ -269,7 +272,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(width: 8),
                             _buildPersonaQuickPill(
-                              icon: Icons.analytics_outlined,
                               label: 'Gestor OEE',
                               subtitle: 'Métricas & Auditoria',
                               color: const Color(0xFFA855F7),
@@ -458,15 +460,15 @@ class _LoginPageState extends State<LoginPage> {
                   // Secondary Technical Access Button
                   SizedBox(
                     height: 44,
-                    child: OutlinedButton.icon(
+                    child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTokens.textPrimary,
                         side: BorderSide(color: AppTokens.line),
                         backgroundColor: AppTokens.panel2.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      icon: Icon(Icons.build_outlined, size: 16, color: AppTokens.focus),
-                      label: const Text(
+                      onPressed: _isLoading ? null : _handleTechnicalAccess,
+                      child: const Text(
                         'ACESSO TÉCNICO EM CAMPO',
                         style: TextStyle(
                           fontSize: 11.5,
@@ -474,7 +476,6 @@ class _LoginPageState extends State<LoginPage> {
                           letterSpacing: 1.0,
                         ),
                       ),
-                      onPressed: _isLoading ? null : _handleTechnicalAccess,
                     ),
                   ),
                   const SizedBox(height: 24),

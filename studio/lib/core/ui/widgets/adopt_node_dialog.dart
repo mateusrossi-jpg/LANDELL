@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../design_system/industrial_tokens.dart';
 import '../../services/network_manager.dart';
 import '../../network/authenticated_http_client.dart';
+import 'endap_logo_widget.dart';
 
 enum IndustrialNodeProfile {
   fieldNode,
@@ -194,7 +195,7 @@ class _AdoptNodeDialogState extends State<AdoptNodeDialog> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: IndustrialTokens.telemetryCyan),
                     ),
-                    child: const Icon(Icons.hub_outlined, color: IndustrialTokens.telemetryCyan, size: 22),
+                    child: const EndapLogoWidget(size: 20, showText: false),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

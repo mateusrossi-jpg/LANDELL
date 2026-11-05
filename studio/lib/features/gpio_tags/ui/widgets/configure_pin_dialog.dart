@@ -6,6 +6,7 @@ import '../../../../ladder_autosave.dart';
 import '../../services/gpio_service.dart';
 import 'analog_calibration_dialog.dart';
 import '../../../../design_system/tokens.dart';
+import '../../../../core/ui/widgets/endap_logo_widget.dart';
 
 enum GpioFunctionType {
   digitalInput,
@@ -284,7 +285,7 @@ class _ConfigurePinDialogState extends State<ConfigurePinDialog> {
               color: const Color(0xFF4FD1C5).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.settings_input_composite, color: Color(0xFF4FD1C5), size: 20),
+            child: const EndapLogoWidget(size: 20, showText: false),
           ),
           const SizedBox(width: 10),
           Expanded(

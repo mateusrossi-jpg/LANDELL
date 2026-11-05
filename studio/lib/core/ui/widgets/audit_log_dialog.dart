@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../design_system/tokens.dart';
 import '../../services/network_manager.dart';
 import '../../services/studio_event_bus.dart';
+import 'endap_logo_widget.dart';
 
 class AuditLogDialog extends StatefulWidget {
   final NetworkManager? networkManager;
@@ -89,7 +90,7 @@ class _AuditLogDialogState extends State<AuditLogDialog> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
                           ),
-                          child: const Icon(Icons.history_edu, color: AppTokens.focus, size: 20),
+                          child: const EndapLogoWidget(size: 20, showText: false),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(

@@ -7,6 +7,7 @@ import '../../../ladder/models/tag_value.dart';
 import '../../../ladder/models/enums.dart';
 import '../../services/studio_event_bus.dart';
 import '../../../ladder_autosave.dart';
+import 'endap_logo_widget.dart';
 
 enum IoPointType {
   digitalInput('Digital Input'),
@@ -264,7 +265,7 @@ class _CreateIoDialogState extends State<CreateIoDialog> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
                     ),
-                    child: const Icon(Icons.add_circle_outline, color: AppTokens.focus, size: 18),
+                    child: const EndapLogoWidget(size: 18, showText: false),
                   ),
                   const SizedBox(width: 10),
                   const Expanded(

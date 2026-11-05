@@ -1156,16 +1156,15 @@ class _HomePageState extends State<HomePage> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: AppTokens.focus.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3)),
                 ),
-                child: const Icon(
-                  Icons.rocket_launch_outlined,
-                  color: AppTokens.focus,
-                  size: 22,
+                child: const EndapLogoWidget(
+                  size: 24,
+                  showText: false,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1201,7 +1200,6 @@ class _HomePageState extends State<HomePage> {
                 : 'Modo Simulação Local ativo (toque para buscar ESP32 na Rede)',
             badgeText: isConnected ? 'ONLINE' : 'SIMULAÇÃO',
             badgeColor: isConnected ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
-            icon: Icons.lan_outlined,
             onTap: () => widget.onNavigateTab?.call(3),
           ),
           const SizedBox(height: 8),
@@ -1213,7 +1211,6 @@ class _HomePageState extends State<HomePage> {
                 : 'Nenhuma tag criada. Cadastre entradas (I0.x), saídas (Q0.x) ou memórias (M0.x)',
             badgeText: '$tagCount TAGS',
             badgeColor: tagCount > 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-            icon: Icons.memory_outlined,
             onTap: () => widget.onNavigateTab?.call(2),
           ),
           const SizedBox(height: 8),
@@ -1225,7 +1222,6 @@ class _HomePageState extends State<HomePage> {
                 : 'Adicione degraus (rungs), contatos, bobinas, timers ou blocos PID',
             badgeText: '$rungCount RUNGS',
             badgeColor: rungCount > 0 ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-            icon: Icons.account_tree_outlined,
             onTap: () => widget.onNavigateTab?.call(1),
           ),
           const SizedBox(height: 16),
@@ -1292,7 +1288,6 @@ class _HomePageState extends State<HomePage> {
     required String subtitle,
     required String badgeText,
     required Color badgeColor,
-    required IconData icon,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -1327,8 +1322,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Icon(icon, color: const Color(0xFF94A3B8), size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1604,8 +1597,8 @@ class _HomePageState extends State<HomePage> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.dashboard_outlined, size: 12, color: Color(0xFF0284C7)),
-                  SizedBox(width: 4),
+                  EndapLogoWidget(size: 13, showText: false),
+                  SizedBox(width: 5),
                   Text(
                     'TELAS',
                     style: TextStyle(
@@ -1653,12 +1646,6 @@ class _HomePageState extends State<HomePage> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                _getIconForName(scr.iconName),
-                                size: 13,
-                                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                              ),
-                              const SizedBox(width: 6),
                               Text(
                                 scr.title,
                                 style: TextStyle(

@@ -9,6 +9,7 @@ import '../../../ladder/models/ladder_project.dart';
 import '../../../ladder/models/tag.dart';
 import '../../../ladder/runtime/ladder_runtime.dart';
 import '../widgets/audit_log_dialog.dart';
+import '../widgets/endap_logo_widget.dart';
 
 /// Tela do GESTOR / SUPERVISOR INDUSTRIAL: Análise Real do Controlador, Frota de Nós e Auditoria
 /// 100% conectada ao NetworkManager, TagStateStore e EventBus (Zero dados mockados).
@@ -233,7 +234,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.analytics_outlined, color: IndustrialTokens.telemetryCyan, size: 18),
+          const EndapLogoWidget(size: 16, showText: false),
           const SizedBox(width: 8),
           Expanded(
             child: Column(

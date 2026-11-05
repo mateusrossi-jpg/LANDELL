@@ -4,6 +4,7 @@ import '../../../design_system/tokens.dart';
 import '../../../ladder/models/ladder_project.dart';
 import '../../../ladder/ui/editor/file_helper.dart';
 import '../../services/studio_event_bus.dart';
+import 'endap_logo_widget.dart';
 
 class ExportProjectDialog {
   static Future<void> show(
@@ -36,7 +37,7 @@ class ExportProjectDialog {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
                 ),
-                child: const Icon(Icons.download, color: AppTokens.focus, size: 20),
+                child: const EndapLogoWidget(size: 20, showText: false),
               ),
               const SizedBox(width: 10),
               const Expanded(

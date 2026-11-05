@@ -11,6 +11,7 @@ import '../network/authenticated_http_client.dart';
 import '../services/network_manager.dart';
 import '../../ladder/ui/editor/telemetry_sync_service.dart';
 import 'widgets/adopt_node_dialog.dart';
+import 'widgets/endap_logo_widget.dart';
 
 class NetworksPage extends StatefulWidget {
   final NetworkManager networkManager;
@@ -433,12 +434,12 @@ class _NetworksPageState extends State<NetworksPage> {
   }
 
   Widget _buildNetworkSubTabBar() {
-    final tabs = <({String key, IconData icon, String label})>[
-      (key: 'ALL', icon: Icons.dashboard_customize_outlined, label: 'Visão Geral'),
-      (key: 'WIFI', icon: Icons.wifi, label: 'Wi-Fi & AP'),
-      (key: 'CLUSTER', icon: Icons.hub_outlined, label: 'Cluster / Nós'),
-      (key: 'MQTT', icon: Icons.cloud_sync_outlined, label: 'MQTT'),
-      (key: 'OTA', icon: Icons.system_update_alt, label: 'Firmware OTA'),
+    final tabs = <({String key, String label})>[
+      (key: 'ALL', label: 'Visão Geral'),
+      (key: 'WIFI', label: 'Wi-Fi & AP'),
+      (key: 'CLUSTER', label: 'Cluster / Nós'),
+      (key: 'MQTT', label: 'MQTT'),
+      (key: 'OTA', label: 'Firmware OTA'),
     ];
 
     return Container(
@@ -459,7 +460,7 @@ class _NetworksPageState extends State<NetworksPage> {
                 borderRadius: BorderRadius.circular(6),
                 onTap: () => setState(() => _selectedNetworkTab = t.key),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
                   decoration: BoxDecoration(
                     color: isSel ? AppTokens.focus.withValues(alpha: 0.18) : AppTokens.panel,
                     borderRadius: BorderRadius.circular(6),
@@ -467,20 +468,13 @@ class _NetworksPageState extends State<NetworksPage> {
                       color: isSel ? AppTokens.focus : AppTokens.line,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(t.icon, size: 13, color: isSel ? AppTokens.focus : AppTokens.muted),
-                      const SizedBox(width: 5),
-                      Text(
-                        t.label,
-                        style: TextStyle(
-                          color: isSel ? Colors.white : AppTokens.muted,
-                          fontSize: 10.5,
-                          fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    t.label,
+                    style: TextStyle(
+                      color: isSel ? Colors.white : AppTokens.muted,
+                      fontSize: 10.5,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -503,7 +497,7 @@ class _NetworksPageState extends State<NetworksPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.hub_outlined, color: AppTokens.focus, size: 16),
+          const EndapLogoWidget(size: 15, showText: false),
           const SizedBox(width: 8),
           Text(
             'Rede & Topologia',
@@ -565,7 +559,7 @@ class _NetworksPageState extends State<NetworksPage> {
                     color: AppTokens.panel2,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.dns, color: AppTokens.focus, size: 22),
+                  child: const EndapLogoWidget(size: 22, showText: false),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

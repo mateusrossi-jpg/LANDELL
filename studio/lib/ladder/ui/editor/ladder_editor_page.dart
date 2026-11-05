@@ -28,6 +28,7 @@ import 'widgets/pid_config_dialog.dart';
 import '../../../design_system/tokens.dart';
 import '../../../../core/services/network_manager.dart';
 import '../../../core/services/hardware_force_bridge.dart';
+import '../../../core/ui/widgets/endap_logo_widget.dart';
 import '../../../features/gpio_tags/services/gpio_service.dart';
 
 enum EditorMode { editor, simulateLocal, simulateHardware }
@@ -1901,7 +1902,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                               tooltip: 'Menu',
                             )
                           else
-                            const Icon(Icons.account_tree_outlined, color: AppColors.primary, size: 18),
+                            const EndapLogoWidget(size: 18, showText: false),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -2413,14 +2414,21 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'FERRAMENTAS DE ENGENHARIA LADDER',
-                    style: TextStyle(
-                      color: Color(0xFFF1F5F9),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                    ),
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      EndapLogoWidget(size: 16, showText: false),
+                      SizedBox(width: 8),
+                      Text(
+                        'FERRAMENTAS DE ENGENHARIA LADDER',
+                        style: TextStyle(
+                          color: Color(0xFFF1F5F9),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2441,7 +2449,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 ],
               ),
               const SizedBox(height: 14),
-              _buildToolsSectionHeader('📡 COMUNICAÇÃO CLP & DIAGNÓSTICO'),
+              _buildToolsSectionHeader('COMUNICAÇÃO CLP & DIAGNÓSTICO'),
               _buildToolSheetTile(
                 icon: Icons.cloud_download_outlined,
                 color: const Color(0xFF38BDF8),
@@ -2503,7 +2511,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 },
               ),
               const SizedBox(height: 12),
-              _buildToolsSectionHeader('✏️ EDIÇÃO & VISUALIZAÇÃO'),
+              _buildToolsSectionHeader('EDIÇÃO & VISUALIZAÇÃO'),
               _buildToolSheetTile(
                 icon: _showToolbox ? Icons.visibility_off_outlined : Icons.view_compact_alt_outlined,
                 color: const Color(0xFFE2E8F0),
@@ -2577,7 +2585,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 },
               ),
               const SizedBox(height: 12),
-              _buildToolsSectionHeader('📁 ARQUIVO & BACKUP (.ENDAP)'),
+              _buildToolsSectionHeader('ARQUIVO & BACKUP (.ENDAP)'),
               _buildToolSheetTile(
                 icon: Icons.folder_open_rounded,
                 color: const Color(0xFF38BDF8),

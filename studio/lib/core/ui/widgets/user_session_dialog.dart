@@ -3,6 +3,7 @@ import '../../../design_system/tokens.dart';
 import '../../auth/session_manager.dart';
 import '../../services/network_manager.dart';
 import '../login_page.dart';
+import 'endap_logo_widget.dart';
 
 class UserSessionDialog extends StatelessWidget {
   final NetworkManager networkManager;
@@ -67,7 +68,7 @@ class UserSessionDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: AppTokens.focus.withValues(alpha: 0.3), width: 1.0),
                           ),
-                          child: const Icon(Icons.manage_accounts_outlined, color: AppTokens.focus, size: 22),
+                          child: const EndapLogoWidget(size: 20, showText: false),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(

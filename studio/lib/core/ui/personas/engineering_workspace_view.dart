@@ -9,6 +9,7 @@ import '../../../ladder/compiler/bytecode_compiler.dart';
 import '../../../ladder/ui/editor/ladder_editor_page.dart';
 import '../../../features/gpio_tags/ui/gpio_tags_page.dart';
 import '../networks_page.dart';
+import '../widgets/endap_logo_widget.dart';
 
 /// Workspace de Engenharia & Integração (IDE Industrial Completa)
 /// Padrão Rockwell Studio 5000 / Schneider EcoStruxure / Siemens TIA Portal
@@ -482,7 +483,7 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
             color: IndustrialTokens.bgPanel,
             child: Row(
               children: [
-                const Icon(Icons.account_tree, size: 15, color: IndustrialTokens.telemetryCyan),
+                const EndapLogoWidget(size: 15, showText: false),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -691,33 +692,9 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
               labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
               unselectedLabelStyle: const TextStyle(fontSize: 11),
               tabs: const [
-                Tab(
-                  child: Row(
-                    children: [
-                      Icon(Icons.table_rows, size: 14),
-                      SizedBox(width: 6),
-                      Text('Lógica Ladder IEC'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    children: [
-                      Icon(Icons.list_alt, size: 14),
-                      SizedBox(width: 6),
-                      Text('Mapeamento de I/O & Tags'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    children: [
-                      Icon(Icons.hub_outlined, size: 14),
-                      SizedBox(width: 6),
-                      Text('Rede & Topologia de Nós'),
-                    ],
-                  ),
-                ),
+                Tab(text: 'Lógica Ladder IEC'),
+                Tab(text: 'Mapeamento de I/O & Tags'),
+                Tab(text: 'Rede & Topologia de Nós'),
               ],
             ),
           ),

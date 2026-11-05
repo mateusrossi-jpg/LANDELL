@@ -13,6 +13,7 @@ import '../../../ladder/models/plc_tag_contract.dart';
 import '../../../ladder/models/enums.dart';
 import '../../../ladder/runtime/ladder_runtime.dart';
 import '../../services/hardware_force_bridge.dart';
+import '../widgets/endap_logo_widget.dart';
 
 /// Tela de MANUTENÇÃO & DIAGNÓSTICO (Field Troubleshooting & Real I/O Forcing)
 /// 100% conectada às TAGs do projeto, ao LadderRuntime e ao Hardware ESP32.
@@ -289,24 +290,13 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
                       border: _mobileSubTab == 0 ? Border.all(color: const Color(0xFF38BDF8)) : null,
                     ),
                     alignment: Alignment.center,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.tune,
-                          size: 14,
-                          color: _mobileSubTab == 0 ? const Color(0xFF38BDF8) : Colors.white60,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'FORÇAMENTO E/S (${_allTags.length})',
-                          style: TextStyle(
-                            color: _mobileSubTab == 0 ? Colors.white : Colors.white60,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'FORÇAMENTO E/S (${_allTags.length})',
+                      style: TextStyle(
+                        color: _mobileSubTab == 0 ? Colors.white : Colors.white60,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -327,24 +317,13 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
                       border: _mobileSubTab == 1 ? Border.all(color: IndustrialTokens.runGreen) : null,
                     ),
                     alignment: Alignment.center,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.bolt,
-                          size: 14,
-                          color: _mobileSubTab == 1 ? IndustrialTokens.runGreen : Colors.white60,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          'RUNGS ATIVOS (${networks.length})',
-                          style: TextStyle(
-                            color: _mobileSubTab == 1 ? Colors.white : Colors.white60,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'RUNGS ATIVOS (${networks.length})',
+                      style: TextStyle(
+                        color: _mobileSubTab == 1 ? Colors.white : Colors.white60,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -471,7 +450,7 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              Icon(Icons.account_tree_outlined, color: Colors.white24, size: 36),
+                              EndapLogoWidget(size: 32, showText: false, isLive: false),
                               SizedBox(height: 10),
                               Text(
                                 'Nenhum diagrama Ladder carregado.',

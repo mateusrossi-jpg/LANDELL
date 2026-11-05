@@ -219,10 +219,10 @@ class IndustrialRibbonBar extends StatelessWidget {
               ),
               onSelected: onPersonaChanged,
               itemBuilder: (ctx) => [
-                _buildPopupMenuItem('HOME', 'Painel HMI', Icons.dashboard_outlined),
-                _buildPopupMenuItem('ENGENHEIRO', 'Workspace Engenheiro', Icons.architecture),
-                _buildPopupMenuItem('MANUTENÇÃO', 'Manutenção & Forçamento', Icons.build_circle_outlined),
-                _buildPopupMenuItem('GESTOR', 'Gestão, OEE & BI', Icons.analytics_outlined),
+                _buildPopupMenuItem('HOME', 'Painel HMI'),
+                _buildPopupMenuItem('ENGENHEIRO', 'Workspace Engenheiro'),
+                _buildPopupMenuItem('MANUTENÇÃO', 'Manutenção & Forçamento'),
+                _buildPopupMenuItem('GESTOR', 'Gestão, OEE & BI'),
               ],
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
@@ -234,7 +234,15 @@ class IndustrialRibbonBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(_personaIcon(activePersona), size: 14, color: const Color(0xFF0284C7)),
+                    Text(
+                      _personaShortLabel(activePersona),
+                      style: const TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
                     const SizedBox(width: 2),
                     const Icon(Icons.keyboard_arrow_down, size: 14, color: Color(0xFF94A3B8)),
                   ],
@@ -562,10 +570,10 @@ class IndustrialRibbonBar extends StatelessWidget {
 
   Widget _buildPersonaSelector() {
     final personas = [
-      {'id': 'HOME', 'label': 'Painel HMI', 'icon': Icons.dashboard_outlined},
-      {'id': 'ENGENHEIRO', 'label': 'Engenharia', 'icon': Icons.architecture},
-      {'id': 'MANUTENÇÃO', 'label': 'Manutenção', 'icon': Icons.build_circle_outlined},
-      {'id': 'GESTOR', 'label': 'Gestão & BI', 'icon': Icons.analytics_outlined},
+      {'id': 'HOME', 'label': 'Painel HMI'},
+      {'id': 'ENGENHEIRO', 'label': 'Engenharia'},
+      {'id': 'MANUTENÇÃO', 'label': 'Manutenção'},
+      {'id': 'GESTOR', 'label': 'Gestão & BI'},
     ];
 
     return Container(
@@ -589,24 +597,14 @@ class IndustrialRibbonBar extends StatelessWidget {
                 color: isSelected ? const Color(0xFF0284C7) : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    p['icon'] as IconData,
-                    size: 13,
-                    color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    p['label'] as String,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
+              child: Text(
+                p['label'] as String,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           );
@@ -615,19 +613,31 @@ class IndustrialRibbonBar extends StatelessWidget {
     );
   }
 
-  PopupMenuItem<String> _buildPopupMenuItem(String id, String label, IconData icon) {
+  PopupMenuItem<String> _buildPopupMenuItem(String id, String label) {
+    final isSelected = activePersona == id;
     return PopupMenuItem<String>(
       value: id,
       child: Row(
         children: [
-          Icon(icon, size: 16, color: activePersona == id ? IndustrialTokens.telemetryCyan : Colors.white70),
+          if (isSelected)
+            const EndapLogoWidget(size: 14, showText: false)
+          else
+            Container(
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: const BoxDecoration(
+                color: Color(0xFF475569),
+                shape: BoxShape.circle,
+              ),
+            ),
           const SizedBox(width: 10),
           Text(
             label,
             style: TextStyle(
-              color: activePersona == id ? IndustrialTokens.telemetryCyan : Colors.white,
+              color: isSelected ? IndustrialTokens.telemetryCyan : Colors.white,
               fontSize: 12,
-              fontWeight: activePersona == id ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],
@@ -635,19 +645,18 @@ class IndustrialRibbonBar extends StatelessWidget {
     );
   }
 
-  IconData _personaIcon(String id) {
+  String _personaShortLabel(String id) {
     switch (id) {
       case 'HOME':
-        return Icons.dashboard_outlined;
-      case 'ENGENHEIRO':
-        return Icons.architecture;
-      case 'MANUTENÇÃO':
-        return Icons.build_circle_outlined;
       case 'OPERADOR':
-        return Icons.touch_app_outlined;
+        return 'HMI';
+      case 'ENGENHEIRO':
+        return 'ENG';
+      case 'MANUTENÇÃO':
+        return 'MAN';
       case 'GESTOR':
       default:
-        return Icons.analytics_outlined;
+        return 'OEE';
     }
   }
 }

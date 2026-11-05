@@ -889,40 +889,30 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                   children: [
                     _buildDrawerItem(
                       index: 0,
-                      icon: Icons.dashboard_outlined,
-                      activeIcon: Icons.dashboard,
                       title: 'Painel HMI (Telas & Kiosk)',
                       subtitle: 'Supervisão de processo, IHM de máquina e modo tablet',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 1,
-                      icon: Icons.account_tree_outlined,
-                      activeIcon: Icons.account_tree,
                       title: 'Lógica Ladder IEC',
                       subtitle: 'Rungs, tags e lógica do controlador',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 2,
-                      icon: Icons.memory_outlined,
-                      activeIcon: Icons.memory,
                       title: 'GPIO / TAGS',
                       subtitle: 'Mapeamento físico GPIO ↔ TAG IEC ↔ Função',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 4,
-                      icon: Icons.build_circle_outlined,
-                      activeIcon: Icons.build_circle,
                       title: 'Diagnósticos de Campo',
                       subtitle: 'Live Energy Flow e Forçamento de E/S',
                     ),
                     const SizedBox(height: 4),
                     _buildDrawerItem(
                       index: 5,
-                      icon: Icons.analytics_outlined,
-                      activeIcon: Icons.analytics,
                       title: 'Gestão, OEE & Relatórios',
                       subtitle: 'Indicadores, perdas e frota de nós',
                     ),
@@ -953,8 +943,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     ),
                     _buildDrawerItem(
                       index: 3,
-                      icon: Icons.hub_outlined,
-                      activeIcon: Icons.hub,
                       title: 'Rede & Topologia',
                       subtitle: 'Descoberta de nós, IP e status Wi-Fi',
                     ),
@@ -963,7 +951,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                       color: Colors.transparent,
                       child: ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                        leading: const Icon(Icons.history_edu, color: Color(0xFF94A3B8), size: 20),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        leading: Container(
+                          width: 3,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF64748B),
+                            borderRadius: BorderRadius.circular(1.5),
+                          ),
+                        ),
                         title: const Text(
                           'Trilha de Auditoria & Eventos',
                           style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.w600),
@@ -983,7 +979,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                       color: Colors.transparent,
                       child: ListTile(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        leading: const Icon(Icons.manage_accounts_outlined, color: Color(0xFF94A3B8), size: 20),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                        leading: Container(
+                          width: 3,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF64748B),
+                            borderRadius: BorderRadius.circular(1.5),
+                          ),
+                        ),
                         title: const Text(
                           'Gestão de Usuários & Login',
                           style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.w600),
@@ -1021,7 +1025,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     ),
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      leading: const Icon(Icons.note_add_outlined, color: Color(0xFFF59E0B), size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      leading: Container(
+                        width: 3,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ),
                       title: const Text('Novo Projeto em Branco (Cru)', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 12.5, fontWeight: FontWeight.bold)),
                       subtitle: const Text('Zerar tags, lógica e widgets para criar do zero', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
                       onTap: () {
@@ -1045,7 +1057,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     ),
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      leading: const Icon(Icons.download_rounded, color: Color(0xFFE2E8F0), size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      leading: Container(
+                        width: 3,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ),
                       title: const Text('Exportar Projeto', style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12.5, fontWeight: FontWeight.bold)),
                       subtitle: const Text('Salvar pacote .endap consolidado', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5)),
                       onTap: () {
@@ -1069,7 +1089,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                     ),
                     child: ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      leading: const Icon(Icons.upload_file_rounded, color: Color(0xFF0284C7), size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      leading: Container(
+                        width: 3,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0284C7),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ),
                       title: const Text('Restaurar Pacote .endap', style: TextStyle(color: Color(0xFF0284C7), fontSize: 12.5, fontWeight: FontWeight.bold)),
                       subtitle: const Text('Importar backup completo da máquina', style: TextStyle(color: Color(0xFF64748B), fontSize: 10.5)),
                       onTap: () async {
@@ -1104,7 +1132,15 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: ListTile(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                  leading: const Icon(Icons.logout, color: Color(0xFFEF4444), size: 20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  leading: Container(
+                    width: 3,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  ),
                   title: const Text('Encerrar Sessão', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12.5, fontWeight: FontWeight.w600)),
                   onTap: () {
                     Navigator.pop(context);
@@ -1205,18 +1241,18 @@ class _StudioScaffoldState extends State<StudioScaffold> {
   }
 
   Widget _buildCompactBottomNavigationBar() {
-    final navItems = <({int index, IconData icon, IconData activeIcon, String label})>[
-      (index: 0, icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'HMI'),
-      (index: 1, icon: Icons.account_tree_outlined, activeIcon: Icons.account_tree, label: 'Ladder'),
-      (index: 2, icon: Icons.memory_outlined, activeIcon: Icons.memory, label: 'GPIO'),
-      (index: 4, icon: Icons.build_circle_outlined, activeIcon: Icons.build_circle, label: 'Diag'),
-      (index: 5, icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: 'OEE'),
-      (index: 3, icon: Icons.hub_outlined, activeIcon: Icons.hub, label: 'Rede'),
+    final navItems = <({int index, String label})>[
+      (index: 0, label: 'HMI'),
+      (index: 1, label: 'LADDER'),
+      (index: 2, label: 'GPIO'),
+      (index: 4, label: 'DIAG'),
+      (index: 5, label: 'OEE'),
+      (index: 3, label: 'REDE'),
     ];
     final effectiveSelected = _selectedIndex == 6 ? 1 : _selectedIndex;
 
     return Container(
-      height: 46,
+      height: 44,
       decoration: const BoxDecoration(
         color: Color(0xFF1E222B),
         border: Border(top: BorderSide(color: Color(0xFF2A303D), width: 1.0)),
@@ -1230,26 +1266,45 @@ class _StudioScaffoldState extends State<StudioScaffold> {
                 HapticFeedback.selectionClick();
                 _onSelectDestination(item.index);
               },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isSelected ? item.activeIcon : item.icon,
-                    size: 17,
-                    color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF94A3B8),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isSelected ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8),
-                      fontSize: 9.5,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF252A36) : Colors.transparent,
+                  border: Border(
+                    top: BorderSide(
+                      color: isSelected ? const Color(0xFF38BDF8) : Colors.transparent,
+                      width: 2.5,
                     ),
                   ),
-                ],
+                ),
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isSelected)
+                      const EndapLogoWidget(size: 13, showText: false)
+                    else
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF475569),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isSelected ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8),
+                        fontSize: 9.5,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -1287,8 +1342,6 @@ class _StudioScaffoldState extends State<StudioScaffold> {
 
   Widget _buildDrawerItem({
     required int index,
-    required IconData icon,
-    required IconData activeIcon,
     required String title,
     required String subtitle,
   }) {
@@ -1307,11 +1360,16 @@ class _StudioScaffoldState extends State<StudioScaffold> {
         child: ListTile(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          leading: Icon(
-            isSelected ? activeIcon : icon,
-            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-            size: 20,
-          ),
+          leading: isSelected
+              ? const EndapLogoWidget(size: 18, showText: false)
+              : Container(
+                  width: 3,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF334155),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
           title: Text(
             title,
             style: TextStyle(
