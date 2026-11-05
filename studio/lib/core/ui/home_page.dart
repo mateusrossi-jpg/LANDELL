@@ -1138,7 +1138,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildEmptyState() {
-    final isConnected = widget.networkManager.isConnected;
+    final isConnected = widget.networkManager.isHardwareOnline;
     final tagCount = _localProject.tags.length;
     final rungCount = _localProject.networks.length;
 
@@ -1197,7 +1197,7 @@ class _HomePageState extends State<HomePage> {
             stepNumber: '1',
             title: 'Conectar CLP ou Operar em Simulação',
             subtitle: isConnected
-                ? 'CLP Online (${widget.networkManager.ip}:${widget.networkManager.port})'
+                ? 'CLP Online (${widget.networkManager.gatewayIp})'
                 : 'Modo Simulação Local ativo (toque para buscar ESP32 na Rede)',
             badgeText: isConnected ? 'ONLINE' : 'SIMULAÇÃO',
             badgeColor: isConnected ? const Color(0xFF10B981) : const Color(0xFF38BDF8),

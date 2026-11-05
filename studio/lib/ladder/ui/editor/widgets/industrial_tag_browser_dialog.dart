@@ -780,16 +780,16 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                   final cleanUnit = unitCtrl.text.trim().isNotEmpty ? unitCtrl.text.trim() : null;
 
                   TagType tagType = TagType.bool;
-                  TagValue initVal = const TagValue.boolean(false);
+                  TagValue initVal = TagValue.boolean(false);
                   if (cleanAddr.startsWith('AI') || cleanAddr.startsWith('AO') || cleanAddr.startsWith('%IW') || cleanAddr.startsWith('%QW')) {
                     tagType = TagType.real;
-                    initVal = const TagValue.real(0.0);
+                    initVal = TagValue.real(0.0);
                   } else if (cleanAddr.startsWith('T')) {
                     tagType = TagType.timer;
-                    initVal = const TagValue.integer(0);
+                    initVal = TagValue.integer(0);
                   } else if (cleanAddr.startsWith('C')) {
                     tagType = TagType.counter;
-                    initVal = const TagValue.integer(0);
+                    initVal = TagValue.integer(0);
                   }
 
                   final newTag = Tag(
@@ -800,7 +800,6 @@ class _IndustrialTagBrowserDialogState extends State<IndustrialTagBrowserDialog>
                     initialValue: initVal,
                     description: cleanDesc,
                     unit: cleanUnit,
-                    controllerIndex: _selectedControllerFilter ?? 0,
                   );
 
                   widget.tags[newTag.id] = newTag;
