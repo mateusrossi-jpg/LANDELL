@@ -3183,7 +3183,6 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       );
     }
 
-    final isSimOrHw = _mode != EditorMode.editor;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
