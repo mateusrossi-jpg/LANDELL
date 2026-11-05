@@ -277,7 +277,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
     );
   }
 
-  // Layout Mobile (iPhone XR)
+  // Layout Mobile (Grade Bento 2x2 Compacta)
   Widget _buildMobileLayout() {
     final isOnline = widget.networkManager.isHardwareOnline;
     final gatewayIp = widget.networkManager.gatewayIp;
@@ -289,55 +289,69 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom + 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildMetricCard(
-            title: 'ENLACE / HARDWARE',
-            value: isOnline ? 'ONLINE' : 'LOCAL',
-            meta: 'Gateway: $gatewayIp',
-            icon: Icons.developer_board,
-            accentColor: isOnline ? IndustrialTokens.runGreen : IndustrialTokens.telemetryCyan,
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'ENLACE',
+                  value: isOnline ? 'ONLINE' : 'LOCAL',
+                  meta: gatewayIp,
+                  icon: Icons.developer_board,
+                  accentColor: isOnline ? IndustrialTokens.runGreen : IndustrialTokens.telemetryCyan,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'SCAN TIME',
+                  value: scanUs > 0 ? '$scanUs µs' : '< 1.0 ms',
+                  meta: 'Alvo: 1.0 ms',
+                  icon: Icons.speed,
+                  accentColor: IndustrialTokens.runGreen,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
-          _buildMetricCard(
-            title: 'DETERMINISMO (SCAN TIME)',
-            value: scanUs > 0 ? '$scanUs µs' : '< 1.0 ms',
-            meta: 'Loop determinístico alvo: 1.0 ms',
-            icon: Icons.speed,
-            accentColor: IndustrialTokens.runGreen,
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  title: 'INVENTÁRIO E/S',
+                  value: '${tags.length} TAGs',
+                  meta: '$forcedCount forçados',
+                  icon: Icons.tune,
+                  accentColor: forcedCount > 0 ? IndustrialTokens.progYellow : IndustrialTokens.runGreen,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: prodTag != null
+                    ? _buildMetricCard(
+                        title: 'PRODUÇÃO',
+                        value: '${_getProductionValue(prodTag)} pcs',
+                        meta: 'Meta: ${_config.targetPerHour * 8}/turno',
+                        icon: Icons.check_circle_outline,
+                        accentColor: IndustrialTokens.runGreen,
+                      )
+                    : _buildMetricCard(
+                        title: 'CLUSTER',
+                        value: '$totalNodes Nó(s)',
+                        meta: 'Local-First',
+                        icon: Icons.hub_outlined,
+                        accentColor: IndustrialTokens.infoBlue,
+                      ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          _buildMetricCard(
-            title: 'INVENTÁRIO DE E/S',
-            value: '${tags.length} TAGs',
-            meta: '$forcedCount canais com forçamento ativo',
-            icon: Icons.tune,
-            accentColor: forcedCount > 0 ? IndustrialTokens.progYellow : IndustrialTokens.runGreen,
-          ),
-          const SizedBox(height: 8),
-          _buildMetricCard(
-            title: 'CONTROLADOR LANDELL',
-            value: '$totalNodes Controlador(es)',
-            meta: 'Modo Gateway Híbrido Local-First',
-            icon: Icons.hub_outlined,
-            accentColor: IndustrialTokens.infoBlue,
-          ),
-          if (prodTag != null) ...[
-            const SizedBox(height: 8),
-            _buildMetricCard(
-              title: 'PRODUÇÃO REAL (TAG: ${prodTag.name})',
-              value: '${_getProductionValue(prodTag)} pcs',
-              meta: 'Meta Nominal: ${_config.targetPerHour * 8} pcs/turno',
-              icon: Icons.check_circle_outline,
-              accentColor: IndustrialTokens.runGreen,
-            ),
-          ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _buildClusterFleetCard(isMobile: true),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _buildAuditLogCard(isMobile: true),
-          const SizedBox(height: 20),
         ],
       ),
     );

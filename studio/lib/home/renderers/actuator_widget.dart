@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/home_widget_config.dart';
 import '../../ladder/models/ladder_project.dart';
 import '../../ladder/runtime/ladder_runtime.dart';
@@ -43,7 +44,9 @@ class _ActuatorWidgetState extends State<ActuatorWidget> {
             children: [
               Expanded(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     setState(() => _isAuto = true);
                     widget.onStateChanged?.call();
                   },
@@ -68,7 +71,9 @@ class _ActuatorWidgetState extends State<ActuatorWidget> {
               ),
               Expanded(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     setState(() => _isAuto = false);
                     widget.onStateChanged?.call();
                   },
@@ -98,7 +103,9 @@ class _ActuatorWidgetState extends State<ActuatorWidget> {
 
         // PULSE Button
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
+            HapticFeedback.mediumImpact();
             setState(() => _pulseActive = !_pulseActive);
             if (widget.config.tagId != null && widget.runtime != null) {
               final tagId = widget.config.tagId!;

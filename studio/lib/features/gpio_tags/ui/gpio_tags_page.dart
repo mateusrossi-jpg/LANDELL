@@ -46,6 +46,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
   bool _showPinMap = false;
   String? _statusBanner;
   String _selectedNodeFilter = 'Todos';
+  String _selectedChannelTab = 'ALL'; // 'ALL', 'IN', 'OUT', 'ANA'
 
   String get _gatewayIp {
     final ip = widget.networkManager.gatewayIp.trim();
@@ -795,7 +796,8 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
               color: AppTokens.focus,
               backgroundColor: AppTokens.panel,
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.viewPaddingOf(context).bottom + 16),
                 children: [
                   if (_statusBanner != null) ...[
                     Container(
@@ -1217,27 +1219,74 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
               }()
             : (hasRemoteNodes ? 'Cluster Detectado' : 'Controlador Local (ESP32)'));
 
-    if (digitalInputs.isNotEmpty) {
+    // Sub-Abas Compactas de Categoria de Canal
+    widgets.add(
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildChannelTabChip('ALL', 'Todos (${_filteredHardwareChannels.length})'),
+              const SizedBox(width: 6),
+              _buildChannelTabChip('IN', 'Entradas (${digitalInputs.length})'),
+              const SizedBox(width: 6),
+              _buildChannelTabChip('OUT', 'Saídas (${digitalOutputs.length})'),
+              const SizedBox(width: 6),
+              _buildChannelTabChip('ANA', 'Analógicas (${analogInputs.length + analogOutputs.length})'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'IN') && digitalInputs.isNotEmpty) {
       widgets.add(_buildSectionHeader('Entradas Digitais — $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(digitalInputs, online));
     }
 
-    if (analogInputs.isNotEmpty) {
+    if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'ANA') && analogInputs.isNotEmpty) {
       widgets.add(_buildSectionHeader('Entradas Analógicas — $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(analogInputs, online));
     }
 
-    if (digitalOutputs.isNotEmpty) {
+    if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'OUT') && digitalOutputs.isNotEmpty) {
       widgets.add(_buildSectionHeader('Saídas Digitais — $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(digitalOutputs, online));
     }
 
-    if (analogOutputs.isNotEmpty) {
+    if ((_selectedChannelTab == 'ALL' || _selectedChannelTab == 'ANA') && analogOutputs.isNotEmpty) {
       widgets.add(_buildSectionHeader('Saídas Analógicas — $nodeLabel'));
       widgets.addAll(_buildHardwareMappingListFor(analogOutputs, online));
     }
 
     return widgets;
+  }
+
+  Widget _buildChannelTabChip(String key, String label) {
+    final isSelected = _selectedChannelTab == key;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => setState(() => _selectedChannelTab = key),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTokens.focus.withValues(alpha: 0.18) : AppTokens.panel,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? AppTokens.focus : AppTokens.line,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? AppTokens.focus : AppTokens.muted,
+            fontSize: 10.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 
   List<Widget> _buildHardwareMappingListFor(List<GpioHardwareChannel> channels, bool online) {
@@ -1261,11 +1310,11 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
 
       return Container(
         key: Key(ch.uniqueKey),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: cardBgColor,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: cardBorderColor,
             width: 1.0,
@@ -1273,111 +1322,83 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
         ),
         child: Row(
           children: [
-            // Indicador de Pino / Tipo
+            // Badge Unificado (IEC • GPIO)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
                 color: isFieldNode ? const Color(0xFF262040) : AppTokens.panel2,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(5),
                 border: Border.all(
                   color: isFieldNode
                       ? const Color(0xFF8B5CF6).withValues(alpha: 0.6)
                       : (ch.isOutput ? const Color(0xFFFF9500).withValues(alpha: 0.4) : AppTokens.focus.withValues(alpha: 0.4)),
                 ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ch.nodeId != null ? 'Nó ${ch.nodeId} · ${ch.name}' : (ch.gpio != null ? 'GPIO ${ch.gpio}' : ch.name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Color(0xFFE7EBF0), fontSize: 10.5, fontWeight: FontWeight.w800, fontFamily: 'monospace'),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    ch.isAnalog
-                        ? 'ANALÓGICO'
-                        : (ch.isOutput ? 'SAÍDA' : 'ENTRADA'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: ch.isAnalog
-                          ? const Color(0xFF8B5CF6)
-                          : (ch.isOutput ? const Color(0xFFFF9500) : const Color(0xFF4FD1C5)),
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              child: Text(
+                ch.gpio != null ? '$iecCode • G${ch.gpio}' : iecCode,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: ch.isAnalog
+                      ? const Color(0xFFA78BFA)
+                      : (ch.isOutput ? const Color(0xFFFFB340) : const Color(0xFF4FD1C5)),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
-            // Tag IEC e Função
+            // Tag IEC e Função em 1 linha limpa
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 4,
-                    runSpacing: 2,
+                  Row(
                     children: [
-                      Text(
-                        tag != null ? tag.name : iecCode,
-                        style: const TextStyle(
-                          color: Color(0xFFE7EBF0),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: isFieldNode
-                              ? const Color(0xFF8B5CF6).withValues(alpha: 0.25)
-                              : const Color(0xFF4FD1C5).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
+                      Flexible(
                         child: Text(
-                          isFieldNode ? 'RACK $nodeIdx (FIELD)' : 'RACK 0 (GATEWAY)',
-                          style: TextStyle(
-                            color: isFieldNode ? const Color(0xFFA78BFA) : const Color(0xFF4FD1C5),
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+                          tag != null ? tag.name : iecCode,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFFE7EBF0),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
                             fontFamily: 'monospace',
                           ),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4FD1C5).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(3),
+                      if (isFieldNode) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            'NÓ $nodeIdx',
+                            style: const TextStyle(
+                              color: Color(0xFFA78BFA),
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
                         ),
-                        child: Text(
-                          tag?.type.name.toUpperCase() ?? (ch.isAnalog ? 'REAL' : 'BOOL'),
-                          style: const TextStyle(color: Color(0xFF4FD1C5), fontSize: 9, fontFamily: 'monospace'),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    tag?.name != null && tag!.name != iecCode
-                        ? '$nodeOrigin · ${tag.name}${tag.description?.isNotEmpty == true ? " (${tag.description})" : ""} (GPIO ${ch.gpio ?? "?"})'
-                        : '$nodeOrigin · ${ch.isAnalog ? (ch.isOutput ? "Saída Analógica DAC" : "Entrada Analógica ADC") : (ch.isOutput ? "Saída Digital" : "Entrada Digital")} (GPIO ${ch.gpio ?? "?"})',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isFieldNode ? const Color(0xFFA78BFA) : const Color(0xFF8C98A8),
-                      fontSize: 10.5,
-                      fontWeight: isFieldNode ? FontWeight.w600 : FontWeight.normal,
+                  if (tag?.description?.isNotEmpty == true || (tag?.name != null && tag!.name != iecCode))
+                    Text(
+                      tag?.description?.isNotEmpty == true ? tag!.description! : '$nodeOrigin · GPIO ${ch.gpio ?? "?"}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFF8C98A8), fontSize: 10),
                     ),
-                  ),
                 ],
               ),
             ),

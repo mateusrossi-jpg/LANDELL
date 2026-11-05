@@ -33,6 +33,7 @@ class NetworksPage extends StatefulWidget {
 class _NetworksPageState extends State<NetworksPage> {
   late final http.Client _client = widget.httpClient ?? AuthenticatedHttpClient();
   int _provisionStep = 0;
+  String _selectedNetworkTab = 'ALL'; // 'ALL', 'WIFI', 'CLUSTER', 'MQTT', 'OTA'
   late TextEditingController _ipController;
   final TextEditingController _ssidController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
@@ -383,6 +384,7 @@ class _NetworksPageState extends State<NetworksPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildHeader(),
+            _buildNetworkSubTabBar(),
             Expanded(
               child: ListenableBuilder(
                 listenable: widget.networkManager,
@@ -396,17 +398,28 @@ class _NetworksPageState extends State<NetworksPage> {
                     color: AppTokens.focus,
                     backgroundColor: AppTokens.panel,
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(14, 10, 14, MediaQuery.viewPaddingOf(context).bottom + 20),
                       children: [
-                        _buildControllerCard(),
-                        const SizedBox(height: 14),
-                        _buildNodesSection(),
-                        const SizedBox(height: 14),
-                        _buildWifiSection(),
-                        const SizedBox(height: 14),
-                        _buildMqttSection(),
-                        const SizedBox(height: 14),
-                        _buildFirmwareOtaSection(),
+                        if (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'WIFI' || _selectedNetworkTab == 'CLUSTER') ...[
+                          _buildControllerCard(),
+                          const SizedBox(height: 12),
+                        ],
+                        if (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'CLUSTER') ...[
+                          _buildNodesSection(),
+                          const SizedBox(height: 12),
+                        ],
+                        if (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'WIFI') ...[
+                          _buildWifiSection(),
+                          const SizedBox(height: 12),
+                        ],
+                        if (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'MQTT') ...[
+                          _buildMqttSection(),
+                          const SizedBox(height: 12),
+                        ],
+                        if (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'OTA') ...[
+                          _buildFirmwareOtaSection(),
+                        ],
                       ],
                     ),
                   );
@@ -414,6 +427,65 @@ class _NetworksPageState extends State<NetworksPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNetworkSubTabBar() {
+    final tabs = <({String key, IconData icon, String label})>[
+      (key: 'ALL', icon: Icons.dashboard_customize_outlined, label: 'Visão Geral'),
+      (key: 'WIFI', icon: Icons.wifi, label: 'Wi-Fi & AP'),
+      (key: 'CLUSTER', icon: Icons.hub_outlined, label: 'Cluster / Nós'),
+      (key: 'MQTT', icon: Icons.cloud_sync_outlined, label: 'MQTT'),
+      (key: 'OTA', icon: Icons.system_update_alt, label: 'Firmware OTA'),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: const BoxDecoration(
+        color: Color(0xFF14181F),
+        border: Border(bottom: BorderSide(color: AppTokens.line, width: 1.0)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: tabs.map((t) {
+            final isSel = _selectedNetworkTab == t.key;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => setState(() => _selectedNetworkTab = t.key),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isSel ? AppTokens.focus.withValues(alpha: 0.18) : AppTokens.panel,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isSel ? AppTokens.focus : AppTokens.line,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(t.icon, size: 13, color: isSel ? AppTokens.focus : AppTokens.muted),
+                      const SizedBox(width: 5),
+                      Text(
+                        t.label,
+                        style: TextStyle(
+                          color: isSel ? Colors.white : AppTokens.muted,
+                          fontSize: 10.5,
+                          fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
@@ -617,12 +689,64 @@ class _NetworksPageState extends State<NetworksPage> {
                 );
 
                 if (isCompact) {
-                  return Column(
-                    children: [
-                      hybridCard,
-                      const SizedBox(height: 8),
-                      dedicatedCard,
-                    ],
+                  return Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: AppTokens.panel2,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTokens.line),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => _switchGatewayMode(true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                              decoration: BoxDecoration(
+                                color: _isHybridGateway ? AppTokens.focus.withValues(alpha: 0.2) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(6),
+                                border: _isHybridGateway ? Border.all(color: AppTokens.focus) : null,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Gateway Híbrido',
+                                style: TextStyle(
+                                  color: _isHybridGateway ? Colors.white : AppTokens.muted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => _switchGatewayMode(false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                              decoration: BoxDecoration(
+                                color: !_isHybridGateway ? AppTokens.warn.withValues(alpha: 0.2) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(6),
+                                border: !_isHybridGateway ? Border.all(color: AppTokens.warn) : null,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Gateway Dedicado',
+                                style: TextStyle(
+                                  color: !_isHybridGateway ? Colors.white : AppTokens.muted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }
 

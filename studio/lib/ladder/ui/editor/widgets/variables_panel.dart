@@ -45,6 +45,7 @@ class VariablesPanel extends StatefulWidget {
 
 class _VariablesPanelState extends State<VariablesPanel> {
   PanelState _panelState = PanelState.collapsed;
+  String _selectedCategory = 'ALL';
   final TextEditingController _textController = TextEditingController();
 
   @override
@@ -298,10 +299,23 @@ class _VariablesPanelState extends State<VariablesPanel> {
     }
   }
 
+  bool _matchesCategory(Tag t) {
+    if (_selectedCategory == 'ALL') return true;
+    final addr = (t.address ?? t.id).toUpperCase();
+    if (_selectedCategory == 'IN') {
+      return addr.startsWith('I') || addr.startsWith('X') || addr.startsWith('%I') || addr.startsWith('AI');
+    }
+    if (_selectedCategory == 'OUT') {
+      return addr.startsWith('Q') || addr.startsWith('Y') || addr.startsWith('%Q') || addr.startsWith('AO');
+    }
+    return !(addr.startsWith('I') || addr.startsWith('X') || addr.startsWith('%I') || addr.startsWith('AI') ||
+        addr.startsWith('Q') || addr.startsWith('Y') || addr.startsWith('%Q') || addr.startsWith('AO'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeFieldNodeIndexes = <int>{};
-    final tagsList = widget.tags.values.where((t) {
+    final allTagsList = widget.tags.values.where((t) {
       final addr = (t.address ?? t.id).toUpperCase();
       final match = RegExp(r'^(I|Q|AI|AO)(\d+)').firstMatch(addr);
       if (match != null) {
@@ -312,12 +326,13 @@ class _VariablesPanelState extends State<VariablesPanel> {
       }
       return true;
     }).toList();
+    final tagsList = allTagsList.where(_matchesCategory).toList();
 
     final activeCount = widget.isHardwareMode
         ? (widget.liveValues != null
-            ? tagsList.where((t) => widget.liveValues![t.id] == true).length
+            ? allTagsList.where((t) => widget.liveValues![t.id] == true).length
             : 0)
-        : tagsList.where((t) => widget.simulationInputs[t.id] == true).length;
+        : allTagsList.where((t) => widget.simulationInputs[t.id] == true).length;
     final height = _calculatePanelHeight(context);
 
     return AnimatedContainer(
@@ -330,7 +345,7 @@ class _VariablesPanelState extends State<VariablesPanel> {
           ? Column(
               children: [
                 Container(height: 1.0, color: AppTokens.line),
-                Expanded(child: _buildHeaderTab(activeCount, tagsList.length)),
+                Expanded(child: _buildHeaderTab(activeCount, allTagsList.length, allTagsList)),
               ],
             )
           : Column(
@@ -338,7 +353,24 @@ class _VariablesPanelState extends State<VariablesPanel> {
                 Container(height: 1.0, color: AppTokens.line),
                 SizedBox(
                   height: 43.0,
-                  child: _buildHeaderTab(activeCount, tagsList.length),
+                  child: _buildHeaderTab(activeCount, allTagsList.length, allTagsList),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildCategoryChip('ALL', 'Todas (${allTagsList.length})'),
+                        const SizedBox(width: 6),
+                        _buildCategoryChip('IN', 'Entradas (I)'),
+                        const SizedBox(width: 6),
+                        _buildCategoryChip('OUT', 'Saídas (Q)'),
+                        const SizedBox(width: 6),
+                        _buildCategoryChip('MEM', 'Memórias / T / C'),
+                      ],
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -711,7 +743,33 @@ class _VariablesPanelState extends State<VariablesPanel> {
     );
   }
 
-  Widget _buildHeaderTab(int activeCount, int totalCount) {
+  Widget _buildCategoryChip(String key, String label) {
+    final isSelected = _selectedCategory == key;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => setState(() => _selectedCategory = key),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF4FD1C5).withValues(alpha: 0.18) : AppTokens.panel2,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF4FD1C5) : AppTokens.line,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF4FD1C5) : const Color(0xFF8C98A8),
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderTab(int activeCount, int totalCount, List<Tag> quickTags) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onVerticalDragUpdate: (details) {
@@ -790,7 +848,65 @@ class _VariablesPanelState extends State<VariablesPanel> {
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: quickTags.take(8).map((t) {
+                          final isOn = widget.isHardwareMode
+                              ? (widget.liveValues?[t.id] ?? false)
+                              : (widget.simulationInputs[t.id] ?? false);
+                          final label = t.address ?? t.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 5),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(4),
+                              onTap: t.type == TagType.bool
+                                  ? () => widget.onSimulationInputChanged(t.id, !isOn)
+                                  : null,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isOn
+                                      ? const Color(0xFF3FBF5A).withValues(alpha: 0.18)
+                                      : AppTokens.panel2,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isOn ? const Color(0xFF3FBF5A) : AppTokens.line,
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: isOn ? const Color(0xFF3FBF5A) : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      label,
+                                      style: TextStyle(
+                                        color: isOn ? const Color(0xFFE7EBF0) : const Color(0xFF94A3B8),
+                                        fontSize: 9.5,
+                                        fontFamily: 'JetBrains Mono',
+                                        fontWeight: isOn ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
                   Tooltip(
                     message: _panelState == PanelState.collapsed
                         ? 'Expandir painel de variáveis'

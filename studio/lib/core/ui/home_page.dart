@@ -551,8 +551,8 @@ class _HomePageState extends State<HomePage> {
             // Top App Bar / Header com abas de Telas IHM
             _buildHeader(),
 
-            // Barra de Filtro de Controladores (Apenas se não estiver embedded)
-            if (!widget.embedded)
+            // Barra de Filtro de Controladores (Apenas se houver múltiplos nós)
+            if (!widget.embedded && widget.networkManager.nodes.length > 1)
               _buildMultiControllerBar(),
 
             // Conteúdo Principal da Tela Ativa
@@ -982,38 +982,7 @@ class _HomePageState extends State<HomePage> {
               else
                 ..._buildGroupedWidgets(isMobile: isMobile),
 
-              const SizedBox(height: 20),
-
-              // FAB Button with Speed Dial / Option Sheet
-              Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF131722),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.4), width: 1.0),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: _showAddActionSheet,
-                      child: const Center(
-                        child: Icon(Icons.add, color: Color(0xFF2DD4BF), size: 24),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              SizedBox(height: MediaQuery.viewPaddingOf(context).bottom + 12),
             ],
           ),
         );
@@ -1100,18 +1069,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  bool _canPairInBentoGrid(HomeWidgetConfig w, bool isMobile) {
+    if (w.sizePreset != WidgetSizePreset.standard) return false;
+    if (!isMobile) return true;
+    return w.templateType == WidgetTemplateType.digital ||
+        w.templateType == WidgetTemplateType.actuator ||
+        w.templateType == WidgetTemplateType.gauge ||
+        w.templateType == WidgetTemplateType.metric ||
+        w.templateType == WidgetTemplateType.numeric;
+  }
+
   List<Widget> _buildGroupedWidgets({bool isMobile = false}) {
     final List<Widget> items = [];
     int i = 0;
+    final gap = isMobile ? 10.0 : 16.0;
 
     while (i < _widgets.length) {
       final current = _widgets[i];
 
-      // Check if current and next can be paired side-by-side (2 standard widgets on desktop/tablet)
-      if (!isMobile &&
-          current.sizePreset == WidgetSizePreset.standard &&
+      // Bento Grid 2x2: Pair two compact/standard widgets side-by-side on both mobile and desktop
+      if (_canPairInBentoGrid(current, isMobile) &&
           i + 1 < _widgets.length &&
-          _widgets[i + 1].sizePreset == WidgetSizePreset.standard) {
+          _canPairInBentoGrid(_widgets[i + 1], isMobile)) {
         final next = _widgets[i + 1];
         items.add(
           Row(
@@ -1127,7 +1106,7 @@ class _HomePageState extends State<HomePage> {
                   onStateChanged: () => setState(() {}),
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: gap),
               Expanded(
                 child: HomeWidgetRenderer(
                   config: next,
@@ -1141,7 +1120,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         );
-        items.add(const SizedBox(height: 16));
+        items.add(SizedBox(height: gap));
         i += 2;
       } else {
         // Render single full-width widget
@@ -1155,7 +1134,7 @@ class _HomePageState extends State<HomePage> {
             onStateChanged: () => setState(() {}),
           ),
         );
-        items.add(const SizedBox(height: 16));
+        items.add(SizedBox(height: gap));
         i++;
       }
     }

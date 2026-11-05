@@ -2153,6 +2153,15 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                       hideLabel: isCompact,
                       onPressed: () => setState(() => _showToolbox = !_showToolbox),
                     ),
+                    const SizedBox(width: 4),
+                    _buildActionButton(
+                      icon: (_showSearchBar || _selectedControllerFilter != 'ALL' || _filterOnlyDisabled)
+                          ? Icons.filter_alt
+                          : Icons.search,
+                      label: 'Filtrar',
+                      hideLabel: isCompact,
+                      onPressed: () => setState(() => _showSearchBar = !_showSearchBar),
+                    ),
                   ],
                 ),
                 Row(
@@ -2256,8 +2265,9 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         ),
       ),
 
-          // CONTROLLER FILTER STRIP & SEARCH
-          _buildControllerFilterStrip(isMobile),
+          // CONTROLLER FILTER STRIP & SEARCH (Recolhido por padrão no mobile para preservar espaço)
+          if (!isMobile || _showSearchBar || _selectedControllerFilter != 'ALL' || _filterOnlyDisabled || _searchQuery.isNotEmpty)
+            _buildControllerFilterStrip(isMobile),
 
           if ((widget.networkManager?.isExclusiveGateway ?? false) && _selectedControllerFilter == 'GATEWAY')
             _buildExclusiveGatewayBanner(),
@@ -3093,6 +3103,50 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   Widget _buildComponentToolboxWrapper() {
+    final isSimOrHw = _mode != EditorMode.editor;
+    if (isSimOrHw) {
+      // Auto-recolhe a paleta de componentes nos modos Simular e ESP32 para liberar ~56px verticais
+      return Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        color: _mode == EditorMode.simulateHardware ? const Color(0xFF064E3B) : const Color(0xFF1E293B),
+        child: Row(
+          children: [
+            Icon(
+              _mode == EditorMode.simulateHardware ? Icons.sensors : Icons.play_circle_filled,
+              size: 13,
+              color: _mode == EditorMode.simulateHardware ? const Color(0xFF34D399) : const Color(0xFF38BDF8),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                _mode == EditorMode.simulateHardware
+                    ? 'MODO HARDWARE ATIVO • Toque nos contatos para forçar/pulsar'
+                    : 'MODO SIMULAÇÃO ATIVO • Toque nos contatos para comutar',
+                style: TextStyle(
+                  color: _mode == EditorMode.simulateHardware ? const Color(0xFF6EE7B7) : const Color(0xFFBAE6FD),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            InkWell(
+              onTap: () => _applyMode(EditorMode.editor),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Text(
+                  'Editar Ladder',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (!_showToolbox) {
       return Container(
         height: 24,

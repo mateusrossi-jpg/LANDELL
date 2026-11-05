@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../design_system/industrial_tokens.dart';
 import '../../auth/session_manager.dart';
 import '../../services/network_manager.dart';
@@ -35,6 +36,7 @@ class MaintenanceDiagnosticsView extends StatefulWidget {
 class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView> {
   Timer? _refreshTimer;
   String _filterType = 'TODOS';
+  int _mobileSubTab = 0; // 0 = Forçamento E/S, 1 = Fluxo de Energia (Rungs)
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -256,110 +258,167 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
     );
   }
 
-  // Layout Mobile (iPhone XR)
+  // Layout Mobile Compacto (Abas separadas: Forçamento E/S vs Rungs Ativos)
   Widget _buildMobileLayout() {
     final networks = widget.project?.networks ?? [];
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Live Energy Flow (Visualizador Ladder Real)
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: IndustrialTokens.bgSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: IndustrialTokens.borderSubtle, width: 1.0),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.bolt, color: IndustrialTokens.runGreen, size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'LIVE ENERGY FLOW',
-                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${networks.length} RUNGS',
-                      style: const TextStyle(color: IndustrialTokens.telemetryCyan, fontSize: 10, fontFamily: 'monospace'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (networks.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'Nenhum diagrama Ladder carregado no projeto.',
-                      style: TextStyle(color: Colors.white38, fontSize: 11),
-                    ),
-                  )
-                else
-                  ...networks.map((net) => _buildLiveLadderRung(net)),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Seletor Segmentado Superior: Forçamento E/S vs Rungs Ativos
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: IndustrialTokens.bgSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: IndustrialTokens.borderSubtle),
           ),
-          const SizedBox(height: 14),
-
-          // Forçamento de E/S
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: IndustrialTokens.bgSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: IndustrialTokens.borderSubtle, width: 1.0),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.tune, color: IndustrialTokens.progYellow, size: 18),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'FORÇAMENTO DE E/S',
-                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _mobileSubTab = 0);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _mobileSubTab == 0 ? const Color(0xFF0284C7).withValues(alpha: 0.22) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: _mobileSubTab == 0 ? Border.all(color: const Color(0xFF38BDF8)) : null,
                     ),
-                    if (_forcedCount > 0)
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: IndustrialTokens.progYellow,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.tune,
+                          size: 14,
+                          color: _mobileSubTab == 0 ? const Color(0xFF38BDF8) : Colors.white60,
                         ),
-                        onPressed: _releaseAllForces,
-                        child: const Text('LIBERAR TODOS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (_filteredTags.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'Nenhuma TAG física ou lógica cadastrada no projeto.',
-                      style: TextStyle(color: Colors.white38, fontSize: 11),
+                        const SizedBox(width: 6),
+                        Text(
+                          'FORÇAMENTO E/S (${_allTags.length})',
+                          style: TextStyle(
+                            color: _mobileSubTab == 0 ? Colors.white : Colors.white60,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                else
-                  ..._filteredTags.map((tag) => _buildMobileChannelCard(tag)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _mobileSubTab = 1);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _mobileSubTab == 1 ? IndustrialTokens.runGreen.withValues(alpha: 0.18) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: _mobileSubTab == 1 ? Border.all(color: IndustrialTokens.runGreen) : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.bolt,
+                          size: 14,
+                          color: _mobileSubTab == 1 ? IndustrialTokens.runGreen : Colors.white60,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'RUNGS ATIVOS (${networks.length})',
+                          style: TextStyle(
+                            color: _mobileSubTab == 1 ? Colors.white : Colors.white60,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        if (_mobileSubTab == 0) ...[
+          // Filtros rápidos de tipo / forçados
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip('TODOS'),
+                const SizedBox(width: 6),
+                _buildFilterChip('DI'),
+                const SizedBox(width: 6),
+                _buildFilterChip('DO'),
+                const SizedBox(width: 6),
+                _buildFilterChip('FORÇADOS'),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
         ],
-      ),
+
+        Expanded(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom + 12),
+            child: _mobileSubTab == 0
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_filteredTags.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: IndustrialTokens.bgSurface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: IndustrialTokens.borderSubtle),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Nenhuma TAG corresponde ao filtro selecionado.',
+                            style: TextStyle(color: Colors.white54, fontSize: 11),
+                          ),
+                        )
+                      else
+                        ..._filteredTags.map((tag) => _buildMobileChannelCard(tag)),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (networks.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Nenhum diagrama Ladder carregado no projeto.',
+                            style: TextStyle(color: Colors.white38, fontSize: 11),
+                          ),
+                        )
+                      else
+                        ...networks.map((net) => _buildLiveLadderRung(net)),
+                    ],
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -607,34 +666,44 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
     final typeStr = _formatTagType(tag);
     final isDO = typeStr == 'DO';
     final isBool = tag.type == TagType.bool;
+    final bool isOn = val == true;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: IndustrialTokens.bgCanvas,
+        color: IndustrialTokens.bgSurface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isForced ? IndustrialTokens.progYellow.withValues(alpha: 0.6) : IndustrialTokens.borderSubtle,
-          width: isForced ? 1.5 : 1.0,
+          color: isForced ? IndustrialTokens.progYellow.withValues(alpha: 0.7) : IndustrialTokens.borderSubtle,
+          width: isForced ? 1.3 : 1.0,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isDO ? const Color(0xFF1E2638) : const Color(0xFF132A24),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: isDO ? const Color(0xFF38BDF8).withValues(alpha: 0.4) : IndustrialTokens.runGreen.withValues(alpha: 0.4),
-                    width: 1.0,
+          // LED + Badge de Endereço
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: isDO ? const Color(0xFF1E2638) : const Color(0xFF132A24),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: isDO ? const Color(0xFF38BDF8).withValues(alpha: 0.4) : IndustrialTokens.runGreen.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isOn ? IndustrialTokens.runGreen : Colors.white24,
                   ),
                 ),
-                child: Text(
+                const SizedBox(width: 5),
+                Text(
                   tag.address ?? tag.id,
                   style: TextStyle(
                     color: isDO ? const Color(0xFF38BDF8) : IndustrialTokens.runGreen,
@@ -643,90 +712,134 @@ class _MaintenanceDiagnosticsViewState extends State<MaintenanceDiagnosticsView>
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  tag.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (isForced)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: IndustrialTokens.progYellow.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('FORÇADO', style: TextStyle(color: IndustrialTokens.progYellow, fontSize: 8.5, fontWeight: FontWeight.bold)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _resolveGpioString(tag),
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9.5),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Valor: $val',
-                style: TextStyle(
-                  color: val == true ? IndustrialTokens.runGreen : Colors.white70,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (isBool)
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: IndustrialTokens.runGreen,
-                      side: const BorderSide(color: IndustrialTokens.runGreen),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                    ),
-                    onPressed: () => _forceBool(tag, true),
-                    child: const Text('FORÇAR ON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: const BorderSide(color: Colors.white30),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                    ),
-                    onPressed: () => _forceBool(tag, false),
-                    child: const Text('FORÇAR OFF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                if (isForced) ...[
-                  const SizedBox(width: 6),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: IndustrialTokens.progYellow,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
-                    onPressed: () => _unforceTag(tag),
-                    child: const Text('LIBERAR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ],
               ],
             ),
+          ),
+          const SizedBox(width: 8),
+          // Nome + GPIO
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        tag.name,
+                        style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isForced) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: IndustrialTokens.progYellow.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: const Text(
+                          'FORÇADO',
+                          style: TextStyle(color: IndustrialTokens.progYellow, fontSize: 8, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                Text(
+                  _resolveGpioString(tag),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 9.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Seletor Segmentado Compacto: [ 0 | AUTO | 1 ]
+          if (isBool)
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: IndustrialTokens.bgCanvas,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: IndustrialTokens.borderSubtle),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildForceSegmentButton(
+                    label: '0',
+                    isSelected: isForced && !isOn,
+                    activeColor: const Color(0xFFF43F5E),
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      _forceBool(tag, false);
+                    },
+                  ),
+                  _buildForceSegmentButton(
+                    label: 'AUTO',
+                    isSelected: !isForced,
+                    activeColor: const Color(0xFF38BDF8),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      if (isForced) _unforceTag(tag);
+                    },
+                  ),
+                  _buildForceSegmentButton(
+                    label: '1',
+                    isSelected: isForced && isOn,
+                    activeColor: IndustrialTokens.runGreen,
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      _forceBool(tag, true);
+                    },
+                  ),
+                ],
+              ),
+            )
+          else
+            Text(
+              '$val',
+              style: const TextStyle(
+                color: IndustrialTokens.telemetryCyan,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildForceSegmentButton({
+    required String label,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.22) : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          border: isSelected ? Border.all(color: activeColor, width: 1) : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white60,
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
+        ),
       ),
     );
   }

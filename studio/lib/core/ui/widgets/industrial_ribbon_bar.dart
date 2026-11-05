@@ -84,10 +84,54 @@ class IndustrialRibbonBar extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
-            // Badge de Estado Compacto
-            _buildPlcStateBadge(isCompact: true),
+            // Pill Unificado de Status + IP + Scan Time (Mobile)
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF252A36),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: networkManager.isHardwareOnline
+                        ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                        : const Color(0xFF353B4A),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: networkManager.isHardwareOnline
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFF38BDF8),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        networkManager.isHardwareOnline
+                            ? '${networkManager.gatewayIp} • ${networkManager.kernelExecMaxUs > 0 ? "${(networkManager.kernelExecMaxUs / 1000.0).toStringAsFixed(1)}ms" : "1.0ms"}'
+                            : 'SIM • ${scanDurationUs != null && scanDurationUs! > 0 ? "${(scanDurationUs! / 1000.0).toStringAsFixed(1)}ms" : "1.0ms"}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: IndustrialTokens.codeMonospace.copyWith(
+                          color: const Color(0xFFE2E8F0),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             if (networkManager.unclaimedNodes.isNotEmpty) ...[
               const SizedBox(width: 6),
@@ -198,7 +242,7 @@ class IndustrialRibbonBar extends StatelessWidget {
               ),
             ),
 
-            if (onToggleTerminal != null && box.maxWidth > 390) ...[
+            if (onToggleTerminal != null) ...[
               const SizedBox(width: 4),
               InkWell(
                 borderRadius: BorderRadius.circular(4),
@@ -207,7 +251,7 @@ class IndustrialRibbonBar extends StatelessWidget {
                   padding: const EdgeInsets.all(5),
                   child: Icon(
                     Icons.terminal_rounded,
-                    size: 17,
+                    size: 16,
                     color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
                   ),
                 ),

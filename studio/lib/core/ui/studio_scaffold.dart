@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../design_system/industrial_tokens.dart';
 import '../network/authenticated_http_client.dart';
 import '../services/network_manager.dart';
@@ -48,7 +49,7 @@ class _StudioScaffoldState extends State<StudioScaffold> {
   final LadderRuntime _runtime = LadderRuntime();
 
   IndustrialPlcMode _plcMode = IndustrialPlcMode.run;
-  bool _showTerminal = true;
+  bool _showTerminal = false;
   bool _isKioskMode = false;
 
   @override
@@ -1111,8 +1112,64 @@ class _StudioScaffoldState extends State<StudioScaffold> {
               IndustrialTerminalDrawer(
                 onClose: () => setState(() => _showTerminal = false),
               ),
+            if (!_isKioskMode)
+              _buildCompactBottomNavigationBar(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompactBottomNavigationBar() {
+    final navItems = <({int index, IconData icon, IconData activeIcon, String label})>[
+      (index: 0, icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'HMI'),
+      (index: 1, icon: Icons.account_tree_outlined, activeIcon: Icons.account_tree, label: 'Ladder'),
+      (index: 2, icon: Icons.memory_outlined, activeIcon: Icons.memory, label: 'GPIO'),
+      (index: 4, icon: Icons.build_circle_outlined, activeIcon: Icons.build_circle, label: 'Diag'),
+      (index: 5, icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: 'OEE'),
+      (index: 3, icon: Icons.hub_outlined, activeIcon: Icons.hub, label: 'Rede'),
+    ];
+    final effectiveSelected = _selectedIndex == 6 ? 1 : _selectedIndex;
+
+    return Container(
+      height: 46,
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E222B),
+        border: Border(top: BorderSide(color: Color(0xFF2A303D), width: 1.0)),
+      ),
+      child: Row(
+        children: navItems.map((item) {
+          final isSelected = effectiveSelected == item.index;
+          return Expanded(
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _onSelectDestination(item.index);
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isSelected ? item.activeIcon : item.icon,
+                    size: 17,
+                    color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected ? const Color(0xFFF1F5F9) : const Color(0xFF94A3B8),
+                      fontSize: 9.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

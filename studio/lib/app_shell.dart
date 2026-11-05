@@ -66,6 +66,13 @@ class _AppShellState extends State<AppShell> {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.dark,
+      builder: (context, child) {
+        return MediaQuery.withClampedTextScaling(
+          minScaleFactor: 0.9,
+          maxScaleFactor: 1.15,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: SessionManager.instance.isLoggedIn
           ? StudioScaffold(
               initialIndex: 0,
