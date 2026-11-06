@@ -356,6 +356,7 @@ static void on_network_ready(const network_ready_snapshot_t *snapshot, void *ctx
     if (!snapshot || !snapshot->ready)
         return;
 
+#if 0 /* Ocultado para apresentacao de Controlador Unico (mudar para 1 para reativar Cluster) */
     portENTER_CRITICAL(&cluster_start_lock);
 
     if (!cluster_start_pending || pending_cluster_link != snapshot->active_link)
@@ -365,6 +366,7 @@ static void on_network_ready(const network_ready_snapshot_t *snapshot, void *ctx
     }
 
     portEXIT_CRITICAL(&cluster_start_lock);
+#endif
 
     portENTER_CRITICAL(&http_start_lock);
 

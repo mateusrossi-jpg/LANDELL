@@ -71,7 +71,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify dialog opened and displays initial tag
-    expect(find.text('VARIÁVEL / TAG DO CLP (IEC 61131-3)'), findsOneWidget);
+    expect(find.text('VARIÁVEL / TAG DO CLP'), findsOneWidget);
     expect(find.text('BTN_START'), findsOneWidget);
     expect(find.text('ALTERAR'), findsOneWidget);
 

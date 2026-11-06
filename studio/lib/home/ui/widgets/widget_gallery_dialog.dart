@@ -95,25 +95,28 @@ class WidgetGalleryDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'GALERIA DE WIDGETS',
-                      style: TextStyle(
-                        color: AppTokens.text,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'GALERIA DE WIDGETS',
+                        style: TextStyle(
+                          color: AppTokens.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Selecione o componente visual para vincular a uma variável',
-                      style: TextStyle(color: AppTokens.textDim, fontSize: 11),
-                    ),
-                  ],
+                      SizedBox(height: 2),
+                      Text(
+                        'Selecione o componente visual para vincular a uma variável',
+                        style: TextStyle(color: AppTokens.textDim, fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +19,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await SessionManager.instance.login('admin', 'Endap@2026!Secured');
 
-    for (final candidate in ['192.168.4.1', '192.168.0.27', '192.168.0.229']) {
+    final envHost = Platform.environment['LANDELL_PLC_HOST'];
+    final candidates = [
+      if (envHost != null && envHost.trim().isNotEmpty) envHost.trim(),
+      '192.168.4.1',
+      '192.168.0.27',
+      '192.168.0.229',
+    ];
+    for (final candidate in candidates) {
       try {
         final res = await http
             .get(Uri.parse('http://$candidate/api/status'))

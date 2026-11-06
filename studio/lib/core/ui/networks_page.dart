@@ -405,7 +405,8 @@ class _NetworksPageState extends State<NetworksPage> {
                           _buildControllerCard(),
                           const SizedBox(height: 12),
                         ],
-                        if (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'CLUSTER') ...[
+                        // Ocultado para apresentação em modo Controlador Único (altere _kShowClusterUi para true para reexibir)
+                        if (_kShowClusterUi && (_selectedNetworkTab == 'ALL' || _selectedNetworkTab == 'CLUSTER')) ...[
                           _buildNodesSection(),
                           const SizedBox(height: 12),
                         ],
@@ -432,11 +433,13 @@ class _NetworksPageState extends State<NetworksPage> {
     );
   }
 
+  static const bool _kShowClusterUi = false;
+
   Widget _buildNetworkSubTabBar() {
     final tabs = <({String key, String label})>[
       (key: 'ALL', label: 'Visão Geral'),
       (key: 'WIFI', label: 'Wi-Fi & AP'),
-      (key: 'CLUSTER', label: 'Cluster / Nós'),
+      if (_kShowClusterUi) (key: 'CLUSTER', label: 'Cluster / Nós'),
       (key: 'MQTT', label: 'MQTT'),
       (key: 'OTA', label: 'Firmware OTA'),
     ];

@@ -138,6 +138,10 @@ bool pve_run_self_tests(void) {
     TEST_ASSERT(pve_variables[1].alarm.low_limit == 30, "Falha no Teste 10: alarm_low de pve[1] incorreto");
     // Test 11: Hysteresis and Alarm History test
     pve_init_variables();
+    pve_variables[0].config.input_min = 0;
+    pve_variables[0].config.input_max = 4095;
+    pve_variables[0].config.scaled_min = 0;
+    pve_variables[0].config.scaled_max = 1000;
     pve_variables[0].alarm.enabled = 1;
     pve_variables[0].alarm.high_limit = 800;
     pve_variables[0].alarm.low_limit = 200;
@@ -166,6 +170,10 @@ bool pve_run_self_tests(void) {
 
     // Auditoria 1 — Overflow do histórico (Ring Buffer de 64 elementos, gerar 200 eventos)
     pve_init_variables();
+    pve_variables[0].config.input_min = 0;
+    pve_variables[0].config.input_max = 4095;
+    pve_variables[0].config.scaled_min = 0;
+    pve_variables[0].config.scaled_max = 1000;
     pve_variables[0].alarm.enabled = 1;
     pve_variables[0].alarm.high_limit = 800;
     pve_variables[0].alarm.low_limit = 200;

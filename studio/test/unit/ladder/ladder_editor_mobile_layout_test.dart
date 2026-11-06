@@ -47,7 +47,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verificar Empty State compacto presente
-        expect(find.text('Lógica Ladder IEC Vazia'), findsOneWidget);
+        expect(find.text('Nenhum rung configurado'), findsOneWidget);
         expect(find.text('Adicionar Rung'), findsOneWidget);
 
         // Verificar Monitor I/O presente e recolhido
@@ -171,8 +171,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Testar validação
-      await tester.tap(find.byIcon(Icons.check));
+      // Testar validação pelo menu Ferramentas
+      await tester.tap(find.text('Ferramentas'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Validar Sintaxe & Grafo IEC 61131-3'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1500));
     });

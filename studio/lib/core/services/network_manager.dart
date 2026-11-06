@@ -257,7 +257,6 @@ class NetworkManager extends ChangeNotifier {
     final candidates = <String>{
       if (gatewayIp.isNotEmpty) gatewayIp,
       '192.168.4.1',
-      'landell.local',
       mdnsHost,
       if (kIsWeb && Uri.base.authority.isNotEmpty) Uri.base.authority,
       if (_lastStaIp.isNotEmpty && _lastStaIp != gatewayIp) _lastStaIp,
@@ -418,7 +417,6 @@ class NetworkManager extends ChangeNotifier {
       '192.168.4.1',
       '192.168.0.229',
       '192.168.0.27',
-      'landell.local',
       mdnsHost,
       'endap.local',
       gatewayIp,

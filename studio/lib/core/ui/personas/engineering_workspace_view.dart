@@ -567,13 +567,14 @@ class _EngineeringWorkspaceViewState extends State<EngineeringWorkspaceView> wit
                     ),
                   ],
                 ),
+                // Ocultado rótulo de Cluster para apresentação em modo Controlador Único
                 _buildTreeGroup(
-                  title: 'Cluster & Nós de Campo',
-                  icon: Icons.hub,
+                  title: 'Rede & Provisionamento',
+                  icon: Icons.wifi_tethering,
                   children: [
                     _buildTreeLeaf(
                       id: 'NodesTopology',
-                      title: 'Topologia de Rede & Descoberta',
+                      title: 'Conectividade Wi-Fi & OTA',
                       icon: Icons.settings_ethernet,
                       iconColor: IndustrialTokens.runGreen,
                       onTap: () => _tabController.animateTo(2),

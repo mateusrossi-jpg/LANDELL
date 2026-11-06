@@ -33,7 +33,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Clica em ADICIONAR WIDGET
-      await tester.tap(find.text('ADICIONAR WIDGET'));
+      await tester.tap(find.text('ADICIONAR WIDGET').first);
       await tester.pumpAndSettle();
 
       // Valida que todos os 7 templates aparecem
@@ -236,7 +236,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Confirma remoção
-      await tester.tap(find.text('REMOVER'));
+      await tester.tap(find.text('REMOVER').last);
       await tester.pumpAndSettle();
 
       expect(find.text('WIDGET A SER EXCLUIDO'), findsNothing);

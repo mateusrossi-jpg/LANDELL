@@ -348,38 +348,48 @@ class _VariablesPanelState extends State<VariablesPanel> {
                 Expanded(child: _buildHeaderTab(activeCount, allTagsList.length, allTagsList)),
               ],
             )
-          : Column(
-              children: [
-                Container(height: 1.0, color: AppTokens.line),
-                SizedBox(
-                  height: 43.0,
-                  child: _buildHeaderTab(activeCount, allTagsList.length, allTagsList),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildCategoryChip('ALL', 'Todas (${allTagsList.length})'),
-                        const SizedBox(width: 6),
-                        _buildCategoryChip('IN', 'Entradas (I)'),
-                        const SizedBox(width: 6),
-                        _buildCategoryChip('OUT', 'Saídas (Q)'),
-                        const SizedBox(width: 6),
-                        _buildCategoryChip('MEM', 'Memórias / T / C'),
-                      ],
+          : LayoutBuilder(
+              builder: (context, panelConstraints) {
+                if (panelConstraints.maxHeight <= 46.0) {
+                  return Column(
+                    children: [
+                      Container(height: 1.0, color: AppTokens.line),
+                      Expanded(child: _buildHeaderTab(activeCount, allTagsList.length, allTagsList)),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    Container(height: 1.0, color: AppTokens.line),
+                    SizedBox(
+                      height: 43.0,
+                      child: _buildHeaderTab(activeCount, allTagsList.length, allTagsList),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Input Form to Add Custom Variable
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _buildCategoryChip('ALL', 'Todas (${allTagsList.length})'),
+                                    const SizedBox(width: 6),
+                                    _buildCategoryChip('IN', 'Entradas (I)'),
+                                    const SizedBox(width: 6),
+                                    _buildCategoryChip('OUT', 'Saídas (Q)'),
+                                    const SizedBox(width: 6),
+                                    _buildCategoryChip('MEM', 'Memórias / T / C'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Input Form to Add Custom Variable
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Row(
@@ -739,6 +749,8 @@ class _VariablesPanelState extends State<VariablesPanel> {
                   ),
                 ),
               ],
+            );
+              },
             ),
     );
   }

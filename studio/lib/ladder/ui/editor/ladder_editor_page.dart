@@ -193,8 +193,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       gatewayIp: initialIp,
     );
     TelemetrySyncService.instance.addListener(_onTelemetryUpdated);
-    if (_mode == EditorMode.simulateHardware && !TelemetrySyncService.instance.isPolling) {
-      TelemetrySyncService.instance.start();
+    if (_mode == EditorMode.simulateHardware) {
+      _startTelemetryIfNeeded();
     }
     if (widget.initialProject != null) {
       _project = widget.initialProject!;
@@ -237,13 +237,13 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         if (_mode != EditorMode.editor) {
           _startTimedSimulation();
         }
-        if (_mode == EditorMode.simulateHardware && !TelemetrySyncService.instance.isPolling) {
-          TelemetrySyncService.instance.start();
+        if (_mode == EditorMode.simulateHardware) {
+          _startTelemetryIfNeeded();
         }
       } else if (!widget.isActive) {
         _simulationTimer?.cancel();
         _simulationTimer = null;
-        TelemetrySyncService.instance.stop();
+        _stopOwnedTelemetry();
       }
     }
   }
@@ -253,8 +253,33 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     _searchController.dispose();
     _simulationTimer?.cancel();
     TelemetrySyncService.instance.removeListener(_onTelemetryUpdated);
-    TelemetrySyncService.instance.stop();
+    _stopOwnedTelemetry();
     super.dispose();
+  }
+
+  /// Indica se este editor iniciou o polling de telemetria. Quando o polling pertence ao
+  /// StudioScaffold (autoStartTelemetry), o editor não pode parar nem pausar o serviço
+  /// compartilhado, senão o status Online/Offline do app inteiro cai.
+  bool _ownsTelemetryPolling = false;
+
+  void _startTelemetryIfNeeded() {
+    if (TelemetrySyncService.instance.isPolling) return;
+    TelemetrySyncService.instance.start();
+    _ownsTelemetryPolling = true;
+  }
+
+  /// Para o polling somente se ele foi iniciado por este editor (ao sair/desmontar).
+  void _stopOwnedTelemetry() {
+    if (!_ownsTelemetryPolling) return;
+    _ownsTelemetryPolling = false;
+    TelemetrySyncService.instance.stop();
+  }
+
+  /// Pausa o polling (preservando o status) somente se ele foi iniciado por este editor.
+  void _pauseOwnedTelemetry() {
+    if (!_ownsTelemetryPolling) return;
+    _ownsTelemetryPolling = false;
+    TelemetrySyncService.instance.pause();
   }
 
   Future<void> _loadProject() async {
@@ -278,9 +303,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
             runtime: _runtime,
             gatewayIp: _resolveGatewayIpSync(),
           );
-          if (!TelemetrySyncService.instance.isPolling) {
-            TelemetrySyncService.instance.start();
-          }
+          _startTelemetryIfNeeded();
         }
         if (_mode != EditorMode.editor && widget.isActive) {
           _startTimedSimulation();
@@ -376,7 +399,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       _simulationTimer = null;
       _releaseAllSimulationForces();
       _clearNodeEnergization();
-      TelemetrySyncService.instance.stop();
+      // pause() (e não stop()) preserva o status Online/Offline exibido no LED do modo ESP32
+      _pauseOwnedTelemetry();
       TelemetrySyncService.instance.injectEnabled = false;
       return;
     }
@@ -386,7 +410,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
     if (mode == EditorMode.simulateLocal) {
       // 2. MODO SIMULAÇÃO: APENAS SIMULAÇÃO EM SOFTWARE
       // Zero comunicação de rede com ESP32. Executa motor determinístico local no app.
-      TelemetrySyncService.instance.stop();
+      _pauseOwnedTelemetry();
       TelemetrySyncService.instance.injectEnabled = false;
       if (_simulationTimer == null && widget.isActive) {
         _startTimedSimulation();
@@ -401,15 +425,64 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         runtime: _runtime,
         gatewayIp: ip,
       );
-      if (TelemetrySyncService.instance.isPolling == false) {
-        TelemetrySyncService.instance.start();
-      }
+      _startTelemetryIfNeeded();
       if (_simulationTimer == null && widget.isActive) {
         _startTimedSimulation();
       }
-      // Faz deploy automático do projeto atual para garantir que SET / Selo / novos rungs estejam ativos no ESP32
-      unawaited(_autoDeployToHardware());
+      // Libera forçamentos antigos (entradas/saídas presas) e faz deploy automático do projeto atual
+      // para garantir que SET / Selo / novos rungs estejam ativos no ESP32
+      unawaited(_releaseHardwareForces().then((_) => _autoDeployToHardware()));
     }
+  }
+
+  /// Libera todos os forçamentos (in_force_en / out_force_en) do controlador, para que a lógica
+  /// Ladder embarcada e os botões físicos voltem a comandar as E/S.
+  Future<void> _releaseHardwareForces() async {
+    try {
+      final ip = await _resolveGatewayIp();
+      if (ip.isEmpty) return;
+      await GpioService.instance.postForce(ip, {'action': 'release_all'});
+    } catch (_) {}
+  }
+
+  /// Indica se o contato é gatilho de um rung com SET/RESET ou Selo (auto-retenção).
+  /// Em modo Hardware esses contatos são acionados como pulso, para que a entrada não fique
+  /// forçada em 1 no ESP32 e o RESET (Ladder ou botão físico) consiga desarmar a saída.
+  bool _isLatchTriggerContact(Set<String> keys) {
+    final upperKeys = keys.map((k) => k.trim().toUpperCase()).toSet();
+    bool matches(String? tid) =>
+        tid != null && tid.isNotEmpty && upperKeys.contains(tid.trim().toUpperCase());
+
+    void collect(List<LadderNode> nodes, List<String> contacts) {
+      for (final n in nodes) {
+        if (n.type == NodeType.parallel && n.branches != null) {
+          for (final b in n.branches!) {
+            collect(b, contacts);
+          }
+        } else if (n.type == NodeType.contactNO || n.type == NodeType.contactNC) {
+          final tid = n.config.tagId;
+          if (tid != null && tid.isNotEmpty) contacts.add(tid.trim().toUpperCase());
+        }
+      }
+    }
+
+    for (final net in _project.networks) {
+      if (!net.isEnabled) continue;
+      final contacts = <String>[];
+      collect(net.nodes, contacts);
+      if (!contacts.any((c) => upperKeys.contains(c))) continue;
+      for (final n in net.nodes) {
+        if (n.type == NodeType.coilSet || n.type == NodeType.coilReset) return true;
+        if (n.type == NodeType.coil) {
+          final tid = n.config.tagId?.trim().toUpperCase();
+          if (tid != null && tid.isNotEmpty && contacts.contains(tid) && matches(tid) == false) {
+            // Selo: a própria saída aparece como contato na mesma rung
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   Future<void> _fetchFromEsp32() async {
@@ -721,7 +794,9 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       }
     }
 
-    if (_simulationPulseMode && isPushbutton) {
+    final usePulse = (_simulationPulseMode && isPushbutton) ||
+        (_mode == EditorMode.simulateHardware && _isLatchTriggerContact(keysToUpdate));
+    if (usePulse) {
       // Se a entrada já estiver ligada, um clique desliga imediatamente
       final current = _simulationInputs[tagId] ?? _runtime.tagStore.getBool(tagId);
       if (current) {
@@ -748,7 +823,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         unawaited(_dispatchHardwareActuation(tagId, true));
       }
 
-      Timer(const Duration(milliseconds: 400), () {
+      Timer(Duration(milliseconds: _mode == EditorMode.simulateHardware ? 450 : 400), () {
         if (!mounted || _mode == EditorMode.editor) return;
         setState(() {
           setAllKeys(false);
@@ -802,6 +877,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
   void _resetSimulation() {
     TelemetrySyncService.instance.clearPendingActuations();
+    if (_mode == EditorMode.simulateHardware) {
+      // Libera forçamentos presos e reimplanta a lógica para zerar saídas retidas no ESP32
+      unawaited(_releaseHardwareForces().then((_) => _autoDeployToHardware()));
+    }
     setState(() {
       _simulationInputs.clear();
       for (var tag in _project.tags.values) {
@@ -1063,7 +1142,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                   _buildComponentSectionHeader('1. Contatos & Ramificação'),
                   _buildComponentMenuOption(rungIndex, insertIndex, 'Contato Aberto (NO)', NodeType.contactNO, Icons.power_input),
                   _buildComponentMenuOption(rungIndex, insertIndex, 'Contato Fechado (NC)', NodeType.contactNC, Icons.do_not_disturb_on),
-                  _buildComponentMenuOption(rungIndex, insertIndex, 'Ramo Paralelo (OR / Selo)', NodeType.parallel, Icons.call_split),
+                  _buildComponentMenuOption(rungIndex, insertIndex, 'Branch (Paralelo / OR)', NodeType.parallel, Icons.call_split),
                   _buildComponentSectionHeader('2. Bobinas de Saída'),
                   _buildComponentMenuOption(rungIndex, insertIndex, 'Bobina de Saída (COIL)', NodeType.coil, Icons.radio_button_checked),
                   _buildComponentMenuOption(rungIndex, insertIndex, 'Bobina de SET (Retenção / Latch)', NodeType.coilSet, Icons.subdirectory_arrow_right),
@@ -1204,7 +1283,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
-                        'Configurar Ramo Paralelo / Selo (OR)',
+                        'Configurar Branch (Paralelo / OR)',
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Color(0xFFE7EBF0)),
                         textAlign: TextAlign.center,
                       ),
@@ -1250,7 +1329,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Text('Ramo Inferior (Contato de Selo / Retenção):', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Branch Inferior (Contato de Auto-retenção):', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       Row(
                         children: [
@@ -1272,7 +1351,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                               controller: bottomTagCtrl,
                               style: const TextStyle(color: Color(0xFFE7EBF0), fontFamily: 'JetBrains Mono', fontSize: 13),
                               decoration: InputDecoration(
-                                labelText: 'Tag do Selo (Ex: Q0.0 ou M0.0)',
+                                labelText: 'Tag da Auto-retenção (Ex: Q0.0 ou M0.0)',
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.table_chart_outlined, size: 18, color: Color(0xFF38BDF8)),
                                   onPressed: () async {
@@ -1280,7 +1359,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                                       context,
                                       tags: _project.tags,
                                       initialSelectedTagId: bottomTagCtrl.text,
-                                      title: 'Tag do Contato de Selo',
+                                      title: 'Tag do Contato de Auto-retenção',
                                     );
                                     if (sel != null) setModalState(() => bottomTagCtrl.text = sel);
                                   },
@@ -1321,7 +1400,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                           });
                           Navigator.pop(context);
                         },
-                        child: const Text('Salvar Selo / Paralelo', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                        child: const Text('Salvar Branch', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -1731,7 +1810,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 if (branchIndex != null)
                   ListTile(
                     leading: const Icon(Icons.call_split, color: Color(0xFF38BDF8)),
-                    title: const Text('Configurar Bloco de Selo / Paralelo', style: TextStyle(color: Color(0xFFE7EBF0))),
+                    title: const Text('Configurar Bloco Branch (Paralelo)', style: TextStyle(color: Color(0xFFE7EBF0))),
                     onTap: () {
                       Navigator.pop(context);
                       _showEditParallelNodeBottomSheet(rungIndex, nodeIndex);
@@ -1740,7 +1819,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 if (isContact && branchIndex == null)
                   ListTile(
                     leading: const Icon(Icons.call_split, color: Color(0xFF10B981)),
-                    title: const Text('Adicionar Contato de Selo em Paralelo', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600)),
+                    title: const Text('Adicionar Contato de Auto-retenção no Branch', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600)),
                     onTap: () {
                       Navigator.pop(context);
                       String seloTag = 'Q0.0';
@@ -2097,7 +2176,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                           const SizedBox(width: 6),
                           _buildActionButton(
                             icon: _showToolbox ? Icons.view_compact_alt : Icons.view_compact_alt_outlined,
-                            label: _showToolbox ? 'Ocultar Paleta' : 'Paleta',
+                            label: _showToolbox ? 'Ocultar Paleta' : 'Paleta Componentes',
                             hideLabel: isCompact,
                             onPressed: () => setState(() => _showToolbox = !_showToolbox),
                           ),
@@ -2214,7 +2293,11 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
   }
 
   void _addNewRung() {
+    if (_mode != EditorMode.editor) {
+      _applyMode(EditorMode.editor);
+    }
     setState(() {
+      _showToolbox = true;
       final isExclusive = widget.networkManager?.isExclusiveGateway ?? false;
       String defaultController = 'GATEWAY';
       if (isExclusive) {
@@ -2267,7 +2350,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       ),
       child: Row(
         children: [
-          Container(
+          Flexible(
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.16),
@@ -2275,6 +2359,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
             ),
             child: Text(
               modeTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: accentColor,
                 fontSize: 9.5,
@@ -2283,8 +2369,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               ),
             ),
           ),
+          ),
           const Spacer(),
-          InkWell(
+          Flexible(
+            child: InkWell(
             onTap: () => setState(() => _simulationPulseMode = !_simulationPulseMode),
             borderRadius: BorderRadius.circular(4),
             child: Container(
@@ -2298,6 +2386,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               ),
               child: Text(
                 _simulationPulseMode ? 'Modo: Pulso' : 'Modo: Retentivo',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: _simulationPulseMode ? const Color(0xFF4FD1C5) : const Color(0xFFE0A430),
                   fontSize: 9.5,
@@ -2306,8 +2396,10 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               ),
             ),
           ),
+          ),
           const SizedBox(width: 6),
-          InkWell(
+          Flexible(
+            child: InkWell(
             onTap: _resetSimulation,
             borderRadius: BorderRadius.circular(4),
             child: Container(
@@ -2319,6 +2411,8 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               ),
               child: const Text(
                 'Resetar Estados',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Color(0xFFF87171),
                   fontSize: 9.5,
@@ -2326,6 +2420,7 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                 ),
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -2365,22 +2460,29 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      EndapLogoWidget(size: 16, showText: false),
-                      SizedBox(width: 8),
-                      Text(
-                        'FERRAMENTAS DE ENGENHARIA LADDER',
-                        style: TextStyle(
-                          color: Color(0xFFF1F5F9),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
+                  const Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        EndapLogoWidget(size: 16, showText: false),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'FERRAMENTAS DE ENGENHARIA LADDER',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Color(0xFFF1F5F9),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
@@ -2580,31 +2682,36 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFF263044)),
       ),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        leading: Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          leading: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
           ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFFF1F5F9),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFFF1F5F9),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5),
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B), size: 18),
+          onTap: onTap,
         ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10.5),
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B), size: 18),
-        onTap: onTap,
       ),
     );
   }
@@ -3368,6 +3475,42 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
 
   Widget _buildComponentToolboxWrapper() {
     final isSimOrHw = _mode != EditorMode.editor;
+    if (!_showToolbox) {
+      return Container(
+        height: 24,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppTokens.panel,
+          border: Border(bottom: BorderSide(color: AppTokens.line, width: 1)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.widgets_outlined, size: 12, color: Color(0xFF94A3B8)),
+            const SizedBox(width: 6),
+            const Expanded(
+              child: Text(
+                'Paleta de Componentes Oculta',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: () => setState(() => _showToolbox = true),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text('Exibir Componentes', style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down, size: 14, color: Color(0xFF4FD1C5)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (isSimOrHw) {
       // Auto-recolhe a paleta de componentes nos modos Simular e ESP32 para liberar ~56px verticais
       return Container(
@@ -3404,42 +3547,6 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
                   'Editar Ladder',
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
                 ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (!_showToolbox) {
-      return Container(
-        height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: AppTokens.panel,
-          border: Border(bottom: BorderSide(color: AppTokens.line, width: 1)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.widgets_outlined, size: 12, color: Color(0xFF94A3B8)),
-            const SizedBox(width: 6),
-            const Expanded(
-              child: Text(
-                'Paleta de Componentes Oculta',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            InkWell(
-              onTap: () => setState(() => _showToolbox = true),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text('Exibir Componentes', style: TextStyle(color: Color(0xFF4FD1C5), fontSize: 10, fontWeight: FontWeight.bold)),
-                  SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down, size: 14, color: Color(0xFF4FD1C5)),
-                ],
               ),
             ),
           ],
@@ -3553,10 +3660,19 @@ class _LadderEditorPageState extends State<LadderEditorPage> {
       (mode: EditorMode.simulateHardware, icon: Icons.memory, label: isMobile ? 'ESP32' : 'Conectado ao ESP32'),
     ];
 
+    final nm = widget.networkManager;
     return ListenableBuilder(
-      listenable: TelemetrySyncService.instance,
+      listenable: Listenable.merge([
+        TelemetrySyncService.instance,
+        if (nm != null) nm,
+      ]),
       builder: (context, _) {
-        final isOnline = TelemetrySyncService.instance.isOnline;
+        // Em Hardware vale a telemetria; em Edição/Simulação (sem polling) vale o NetworkManager.
+        final telemetryOnline = TelemetrySyncService.instance.isOnline;
+        final managerOnline = nm?.isHardwareOnline ?? false;
+        final isOnline = _mode == EditorMode.simulateHardware
+            ? (telemetryOnline || managerOnline)
+            : (nm != null ? managerOnline : telemetryOnline);
         final shouldUseExpanded = isMobile && allowExpand;
         return Container(
           padding: const EdgeInsets.all(2),

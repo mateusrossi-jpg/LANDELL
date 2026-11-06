@@ -1222,97 +1222,101 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showAddActionSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF131722),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        side: BorderSide(color: Color(0xFF222B3D)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-          child: Column(
+  /// Ações fixas à direita do cabeçalho da Home (Kiosk, Exportar, Novo Widget, Editar).
+  Widget _hmiHeaderActions() {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+    return Row(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF334155),
-                    borderRadius: BorderRadius.circular(2),
+              // Botão: Modo Kiosk (Touch Operator)
+              Tooltip(
+                message: 'Iniciar Modo Touch Kiosk',
+                child: InkWell(
+                  key: const Key('btn_modo_kiosk'),
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: _enterKioskMode,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.6), width: 1.0),
+                    ),
+                    child: const Text(
+                      'KIOSK',
+                      style: TextStyle(color: Color(0xFF2DD4BF), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
-              const Text(
-                'AÇÕES DO PROJETO',
-                style: TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                title: const Text(
-                  'Novo Ponto de I/O (Tag)',
-                  style: TextStyle(
-                    color: Color(0xFFFFFFFF),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+              SizedBox(width: isMobile ? 4 : 6),
+
+              // Botão: Exportar Pacote IHM (.endap-hmi)
+              Tooltip(
+                message: 'Exportar pacote IHM',
+                child: InkWell(
+                  key: const Key('btn_exportar_ihm'),
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: _openExportHmiDialog,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF252A36),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFF353B4A)),
+                    ),
+                    child: Text(
+                      isMobile ? 'EXPORTAR' : 'EXPORTAR IHM',
+                      style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-                subtitle: const Text(
-                  'Criar entrada, saída ou variável de memória no projeto',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
-                ),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final newTag = await CreateIoDialog.show(
-                    context,
-                    project: _localProject,
-                    onTagCreated: (tag) {
-                      setState(() {});
-                      widget.onProjectUpdated?.call();
-                    },
-                  );
-                  if (newTag != null && mounted) {
-                    setState(() {});
-                    widget.onProjectUpdated?.call();
-                  }
-                },
               ),
-              const Divider(color: Color(0xFF1E2638)),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                title: const Text(
-                  'Adicionar Widget HMI',
-                  style: TextStyle(
-                    color: Color(0xFFFFFFFF),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+              SizedBox(width: isMobile ? 4 : 6),
+
+              // Botão: Adicionar Widget
+              Tooltip(
+                message: 'Adicionar Widget na tela atual',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: _openAddWidgetFlow,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      isMobile ? '+ WIDGET' : 'NOVO WIDGET',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-                subtitle: const Text(
-                  'Escolher mostrador, indicador, gráfico ou atuador',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+              ),
+              SizedBox(width: isMobile ? 4 : 6),
+
+              // Botão: Reordenar / Editar Layout
+              Tooltip(
+                message: 'Editar Dashboard',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: () => setState(() => _isEditMode = true),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF252A36),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(color: const Color(0xFF353B4A)),
+                    ),
+                    child: const Text(
+                      'EDITAR',
+                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _openAddWidgetFlow();
-                },
               ),
             ],
-          ),
-        ),
-      ),
-    );
+          );
   }
 
   Widget _buildHeader() {
@@ -1418,6 +1422,7 @@ class _HomePageState extends State<HomePage> {
 
           // Screen Selector Tabs roláveis no centro
           Expanded(
+            flex: isMobile ? 3 : 1,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -1544,99 +1549,18 @@ class _HomePageState extends State<HomePage> {
 
           SizedBox(width: isMobile ? 4 : 8),
 
-          // Ações Fixas à Direita
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Botão: Modo Kiosk (Touch Operator)
-              Tooltip(
-                message: 'Iniciar Modo Touch Kiosk',
-                child: InkWell(
-                  key: const Key('btn_modo_kiosk'),
-                  borderRadius: BorderRadius.circular(5),
-                  onTap: _enterKioskMode,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.6), width: 1.0),
-                    ),
-                    child: const Text(
-                      'KIOSK',
-                      style: TextStyle(color: Color(0xFF2DD4BF), fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
+          // Ações Fixas à Direita (roláveis em telas estreitas para evitar overflow)
+          if (isMobile)
+            Flexible(
+              flex: 2,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                child: _hmiHeaderActions(),
               ),
-              SizedBox(width: isMobile ? 4 : 6),
-
-              // Botão: Exportar Pacote IHM (.endap-hmi)
-              Tooltip(
-                message: 'Exportar pacote IHM',
-                child: InkWell(
-                  key: const Key('btn_exportar_ihm'),
-                  borderRadius: BorderRadius.circular(5),
-                  onTap: _openExportHmiDialog,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF252A36),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: const Color(0xFF353B4A)),
-                    ),
-                    child: Text(
-                      isMobile ? 'EXPORTAR' : 'EXPORTAR IHM',
-                      style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: isMobile ? 4 : 6),
-
-              // Botão: Adicionar Widget
-              Tooltip(
-                message: 'Adicionar Widget na tela atual',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(5),
-                  onTap: _openAddWidgetFlow,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      isMobile ? '+ WIDGET' : 'NOVO WIDGET',
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: isMobile ? 4 : 6),
-
-              // Botão: Reordenar / Editar Layout
-              Tooltip(
-                message: 'Editar Dashboard',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(5),
-                  onTap: () => setState(() => _isEditMode = true),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 7 : 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF252A36),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: const Color(0xFF353B4A)),
-                    ),
-                    child: const Text(
-                      'EDITAR',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            )
+          else
+            _hmiHeaderActions(),
     ],
   ),
 );

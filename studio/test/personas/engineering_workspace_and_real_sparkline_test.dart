@@ -123,6 +123,6 @@ void main() {
     await tester.pumpAndSettle();
 
     // Must display real scan duration in ms
-    expect(find.text('0.05ms • SIMULADOR'), findsOneWidget);
+    expect(find.text('0.05ms  |  LOCAL'), findsOneWidget);
   });
 }

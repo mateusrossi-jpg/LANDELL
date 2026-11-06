@@ -36,7 +36,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('LANDELL STUDIO'), findsOneWidget);
-      expect(find.text('IDENTIFICAÇÃO DO OPERADOR'), findsOneWidget);
+      expect(find.text('IDENTIFICAÇÃO DO USUÁRIO'), findsOneWidget);
       expect(find.text('ENTRAR'), findsOneWidget);
       expect(find.text('ACESSO TÉCNICO EM CAMPO'), findsOneWidget);
 
@@ -182,14 +182,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Switch dropdown to Analog Input
-      await tester.tap(find.text('Digital Input'));
+      await tester.tap(find.text('Entrada Digital (%IX)'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Analog Input').last);
+      await tester.tap(find.text('Entrada Analógica (%IW)').last);
       await tester.pumpAndSettle();
 
-      // Enter address AI0.0, name SENSOR_TEMP
+      // Enter address AI0.0, name SENSOR_TEMP, unit °C
       await tester.enterText(find.byType(TextField).at(0), 'AI0.0');
       await tester.enterText(find.byType(TextField).at(1), 'SENSOR_TEMP');
+      await tester.enterText(find.byType(TextField).at(2), '°C');
 
       await tester.ensureVisible(find.text('CRIAR'));
       await tester.tap(find.text('CRIAR'));

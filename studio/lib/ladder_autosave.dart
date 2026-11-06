@@ -7,7 +7,7 @@ const String _kRawMigrationV2Key = 'landell_raw_migration_v2_done';
 
 Future<void> saveCurrentLadder(LadderProject project) async {
   try {
-    final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
+    final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 1));
     // Se o projeto ainda tiver o ID antigo de mock e o usuário editou, promove para ID de usuário
     final jsonMap = project.toJson();
     final jsonString = jsonEncode(jsonMap);
@@ -20,7 +20,7 @@ Future<void> saveCurrentLadder(LadderProject project) async {
 
 Future<LadderProject?> loadCurrentLadder() async {
   try {
-    final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
+    final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 1));
     final migrated = prefs.getBool(_kRawMigrationV2Key) ?? false;
     final jsonString = prefs.getString(_kAutosaveKey);
     if (jsonString != null && jsonString.isNotEmpty) {

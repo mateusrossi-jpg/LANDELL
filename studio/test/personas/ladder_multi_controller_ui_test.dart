@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:endap_studio/ladder/models/ladder_project.dart';
 import 'package:endap_studio/ladder/models/ladder_network.dart';
 import 'package:endap_studio/ladder/models/ladder_node.dart';
@@ -14,6 +15,7 @@ void main() {
     late LadderProject testProject;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       testProject = LadderProject.blank(name: 'Projeto Teste Distribuído');
       testProject.tags['I0.0'] = Tag(
         id: 'I0.0',

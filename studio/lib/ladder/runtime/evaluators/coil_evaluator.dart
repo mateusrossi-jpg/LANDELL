@@ -48,6 +48,7 @@ class CoilEvaluator implements NodeEvaluator {
           tagStore.setInt('$a.CV', 0);
           tagStore.setInt('$a.ACC', 0);
           tagStore.setInt('$a.ET', 0);
+          tagStore.setBool('$a.__reset_pending', true);
         }
       }
     }

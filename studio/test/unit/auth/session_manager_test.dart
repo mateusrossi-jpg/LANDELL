@@ -13,9 +13,9 @@ void main() {
   group('SessionManager - Default & Initial State', () {
     test('Default instance has initial values', () {
       final session = SessionManager.instance;
-      expect(session.isLoggedIn, isTrue);
-      expect(session.currentUser, equals('OPERADOR'));
-      expect(session.currentRole, equals('OPERADOR INDUSTRIAL'));
+      expect(session.isLoggedIn, isFalse);
+      expect(session.currentUser, isNull);
+      expect(session.currentRole, isNull);
       expect(session.sessionToken, isNull);
       expect(session.authHeaders, isEmpty);
     });
@@ -133,7 +133,7 @@ void main() {
       await session.init();
 
       expect(session.isLoggedIn, isFalse);
-      expect(session.currentUser, equals('previous_user'));
+      expect(session.currentUser, isNull);
     });
 
     test('login, loginTechnical, and logout update SharedPreferences', () async {
@@ -144,7 +144,7 @@ void main() {
       var prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('endap_session_active'), isTrue);
       expect(prefs.getString('endap_session_user'), equals('user_pref_test'));
-      expect(prefs.getString('endap_session_role'), equals('OPERADOR INDUSTRIAL'));
+      expect(prefs.getString('endap_session_role'), equals('INTEGRADOR'));
 
       await session.logout();
       prefs = await SharedPreferences.getInstance();

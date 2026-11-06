@@ -155,146 +155,152 @@ class IndustrialRibbonBar extends StatelessWidget {
               ),
             ],
 
-            const Spacer(),
-
-            if (onDeploy != null) ...[
-              Tooltip(
-                message: 'Gravar Lógica no Controlador',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(5),
-                  onTap: onDeploy,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: const Color(0xFF0284C7), width: 1),
-                    ),
-                    child: const Text(
-                      'GRAVAR',
-                      style: TextStyle(
-                        color: Color(0xFFE0F2FE),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-            ],
-
-            if (onFetch != null) ...[
-              Tooltip(
-                message: 'Ler Lógica do Controlador',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(5),
-                  onTap: onFetch,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF252A36),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: const Color(0xFF353B4A), width: 1),
-                    ),
-                    child: const Text(
-                      'LER',
-                      style: TextStyle(
-                        color: Color(0xFF38BDF8),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-            ],
-
-            // Menu Dropdown de Seleção de Persona no Mobile
-            PopupMenuButton<String>(
-              tooltip: 'Selecionar Perfil',
-              color: const Color(0xFF1E222B),
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-                side: const BorderSide(color: Color(0xFF353B4A)),
-              ),
-              onSelected: onPersonaChanged,
-              itemBuilder: (ctx) => [
-                _buildPopupMenuItem('HOME', 'Painel HMI'),
-                _buildPopupMenuItem('ENGENHEIRO', 'Workspace Engenheiro'),
-                _buildPopupMenuItem('MANUTENÇÃO', 'Manutenção & Forçamento'),
-                _buildPopupMenuItem('GESTOR', 'Gestão, OEE & BI'),
-              ],
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF252A36),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFF353B4A), width: 1),
-                ),
+            // Grupo de ações à direita: rola horizontalmente em telas estreitas (evita overflow)
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      _personaShortLabel(activePersona),
-                      style: const TextStyle(
-                        color: Color(0xFF38BDF8),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.4,
+                    Tooltip(
+                      message: 'Gravar Lógica no Controlador',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(5),
+                        onTap: onDeploy,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFF0284C7), width: 1),
+                          ),
+                          child: const Text(
+                            'GRAVAR',
+                            style: TextStyle(
+                              color: Color(0xFFE0F2FE),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.keyboard_arrow_down, size: 14, color: Color(0xFF94A3B8)),
-                  ],
-                ),
-              ),
-            ),
+                    const SizedBox(width: 4),
 
-            if (onToggleTerminal != null) ...[
-              const SizedBox(width: 4),
-              InkWell(
-                borderRadius: BorderRadius.circular(4),
-                onTap: onToggleTerminal,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: Icon(
-                    Icons.terminal_rounded,
-                    size: 16,
-                    color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(width: 6),
-
-            // Botão Failsafe / Parada Compacto e Elegante
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTriggerFailsafe,
-                borderRadius: BorderRadius.circular(5),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B181E),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: const Color(0xFF6B2129), width: 1),
-                  ),
-                  child: const Text(
-                    'STOP',
-                    style: TextStyle(
-                      color: Color(0xFFFCA5A5),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 9,
-                      letterSpacing: 0.5,
+                    Tooltip(
+                      message: 'Ler Lógica do Controlador',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(5),
+                        onTap: onFetch,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF252A36),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFF353B4A), width: 1),
+                          ),
+                          child: const Text(
+                            'LER',
+                            style: TextStyle(
+                              color: Color(0xFF38BDF8),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+
+                    // Menu Dropdown de Seleção de Persona no Mobile
+                    PopupMenuButton<String>(
+                      tooltip: 'Selecionar Perfil',
+                      color: const Color(0xFF1E222B),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        side: const BorderSide(color: Color(0xFF353B4A)),
+                      ),
+                      onSelected: onPersonaChanged,
+                      itemBuilder: (ctx) => [
+                        _buildPopupMenuItem('HOME', 'Painel HMI'),
+                        _buildPopupMenuItem('ENGENHEIRO', 'Workspace Engenheiro'),
+                        _buildPopupMenuItem('MANUTENÇÃO', 'Manutenção & Forçamento'),
+                        _buildPopupMenuItem('GESTOR', 'Gestão, OEE & BI'),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF252A36),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF353B4A), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _personaShortLabel(activePersona),
+                              style: const TextStyle(
+                                color: Color(0xFF38BDF8),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(Icons.keyboard_arrow_down, size: 14, color: Color(0xFF94A3B8)),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    if (onToggleTerminal != null) ...[
+                      const SizedBox(width: 4),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(4),
+                        onTap: onToggleTerminal,
+                        child: Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: Icon(
+                            Icons.terminal_rounded,
+                            size: 16,
+                            color: isTerminalVisible ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(width: 6),
+
+                    // Botão Failsafe / Parada Compacto e Elegante
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onTriggerFailsafe,
+                        borderRadius: BorderRadius.circular(5),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B181E),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFF6B2129), width: 1),
+                          ),
+                          child: const Text(
+                            'STOP',
+                            style: TextStyle(
+                              color: Color(0xFFFCA5A5),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 9,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

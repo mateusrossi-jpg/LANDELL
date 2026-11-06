@@ -49,7 +49,7 @@ void main() {
 
     // Drawer should now be visible with items
     expect(find.textContaining(RegExp(r'(LANDELL|ENDAP) STUDIO', caseSensitive: false)), findsWidgets);
-    expect(find.textContaining(RegExp(r'FERRAMENTAS & DIAGNÓSTICO', caseSensitive: false)), findsOneWidget);
+    expect(find.textContaining(RegExp(r'FERRAMENTAS (E SISTEMA|& DIAGNÓSTICO)', caseSensitive: false)), findsOneWidget);
     expect(find.textContaining('Rede & Topologia'), findsOneWidget);
   });
 }

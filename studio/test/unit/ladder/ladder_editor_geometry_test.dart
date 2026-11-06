@@ -26,7 +26,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show clean empty state and no rungs initially
-      expect(find.text('Lógica Ladder IEC Vazia'), findsOneWidget);
+      expect(find.text('Nenhum rung configurado'), findsOneWidget);
       expect(find.text('Adicionar Rung'), findsOneWidget);
       expect(find.byType(LadderNodeVisual), findsNothing);
     });

@@ -231,8 +231,9 @@ void main() {
 
       await tester.pump(const Duration(milliseconds: 200));
       // Garante que o editor continua estável e responsivo
-      expect(find.text('START'), findsOneWidget);
-      expect(find.text('MOTOR'), findsOneWidget);
+      // O rótulo da tag aparece no nó e na legenda do contato/bobina (>= 1 ocorrência)
+      expect(find.text('START'), findsWidgets);
+      expect(find.text('MOTOR'), findsWidgets);
     });
 
     testWidgets('Stress Test 4: Forçamento Rápido e Toggle Contínuo de I/O em Simulação', (tester) async {
@@ -276,8 +277,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Dispara 10 toggles sucessivos no contato SENSOR respeitando kDoubleTapTimeout
-      final contactFinder = find.text('SENSOR');
-      expect(contactFinder, findsOneWidget);
+      final contactFinder = find.text('SENSOR').first;
+      expect(find.text('SENSOR'), findsWidgets);
 
       for (int i = 0; i < 10; i++) {
         await tester.tap(contactFinder);

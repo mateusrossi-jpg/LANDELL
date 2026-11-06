@@ -181,12 +181,13 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isShortScreen = MediaQuery.sizeOf(context).height < 700;
     return Scaffold(
       backgroundColor: AppTokens.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: isShortScreen ? 8 : 20),
             physics: const BouncingScrollPhysics(),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
@@ -195,14 +196,14 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Industrial Brand Header
-                  const Center(
+                  Center(
                     child: EndapLogoWidget(
-                      size: 48,
+                      size: isShortScreen ? 32 : 48,
                       showText: true,
-                      showSubtitle: true,
+                      showSubtitle: !isShortScreen,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: isShortScreen ? 4 : 12),
                   Center(
                     child: Text(
                       'AUTENTICAÇÃO & CONTROLE INDUSTRIAL',
@@ -215,11 +216,11 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  SizedBox(height: isShortScreen ? 10 : 28),
 
                   // Login Form Card
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isShortScreen ? 14 : 24),
                     decoration: BoxDecoration(
                       color: AppTokens.panel,
                       borderRadius: BorderRadius.circular(14),
@@ -237,7 +238,7 @@ class _LoginPageState extends State<LoginPage> {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        SizedBox(height: isShortScreen ? 10 : 18),
 
                         // Username field
                         Text(
@@ -249,7 +250,7 @@ class _LoginPageState extends State<LoginPage> {
                             letterSpacing: 0.8,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: isShortScreen ? 4 : 6),
                         TextField(
                           controller: _usernameController,
                           style: TextStyle(
@@ -263,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
                             hintStyle: TextStyle(color: AppTokens.muted.withValues(alpha: 0.6), fontSize: 12),
                             filled: true,
                             fillColor: AppTokens.panel2,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: isShortScreen ? 9 : 14),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppTokens.line),
@@ -278,7 +279,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: isShortScreen ? 10 : 16),
 
                         // Password field
                         Text(
@@ -290,7 +291,7 @@ class _LoginPageState extends State<LoginPage> {
                             letterSpacing: 0.8,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: isShortScreen ? 4 : 6),
                         TextField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -316,7 +317,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             filled: true,
                             fillColor: AppTokens.panel2,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: isShortScreen ? 9 : 14),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(color: AppTokens.line),
@@ -332,7 +333,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         if (_errorMessage != null) ...[
-                          const SizedBox(height: 14),
+                          SizedBox(height: isShortScreen ? 8 : 14),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
@@ -346,11 +347,11 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 22),
+                        SizedBox(height: isShortScreen ? 12 : 22),
 
                         // Login Submit Button
                         SizedBox(
-                          height: 46,
+                          height: isShortScreen ? 38 : 46,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTokens.focus,
@@ -381,11 +382,11 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: isShortScreen ? 8 : 14),
 
                   // Perfis de Operação
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: EdgeInsets.all(isShortScreen ? 10 : 14),
                     decoration: BoxDecoration(
                       color: AppTokens.panel,
                       borderRadius: BorderRadius.circular(12),
@@ -403,7 +404,7 @@ class _LoginPageState extends State<LoginPage> {
                             letterSpacing: 1.0,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: isShortScreen ? 6 : 10),
                         Row(
                           children: [
                             _buildPersonaQuickPill(
@@ -421,7 +422,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: isShortScreen ? 6 : 8),
                         Row(
                           children: [
                             _buildPersonaQuickPill(
@@ -442,11 +443,11 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: isShortScreen ? 8 : 14),
 
                   // Secondary Technical Access Button
                   SizedBox(
-                    height: 44,
+                    height: isShortScreen ? 36 : 44,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTokens.textPrimary,
@@ -465,7 +466,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: isShortScreen ? 8 : 24),
 
                   // System Status Footer
                   const Row(

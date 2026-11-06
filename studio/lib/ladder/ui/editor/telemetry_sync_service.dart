@@ -49,8 +49,8 @@ class TelemetrySyncService extends ChangeNotifier {
   /// poll em voo de /api/io/map sobrescreva imediatamente o sinal antes do ESP32 processar).
   final Map<String, ({bool value, DateTime expiresAt})> _pendingActuations = {};
 
-  /// Controle de throttling para sincronização de saídas físicas (Q0.x) com o ESP32.
-  final Map<int, ({bool value, DateTime sentAt})> _lastSyncedHardwareOutputs = {};
+  /// Controle de throttling da liberação de forçamentos presos em saídas físicas (Q0.x).
+  final Map<int, DateTime> _lastReleasedForces = {};
 
   void registerPendingActuation(
     Iterable<String> keys,
@@ -68,7 +68,7 @@ class TelemetrySyncService extends ChangeNotifier {
 
   void clearPendingActuations() {
     _pendingActuations.clear();
-    _lastSyncedHardwareOutputs.clear();
+    _lastReleasedForces.clear();
   }
 
   bool _isPendingActuation(String key) {
@@ -80,6 +80,13 @@ class TelemetrySyncService extends ChangeNotifier {
       return false;
     }
     return true;
+  }
+
+  bool _hasActivePendingActuations() {
+    if (_pendingActuations.isEmpty) return false;
+    final now = DateTime.now();
+    _pendingActuations.removeWhere((_, entry) => now.isAfter(entry.expiresAt));
+    return _pendingActuations.isNotEmpty;
   }
 
   TelemetryConnectionStatus get status => _status;
@@ -117,13 +124,19 @@ class TelemetrySyncService extends ChangeNotifier {
     String? gatewayIp,
     List<String>? controllerIps,
   }) {
-    _status = TelemetryConnectionStatus.offline;
-    _consecutiveFailures = 0;
     _project = project;
     _runtime = runtime;
-    final normalizedIp = (gatewayIp == null || gatewayIp.trim().isEmpty)
-        ? '192.168.4.1'
-        : gatewayIp.trim();
+    // Re-inicializações sem IP (ex.: recarga do projeto ao trocar de modo) preservam o
+    // gateway atual e o status de conexão, evitando derrubar o LED Online/Offline.
+    final hasNewIp = gatewayIp != null && gatewayIp.trim().isNotEmpty;
+    final normalizedIp = hasNewIp
+        ? gatewayIp.trim()
+        : (_gatewayIp.isEmpty ? '192.168.4.1' : _gatewayIp);
+    final ipChanged = normalizedIp != _gatewayIp;
+    if (ipChanged) {
+      _status = TelemetryConnectionStatus.offline;
+      _consecutiveFailures = 0;
+    }
     _gatewayIp = normalizedIp;
     if (controllerIps != null && controllerIps.isNotEmpty) {
       _controllerIps = controllerIps
@@ -134,8 +147,10 @@ class TelemetrySyncService extends ChangeNotifier {
       if (!_controllerIps.contains(_gatewayIp)) {
         _controllerIps.insert(0, _gatewayIp);
       }
-    } else {
+    } else if (ipChanged || _controllerIps.isEmpty) {
       _controllerIps = [_gatewayIp];
+    } else if (!_controllerIps.contains(_gatewayIp)) {
+      _controllerIps.insert(0, _gatewayIp);
     }
   }
 
@@ -441,21 +456,79 @@ class TelemetrySyncService extends ChangeNotifier {
     return (drivenTags: driven, retentiveOrSeloTags: retentive);
   }
 
-  void _syncTagAliasesInStore() {
+  /// Variantes equivalentes de um endereço digital (Q0.x <-> Yx, I0.x <-> Xx).
+  Set<String> _digitalAddressVariants(String address) {
+    final clean = address.trim();
+    final upper = clean.toUpperCase();
+    final res = <String>{clean, upper};
+    if (upper.startsWith('Q0.') && upper.length == 4) {
+      res.add('Y${upper.substring(3)}');
+    } else if (upper.startsWith('Y') && upper.length == 2) {
+      res.add('Q0.${upper.substring(1)}');
+    } else if (upper.startsWith('I0.') && upper.length == 4) {
+      res.add('X${upper.substring(3)}');
+    } else if (upper.startsWith('X') && upper.length == 2) {
+      res.add('I0.${upper.substring(1)}');
+    }
+    return res;
+  }
+
+  /// Foto dos valores booleanos de id/endereço de cada tag antes do scan local.
+  Map<String, bool> _snapshotAliasValues() {
+    final snap = <String, bool>{};
+    if (_project == null || _runtime == null) return snap;
+    final store = _runtime!.tagStore;
+    for (final tag in _project!.tags.values) {
+      final addr = tag.address?.trim();
+      if (addr == null || addr.isEmpty || tag.type != TagType.bool) continue;
+      snap[tag.id] = store.getBool(tag.id);
+      snap[addr] = store.getBool(addr);
+    }
+    return snap;
+  }
+
+  /// Unifica id/endereço/aliases de cada tag booleana após o scan. Vence sempre o lado que
+  /// foi alterado pelo scan (bobina SET/RESET/Selo); sem alteração, vale o endereço canônico.
+  /// Assim um RESET escrito em 'Q0.0' não é desfeito por um valor antigo guardado em 'Q00'.
+  void _syncTagAliasesInStore(Map<String, bool> before) {
     if (_project == null || _runtime == null) return;
     final store = _runtime!.tagStore;
     for (final tag in _project!.tags.values) {
       final addr = tag.address?.trim();
-      if (addr == null || addr.isEmpty) continue;
-      if (tag.type == TagType.bool) {
-        final vId = store.getBool(tag.id);
-        final vAddr = store.getBool(addr);
-        if (vId != vAddr) {
-          // Propaga o estado atualizado (prioriza tag.id se foi escrito pelo avaliador)
-          store.setBool(addr, vId);
+      if (addr == null || addr.isEmpty || tag.type != TagType.bool) continue;
+      final vId = store.getBool(tag.id);
+      final vAddr = store.getBool(addr);
+      final idChanged = before[tag.id] != vId;
+      final addrChanged = before[addr] != vAddr;
+      bool winner = vAddr;
+      if (vId != vAddr && idChanged && !addrChanged) {
+        winner = vId;
+      }
+      for (final k in {tag.id, ..._digitalAddressVariants(addr)}) {
+        if (!store.isForced(k) && store.getBool(k) != winner) {
+          store.setBool(k, winner);
         }
       }
     }
+  }
+
+  /// Libera um forçamento de saída (out_force_en) que ficou preso no ESP32 por comandos
+  /// manuais antigos (/api/set). Saídas comandadas pelo Ladder nunca devem ficar forçadas.
+  void _releaseStuckOutputForce(int channelId, int controllerIndex) {
+    final now = DateTime.now();
+    final last = _lastReleasedForces[channelId];
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) return;
+    _lastReleasedForces[channelId] = now;
+    final targetIp =
+        (controllerIndex >= 0 && controllerIndex < _controllerIps.length)
+            ? _controllerIps[controllerIndex]
+            : _gatewayIp;
+    unawaited(
+      _client
+          .get(Uri.parse('http://$targetIp/api/set?id=$channelId&action=release'))
+          .timeout(const Duration(milliseconds: 900))
+          .then((_) {}, onError: (_) {}),
+    );
   }
 
   /// Processa o JSON retornado por /api/io/map e injeta os estados no TagStateStore.
@@ -486,7 +559,10 @@ class TelemetrySyncService extends ChangeNotifier {
       }
     }
 
-    // Aplica as saídas e memórias do hardware real (preservando estados retentivos de SET e Selo)
+    final hasPendingUiActuation = _hasActivePendingActuations();
+
+    // Aplica as saídas e memórias do hardware real. Tags retentivas (SET/RESET/Selo) seguem o
+    // hardware (inclusive 0 vindo de Reset por Ladder ou botão físico); o scan local reavalia.
     final outputs = json['outputs'];
     if (outputs is List) {
       for (var item in outputs) {
@@ -495,8 +571,8 @@ class TelemetrySyncService extends ChangeNotifier {
             item,
             isOutput: true,
             controllerIndex: controllerIndex,
-            preserveLatchedTags: retentiveTags,
-            skipDrivenTags: drivenTags.difference(retentiveTags),
+            skipDrivenTags: hasPendingUiActuation ? drivenTags.difference(retentiveTags) : null,
+            releaseForcedTags: drivenTags,
           );
         }
       }
@@ -512,33 +588,26 @@ class TelemetrySyncService extends ChangeNotifier {
               item,
               isOutput: false,
               controllerIndex: 0,
-              preserveLatchedTags: retentiveTags,
-              skipDrivenTags: drivenTags.difference(retentiveTags),
             );
           }
         }
       }
     }
 
-    _syncTagAliasesInStore();
-
     // Avalia a topologia localmente com base nos sinais recebidos para energização dos nós e retenção SET/Selo
+    final aliasesBefore = _snapshotAliasValues();
     _runtime!.singleScan(100);
+    _syncTagAliasesInStore(aliasesBefore);
 
-    _syncTagAliasesInStore();
-
-    // Após a varredura, aplica do hardware apenas saídas/memórias que NÃO são comandadas por rungs ativos locais,
-    // e sincroniza com o ESP32 qualquer saída física Q0.x comandada por SET/Selo/Bobina local que esteja divergente.
-    if (outputs is List) {
+    // Reaplica o estado real de hardware reportado em outputs e internals (timers/contadores),
+    // garantindo autoridade ciberfísica quando não há atuação manual otimista pendente na UI.
+    if (!hasPendingUiActuation && outputs is List) {
       for (var item in outputs) {
         if (item is Map) {
           _applyIoEntry(
             item,
             isOutput: true,
             controllerIndex: controllerIndex,
-            preserveLatchedTags: retentiveTags,
-            skipDrivenTags: drivenTags,
-            syncDrivenOutputToHardware: true,
           );
         }
       }
@@ -552,8 +621,6 @@ class TelemetrySyncService extends ChangeNotifier {
               item,
               isOutput: false,
               controllerIndex: 0,
-              preserveLatchedTags: retentiveTags,
-              skipDrivenTags: drivenTags,
             );
           }
         }
@@ -661,9 +728,8 @@ class TelemetrySyncService extends ChangeNotifier {
     Map entry, {
     required bool isOutput,
     int controllerIndex = 0,
-    Set<String>? preserveLatchedTags,
     Set<String>? skipDrivenTags,
-    bool syncDrivenOutputToHardware = false,
+    Set<String>? releaseForcedTags,
   }) {
     dynamic rawValue;
     if (isOutput) {
@@ -833,23 +899,25 @@ class TelemetrySyncService extends ChangeNotifier {
         resolvedChannelId >= 40 &&
         resolvedChannelId <= 71 &&
         plcAddress != null) {
-      if (skipDrivenTags != null &&
-          (skipDrivenTags.contains(plcAddress) ||
-              skipDrivenTags.contains('$plcAddress.DN'))) {
-        return;
-      }
       keysToUpdate.addAll(['$plcAddress.DN', '$plcAddress.Q']);
       if (resolvedChannelId >= 40 && resolvedChannelId <= 55) {
         final active = entry['active'] == true;
+        final hasElapsed = entry.containsKey('elapsed');
         final elapsed = entry['elapsed'] is num ? (entry['elapsed'] as num).toInt() : 0;
-        final isDone = rawValue == 1 || rawValue == true;
+        final isDone = _parseBool(rawValue);
         _runtime!.tagStore.setBool('$plcAddress.EN', active || isDone);
         _runtime!.tagStore.setBool('$plcAddress.IN', active || isDone);
         _runtime!.tagStore.setBool('$plcAddress.TT', active && !isDone);
-        if (elapsed > 0) {
+        if (hasElapsed) {
           _runtime!.tagStore.setInt('$plcAddress.ACC', elapsed);
           _runtime!.tagStore.setInt('$plcAddress.ET', elapsed);
         }
+        _syncHardwareTimerNodeStates(
+          plcAddress,
+          active: active,
+          isDone: isDone,
+          elapsed: hasElapsed ? elapsed : null,
+        );
       }
     }
 
@@ -886,61 +954,27 @@ class TelemetrySyncService extends ChangeNotifier {
         name == 'AI0.0' ||
         name == 'AI0.1');
 
-    // Se qualquer chave da entrada possuir atuação recente disparada pela UI, preserva o estado otimista
-    if (keysToUpdate.any(_isPendingActuation)) {
-      return;
-    }
-
-    // Se a saída física é comandada pela lógica Ladder local e estamos na fase pós-scan,
-    // sincroniza o estado calculado (SET/Selo/Bobina) com o hardware caso esteja divergente.
-    if (syncDrivenOutputToHardware &&
-        isOutput &&
+    // Saída comandada pelo Ladder e travada por forçamento antigo (/api/set): libera no ESP32
+    // para que SET/RESET/Selo (e o botão físico) voltem a controlar o relé.
+    if (isOutput &&
+        releaseForcedTags != null &&
+        entry['forced'] == true &&
         localChannelId != null &&
         localChannelId >= 100 &&
         localChannelId <= 115 &&
-        skipDrivenTags != null &&
-        keysToUpdate.any(skipDrivenTags.contains)) {
-      final primaryKey = plcAddress ?? matchedTagId ?? canonicalAddress;
-      if (primaryKey != null) {
-        final localVal = _runtime!.tagStore.getBool(primaryKey);
-        for (final k in keysToUpdate) {
-          _runtime!.tagStore.setBool(k, localVal);
-        }
-        if (localVal != boolVal) {
-          final lastSync = _lastSyncedHardwareOutputs[localChannelId];
-          final now = DateTime.now();
-          if (lastSync == null ||
-              lastSync.value != localVal ||
-              now.difference(lastSync.sentAt) > const Duration(milliseconds: 600)) {
-            _lastSyncedHardwareOutputs[localChannelId] = (value: localVal, sentAt: now);
-            final targetIp = (controllerIndex >= 0 && controllerIndex < _controllerIps.length)
-                ? _controllerIps[controllerIndex]
-                : _gatewayIp;
-            final valInt = localVal ? 1 : 0;
-            unawaited(
-              _client
-                  .get(Uri.parse('http://$targetIp/api/set?id=$localChannelId&value=$valInt'))
-                  .timeout(const Duration(milliseconds: 900))
-                  .then((_) {}, onError: (_) {}),
-            );
-          }
-        }
-      }
+        keysToUpdate.any(releaseForcedTags.contains) &&
+        !keysToUpdate.any(_runtime!.tagStore.isForced)) {
+      _releaseStuckOutputForce(localChannelId, controllerIndex);
+    }
+
+    // Se qualquer chave da entrada possuir atuação recente disparada pela UI, preserva o estado otimista
+    if (keysToUpdate.any(_isPendingActuation)) {
       return;
     }
 
     // Se a tag é comandada localmente pelo Ladder e foi solicitado pular, não sobrescreve
     if (skipDrivenTags != null && keysToUpdate.any(skipDrivenTags.contains)) {
       return;
-    }
-
-    // Se a tag faz parte de um SET/RESET ou Selo (auto-retenção), nunca permite que um 0 do
-    // /api/io/map desarme a retenção antes do singleScan avaliar a condição de Reset/Parada.
-    if (preserveLatchedTags != null && keysToUpdate.any(preserveLatchedTags.contains)) {
-      final isCurrentlyLatched = keysToUpdate.any((k) => _runtime!.tagStore.getBool(k));
-      if (isCurrentlyLatched && !boolVal) {
-        return;
-      }
     }
 
     for (final key in keysToUpdate) {
@@ -975,6 +1009,49 @@ class TelemetrySyncService extends ChangeNotifier {
         } else {
           _runtime!.tagStore.setBool(key, boolVal);
         }
+      }
+    }
+  }
+
+  void _syncHardwareTimerNodeStates(
+    String plcAddress, {
+    required bool active,
+    required bool isDone,
+    int? elapsed,
+  }) {
+    final proj = _project;
+    final rt = _runtime;
+    if (proj == null || rt == null) return;
+    final target = plcAddress.trim().toUpperCase();
+
+    void updateNode(LadderNode node) {
+      if ((node.type == NodeType.timerTON || node.type == NodeType.timerTOF) &&
+          node.config.tagId?.trim().toUpperCase() == target) {
+        final state = rt.nodeStates[node.id];
+        if (state != null) {
+          state.energized = active || isDone;
+          state.runtimeFlags['EN'] = active || isDone;
+          state.runtimeFlags['TT'] = active && !isDone;
+          state.runtimeFlags['DN'] = isDone;
+          if (elapsed != null) {
+            state.accumulatedTimeMs = elapsed;
+          }
+        }
+        node.isEnergized = active || isDone;
+        node.isConducting = isDone;
+      }
+      if (node.type == NodeType.parallel && node.branches != null) {
+        for (final branch in node.branches!) {
+          for (final child in branch) {
+            updateNode(child);
+          }
+        }
+      }
+    }
+
+    for (final net in proj.networks) {
+      for (final node in net.nodes) {
+        updateNode(node);
       }
     }
   }

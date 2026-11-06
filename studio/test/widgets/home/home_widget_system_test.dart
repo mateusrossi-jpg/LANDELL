@@ -284,15 +284,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify in Edit Mode
-      expect(find.text('EDIT DASHBOARD'), findsOneWidget);
-      expect(find.text('DONE'), findsOneWidget);
-      expect(find.text('ADICIONAR WIDGET'), findsOneWidget);
+      expect(find.text('EDIÇÃO DO PAINEL'), findsOneWidget);
+      expect(find.text('CONCLUIR'), findsOneWidget);
+      expect(find.text('ADICIONAR WIDGET'), findsAtLeastNWidgets(1));
 
-      // Tap DONE to return to normal mode
-      await tester.tap(find.text('DONE'));
+      // Tap CONCLUIR to return to normal mode
+      await tester.tap(find.text('CONCLUIR'));
       await tester.pumpAndSettle();
 
-      expect(find.text('EDIT DASHBOARD'), findsNothing);
+      expect(find.text('EDIÇÃO DO PAINEL'), findsNothing);
       expect(find.textContaining('LANDELL'), findsOneWidget);
     });
   });

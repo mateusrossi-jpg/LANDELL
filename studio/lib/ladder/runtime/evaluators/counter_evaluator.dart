@@ -29,6 +29,12 @@ class CounterEvaluator implements NodeEvaluator {
       }
     }
       final tagId = node.config.tagId;
+      if (tagId != null && tagId.isNotEmpty && tagStore.getBool('$tagId.__reset_pending')) {
+        tagStore.setBool('$tagId.__reset_pending', false);
+        state.counterValue = 0;
+        state.runtimeFlags['DN'] = false;
+        state.runtimeFlags.remove('CTD_INIT');
+      }
       if (node.type == NodeType.counterCTU) {
         if (risingEdge && state.counterValue < preset) {
           state.counterValue++;

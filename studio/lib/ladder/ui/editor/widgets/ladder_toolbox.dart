@@ -16,7 +16,7 @@ class LadderToolbox extends StatelessWidget {
   static const List<Map<String, dynamic>> _tools = [
     {'label': 'NO', 'type': NodeType.contactNO, 'description': 'Contato Normal Aberto (NO)'},
     {'label': 'NC', 'type': NodeType.contactNC, 'description': 'Contato Normal Fechado (NC)'},
-    {'label': 'SELO', 'type': NodeType.parallel, 'description': 'Ramo Paralelo / Selo (OR)'},
+    {'label': 'BRANCH', 'type': NodeType.parallel, 'description': 'Branch: ramo paralelo (OR) / auto-retenção (selo)'},
     {'label': 'COIL', 'type': NodeType.coil, 'description': 'Bobina de Saída (COIL)'},
     {'label': 'SET', 'type': NodeType.coilSet, 'description': 'Bobina de Retenção Set (SET)'},
     {'label': 'RST', 'type': NodeType.coilReset, 'description': 'Bobina de Reset (RST)'},

@@ -293,7 +293,6 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
     final scanUs = widget.runtime?.lastScanDurationUs ?? 0;
     final tags = _tags;
     final forcedCount = tags.where((t) => widget.runtime?.tagStore.isForced(t.id) ?? false).length;
-    final totalNodes = widget.networkManager.nodes.isEmpty ? 1 : widget.networkManager.nodes.length;
     final prodTag = _findProductionTag();
 
     return SingleChildScrollView(
@@ -348,10 +347,10 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
                         accentColor: IndustrialTokens.runGreen,
                       )
                     : _buildMetricCard(
-                        title: 'CLUSTER',
-                        value: '$totalNodes Nó(s)',
-                        meta: 'Local-First',
-                        icon: Icons.hub_outlined,
+                        title: 'ARQUITETURA',
+                        value: 'Unidade Única',
+                        meta: 'Local-First 1 ms',
+                        icon: Icons.memory_outlined,
                         accentColor: IndustrialTokens.infoBlue,
                       ),
               ),
@@ -373,7 +372,6 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
     final scanUs = widget.runtime?.lastScanDurationUs ?? 0;
     final tags = _tags;
     final forcedCount = tags.where((t) => widget.runtime?.tagStore.isForced(t.id) ?? false).length;
-    final totalNodes = widget.networkManager.nodes.isEmpty ? 1 : widget.networkManager.nodes.length;
     final prodTag = _findProductionTag();
 
     return Column(
@@ -426,9 +424,9 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
                     )
                   : _buildMetricCard(
                       title: 'CONTROLADOR LANDELL',
-                      value: '$totalNodes Controlador(es)',
-                      meta: 'Modo Gateway Híbrido Local-First',
-                      icon: Icons.hub_outlined,
+                      value: 'Controlador Único',
+                      meta: 'Arquitetura Dual-Core Local-First',
+                      icon: Icons.memory_outlined,
                       accentColor: IndustrialTokens.infoBlue,
                     ),
             ),
@@ -548,7 +546,7 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isExclusive ? 'GATEWAY DEDICADO (Roteador)' : 'GATEWAY PRINCIPAL (Híbrido)',
+                  isExclusive ? 'CONTROLADOR DEDICADO' : 'CONTROLADOR PRINCIPAL (ESP32-WROOM-32)',
                   style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -579,9 +577,11 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: Text(
-                'Nenhum nó de campo secundário conectado no cluster.\nPara adotar nós, use a aba Rede & Topologia.',
+                // Ocultado texto de cluster para apresentação de Controlador Único:
+                // 'Nenhum nó de campo secundário conectado no cluster.\nPara adotar nós, use a aba Rede & Topologia.'
+                'Operação em modo Controlador Único Determinístico.\nCore 1: Kernel Hard Real-Time (1 ms) | Core 0: Rede, HTTP & Persistência NVS.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white38, fontSize: 10),
+                style: TextStyle(color: Colors.white54, fontSize: 10),
               ),
             ),
           )
@@ -640,9 +640,9 @@ class _ManagerAnalyticsViewState extends State<ManagerAnalyticsView> {
                   color: IndustrialTokens.infoBlue.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(
-                  '${fieldNodes.length + 1} NÓS ATIVOS',
-                  style: const TextStyle(color: IndustrialTokens.infoBlue, fontSize: 8.5, fontWeight: FontWeight.bold),
+                child: const Text(
+                  'CONTROLADOR ÚNICO',
+                  style: TextStyle(color: IndustrialTokens.infoBlue, fontSize: 8.5, fontWeight: FontWeight.bold),
                 ),
               ),
             ],

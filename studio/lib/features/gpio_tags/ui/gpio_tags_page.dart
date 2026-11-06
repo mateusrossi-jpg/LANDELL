@@ -879,13 +879,17 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
       ),
       child: Row(
         children: [
-          Text(
-            'MAPEAMENTO GPIO & TAGS',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: isDesktop ? 12 : 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
+          Flexible(
+            child: Text(
+              'MAPEAMENTO GPIO & TAGS',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: isDesktop ? 12 : 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.8,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -1353,7 +1357,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
           children: [
             // Badge Unificado (IEC e GPIO)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
                 color: isFieldNode ? const Color(0xFF262040) : AppTokens.panel2,
                 borderRadius: BorderRadius.circular(5),
@@ -1364,7 +1368,7 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                 ),
               ),
               child: Text(
-                ch.gpio != null ? '$iecCode G${ch.gpio}' : iecCode,
+                iecCode,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1377,7 +1381,29 @@ class _GpioTagsPageState extends State<GpioTagsPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            if (ch.gpio != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTokens.panel2,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: AppTokens.line),
+                ),
+                child: Text(
+                  'GPIO ${ch.gpio}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 8),
 
             // Tag IEC e Função em 1 linha limpa
             Expanded(

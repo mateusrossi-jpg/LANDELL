@@ -68,6 +68,13 @@ class TimerEvaluator implements NodeEvaluator {
     final preset = resolveNodePreset(node, tagStore);
 
     final tagId = node.config.tagId;
+    if (tagId != null && tagId.isNotEmpty && tagStore.getBool('$tagId.__reset_pending')) {
+      tagStore.setBool('$tagId.__reset_pending', false);
+      state.accumulatedTimeMs = 0;
+      state.runtimeFlags['EN'] = false;
+      state.runtimeFlags['TT'] = false;
+      state.runtimeFlags['DN'] = false;
+    }
     if (node.type == NodeType.timerTON) {
       if (inPowerFlow) {
         state.runtimeFlags['EN'] = true;

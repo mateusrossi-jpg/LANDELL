@@ -101,22 +101,26 @@ class HomeWidgetRenderer extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: isInteractive
-                      ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                      : const Color(0xFF38BDF8).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  isInteractive ? 'COMANDO' : 'LEITURA',
-                  style: TextStyle(
-                    color: isInteractive ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
-                    fontSize: 8.0,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.4,
+              const SizedBox(width: 4),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: isInteractive
+                        ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                        : const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isInteractive ? 'COMANDO' : 'LEITURA',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isInteractive ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
+                      fontSize: 8.0,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                 ),
               ),
@@ -176,29 +180,35 @@ class HomeWidgetRenderer extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        TextButton(
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: onEdit,
-          child: const Text(
-            'EDITAR',
-            style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold),
+        Tooltip(
+          message: 'Configurar Widget',
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: onEdit,
+            child: const Text(
+              'EDITAR',
+              style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         const SizedBox(width: 4),
-        TextButton(
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: onDelete,
-          child: const Text(
-            'REMOVER',
-            style: TextStyle(color: Color(0xFFF43F5E), fontSize: 10, fontWeight: FontWeight.bold),
+        Tooltip(
+          message: 'Remover Widget',
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: onDelete,
+            child: const Text(
+              'REMOVER',
+              style: TextStyle(color: Color(0xFFF43F5E), fontSize: 10, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],

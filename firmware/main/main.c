@@ -37,10 +37,12 @@ void app_main(void)
     /* Desativa o detector de Brownout de hardware para evitar resets durante surtos transientes de calibração RF em USB */
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
+#if 0 /* Ocultado para apresentacao de Controlador Unico */
     ESP_LOGI("SIZE", "cluster_node_t=%u", sizeof(cluster_node_t));
     ESP_LOGI("SIZE", "node_registry_entry_t=%u", sizeof(node_registry_entry_t));
     ESP_LOGI("SIZE", "node_registry_blob_t=%u", sizeof(node_registry_blob_t));
     ESP_LOGI("SIZE", "cluster_io_entry_t=%u", sizeof(cluster_io_entry_t));
+#endif
     ESP_LOGI("SIZE", "state_entry_t=%u", sizeof(state_entry_t));
 
     BaseType_t ok = xTaskCreatePinnedToCore(
